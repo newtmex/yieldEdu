@@ -1,0 +1,11 @@
+{
+    "name": "yieldedu",
+    "repository": "https://github.com/YieldEDU/yieldEdu.git",
+    "author": "YieldEDU Team",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "solidity",
+        "packages/*"
+    ]
+}
