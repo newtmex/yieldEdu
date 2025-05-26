@@ -4,10 +4,11 @@ pragma solidity ^0.8.20;
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {SFTUpgradeable} from "../abstracts/SFTUpgradeable.sol";
+import {ISToken} from "./ISToken.sol";
 
 /**
  * @title sToken
- * @dev YieldEDU Semi-Fungible Token (SFT) contract extending SFTUpgradeable, with UUPS upgradeability and role-based minting.
+ * @dev YieldEDU Course-gating, Semi-Fungible Token (SFT) contract extending SFTUpgradeable, with UUPS upgradeability and role-based minting.
  *
  * The `sToken` contract represents a specialized implementation of a Semi-Fungible Token (SFT) tailored for the YieldEDU platform.
  * It leverages the ERC-1155 standard to efficiently manage multiple token types within a single contract, combining the benefits of both fungible and non-fungible tokens.
@@ -21,25 +22,7 @@ import {SFTUpgradeable} from "../abstracts/SFTUpgradeable.sol";
  *
  * This contract is designed to support the dynamic needs of educational platforms, facilitating the issuance and management of various educational credentials and rewards.
  */
-contract sToken is SFTUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
-    /**
-     * @dev Enum representing the type of the token.
-     * - `Learner`: Represents a token awarded to learners.
-     * - `Scholar`: Represents a token awarded to scholars.
-     */
-    enum TokenType {
-        Learner,
-        Scholar
-    }
-
-    /**
-     * @dev Struct encapsulating the attributes associated with a token.
-     * @param tokenType The type of the token, indicating its category.
-     */
-    struct TokenAttributes {
-        TokenType tokenType;
-    }
-
+contract SToken is SFTUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
     /**
      * @dev Constructor that disables initializers to prevent the implementation contract from being initialized.
      * This is a security measure to ensure that the implementation contract cannot be misused.
@@ -88,7 +71,7 @@ contract sToken is SFTUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
     function sTokenMint(
         address to,
         uint256 amount,
-        TokenAttributes memory attributes
+        ISToken.TokenAttributes memory attributes
     ) external onlyRole(MINTER_ROLE) returns (uint256 nonce) {
         return _mintSFT(to, amount, abi.encode(attributes));
     }

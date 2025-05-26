@@ -289,4 +289,8 @@ abstract contract SFTUpgradeable is
 
         super._update(from, to, ids, values);
     }
+
+    function totalSupply() external view returns (uint256) {
+        return _getSFTStorage().totalSupply;
+    }
 }

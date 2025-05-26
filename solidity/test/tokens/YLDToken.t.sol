@@ -1,37 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {YLDToken} from "../../contracts/tokens/YLDToken.sol";
+import {YLDTokenFixture} from "./YLDTokenFixture.sol";
 
-contract YLDTokenTest is Test {
-    YLDToken public yld;
-    address public owner;
+contract YLDTokenTest is YLDTokenFixture {
     address public minter;
     address public user;
 
     function setUp() public {
-        owner = makeAddr("owner");
         minter = makeAddr("minter");
         user = makeAddr("user");
-
-        // Deploy the implementation contract
-        YLDToken implementation = new YLDToken();
-
-        // Prepare the initialization data
-        bytes memory data = abi.encodeWithSelector(
-            YLDToken.initialize.selector,
-            "YieldEDU Token",
-            "YLD",
-            owner
-        );
-
-        // Deploy the proxy contract
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-
-        // Cast the proxy address to YLDToken
-        yld = YLDToken(address(proxy));
 
         // Grant MINTER_ROLE to minter
         vm.startPrank(owner);
