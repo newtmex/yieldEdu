@@ -82,7 +82,7 @@ const CountDownTimer = ({
 	const formatNumber = (n: number): string => n.toString().padStart(2, "0");
 
 	const handleWithdrawClick = () => {
-		const params = new URLSearchParams(searchParams.toString());
+		const params = new URLSearchParams(searchParams?.toString());
 		params.set("positionId", positionId);
 		window.history.pushState({}, "", `?${params.toString()}`);
 		setShowWithDrawModal(true);
@@ -93,7 +93,7 @@ const CountDownTimer = ({
 			return (
 				<div className="flex items-center text-lime-600 gap-3">
 					<Timer className="w-5 h-5" />
-					<p className="text-lime-600 font-medium text-md">
+					<p className="text-lime-600 font-medium text-sm">
 						Your position is available for withdrawal
 					</p>
 					<Button
@@ -118,13 +118,15 @@ const CountDownTimer = ({
 
 		if (days > 0) {
 			return (
-				<span>
-					Your position will be available for withdrawal in{" "}
-					<span className="dark:text-yellow-400 text-lg text-slate-800 font-semibold">
+				<>
+					<span className="text-sm text-center w-full">
+						Your position will be available for withdrawal in{" "}
+					</span>
+					<span className="dark:text-yellow-400 text-center w-full text-slate-800 font-semibold text-md">
 						{days}d {formatNumber(hours)}h {formatNumber(minutes)}m{" "}
 						{formatNumber(seconds)}s
 					</span>
-				</span>
+				</>
 			);
 		}
 		if (hours > 0) {

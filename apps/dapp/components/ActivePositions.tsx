@@ -125,7 +125,7 @@ const ActivePositions = ({
 
 	const handleUnstake = (positionId: string) => {
 		setModalType("unstake");
-		const params = new URLSearchParams(searchParams.toString());
+		const params = new URLSearchParams(searchParams?.toString());
 		params.set("positionId", positionId);
 		window.history.pushState({}, "", `?${params.toString()}`);
 		setShowWithDrawModal(true);
@@ -234,11 +234,14 @@ const ActivePositions = ({
 				const status = row.getValue("status") as string;
 				return (
 					<Badge
-						className={
-							status === "Active"
-								? "bg-lime-100 dark:bg-lime-400/20 text-lime-600 dark:text-lime-400 border-lime-200 dark:border-lime-400/30"
-								: "bg-yellow-100 dark:bg-yellow-400/20 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-400/30"
-						}
+						variant={"default"}
+						className={cn(
+							"bg-yellow-100 dark:bg-yellow-400/20 hover:bg-yellow-100 hover:dark:bg-yellow-400/20 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-400/30",
+							{
+								"bg-lime-100 hover:bg-lime-100 hover:dark:bg-lime-400/20 dark:bg-lime-400/20 text-lime-600 dark:text-lime-400 border-lime-200 dark:border-lime-400/30":
+									status === "Active",
+							}
+						)}
 					>
 						{status}
 					</Badge>
@@ -319,7 +322,7 @@ const ActivePositions = ({
 	const sortedRows = table.getSortedRowModel().rows;
 
 	return (
-		<Card className="bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 backdrop-blur-sm shadow-sm">
+		<Card className="bg-white my-4 w-full overflow-auto dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 backdrop-blur-sm shadow-sm">
 			<CardHeader>
 				<CardTitle className="text-slate-900 dark:text-white">
 					Active Positions
@@ -332,7 +335,10 @@ const ActivePositions = ({
 				<Table>
 					<TableHeader>
 						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow className="hover:bg-transparent" key={headerGroup.id}>
+							<TableRow
+								className="hover:bg-transparent border-slate-800/20 dark:border-slate-700/50"
+								key={headerGroup.id}
+							>
 								{headerGroup.headers.map((header) => {
 									return (
 										<TableHead key={header.id}>
@@ -359,10 +365,13 @@ const ActivePositions = ({
 											)
 										}
 										key={row.id}
-										className={cn("", {
-											"bg-lime-500/20":
-												row.original.positionAddress === address,
-										})}
+										className={cn(
+											"border-slate-800/20 text-slate-500 dark:text-slate-300",
+											{
+												"bg-lime-500/20":
+													row.original.positionAddress === address,
+											}
+										)}
 										data-state={row.getIsSelected() && "selected"}
 									>
 										{row.getVisibleCells().map((cell) => {

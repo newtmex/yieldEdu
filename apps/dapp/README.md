@@ -26,19 +26,14 @@ cd YieldEdu
 1. **Install dependencies for hardhat**
 
 ```bash
-# Install dependencies
-pnpm install
+# Install dependencies for solidity
+cd solidity && pnpm install
 
-# Install smartcontract dependencies
-cd solidity
-pnpm install
 ```
 
 1. **Set up environment variables**
 
 ```bash
-cd solidty
-
 npx hardhat vars set ACCOUNT_PRIVATE_KEY
 # Enter your wallet's private key when prompted
 ```
@@ -71,9 +66,12 @@ npx hardhat coverage
 
 ```bash
 # In the frontend directory
-cd into root or frontend
+cd apps/dapp
 pnpm install
-pnpm run dev
+ln -s ../../solidity/artifacts ./artifacts  # This creates a permanent link so apps/dapp/artifacts always points to the latest compiled hardhat artifacts.
+pnpm copy-artifacts
+# go to node_module/@opencampus/lib/react/OCSpinner.js and comment out require("./OCSpinner.css");
+pnpm dev
 ```
 
 1. **Access the Application**
@@ -140,6 +138,7 @@ npx hardhat node
 1. **Deploy Contracts Locally**
 
 ```bash
+cd solidity
 npx hardhat ignition deploy ./ignition/modules/YieldPool.ts --['your network']
 ```
 

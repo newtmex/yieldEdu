@@ -78,7 +78,7 @@ const FaucetButton = ({ userAddress }: { userAddress?: string }) => {
 			onClick={handleMint}
 			disabled={!userAddress || isPending || !!simulateError?.cause}
 			variant="outline"
-			className="disabled:bg-green-700 bg-green-500 hover:bg-green-600 border-none hover:text-white font-semibold enabled:active:bg-green-600"
+			className="disabled:bg-green-700 text-xs text-white hover:text-white bg-green-500 hover:bg-green-600 border-none font-semibold enabled:active:bg-green-600"
 		>
 			{isPending
 				? "Minting... approve from metamask"

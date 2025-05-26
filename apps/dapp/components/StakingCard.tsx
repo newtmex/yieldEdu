@@ -325,12 +325,12 @@ const StakingCard = ({
 			<Card
 				className={cn(
 					className,
-					"bg-white mb-6 pb-0 xl:mb-0 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 backdrop-blur-sm shadow-sm"
+					"pb-0 xl:mb-0 dark:bg-slate-800/50 bg-white border-slate-200 dark:border-slate-700/50 backdrop-blur-sm shadow-sm"
 				)}
 			>
 				<CardHeader>
-					<CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-						<GraduationCap className="w-5 h-5 text-lime-500" />
+					<CardTitle className="flex items-center gap-2 dark:text-white">
+						<GraduationCap className="size-7 text-lime-500" />
 						Stake EDU
 					</CardTitle>
 					<CardDescription className="text-slate-500 dark:text-slate-400">
@@ -359,7 +359,7 @@ const StakingCard = ({
 							</label>
 							<div
 								ref={buttonGridRef}
-								className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4 gap-2"
+								className="flex flex-wrap justify-between xl:grid-cols-2 2xl:grid-cols-4 gap-2"
 							>
 								{["30", "60", "90"].map((days) => (
 									<Button
@@ -367,12 +367,15 @@ const StakingCard = ({
 										disabled={isTransactionInProgress}
 										key={days}
 										variant="outline"
-										className={cn("border-slate-200 dark:border-slate-700", {
-											"bg-gradient-to-r from-lime-500 hover:text-slate-900 to-yellow-500 text-slate-900 border-transparent":
-												lockDuration === parseFloat(days),
-											"bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800":
-												lockDuration !== parseFloat(days),
-										})}
+										className={cn(
+											"flex-1 border-slate-200 dark:border-slate-700",
+											{
+												"bg-gradient-to-r from-lime-500 hover:text-slate-900 to-yellow-500 text-slate-900 border-transparent":
+													lockDuration === parseFloat(days),
+												"bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800":
+													lockDuration !== parseFloat(days),
+											}
+										)}
 										onClick={() => (
 											setLockDuration(parseFloat(days)),
 											setShowCustomInput(lockDurationCustom ? true : false),

@@ -38,24 +38,27 @@ const Performance = () => {
 		{ date: "Jan 7", apy: 10.0 },
 	]);
 
-	const [activeTab, setActiveTab] = useState<string>("tvl");
+	const [activeTab, setActiveTab] = useState<string>("apy");
 	const { userPositions } = usePositions();
 	const { isConnected } = useAppKitAccount();
 	const { open } = useAppKit();
 
 	useEffect(() => {
 		if (activeTab === "tvl" && userPositions) {
-			setChartData(() => {
-				return userPositions.map((position) => {
-					const startTime = new Date(position.startTime * 1000);
-					const formattedDate = startTime.toLocaleDateString("en-US", {
-						year: "numeric",
-						month: "long",
-						day: "numeric",
-					});
-
-					return { date: formattedDate, tvl: position.amount };
+			const newChartData = userPositions.map((position) => {
+				const startTime = new Date(position.startTime * 1000);
+				const formattedDate = startTime.toLocaleDateString("en-US", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
 				});
+				return { date: formattedDate, tvl: position.amount };
+			});
+			// Only update if data actually changed
+			setChartData((prev) => {
+				const prevString = JSON.stringify(prev);
+				const newString = JSON.stringify(newChartData);
+				return prevString !== newString ? newChartData : prev;
 			});
 		} else if (activeTab === "apy") {
 			setChartData([
@@ -78,7 +81,7 @@ const Performance = () => {
 				{ date: "Jan 7", rewards: 0 },
 			]);
 		}
-	}, [activeTab, userPositions]);
+	}, [activeTab]);
 
 	return (
 		<Card className="col-span-2 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 backdrop-blur-sm shadow-sm">

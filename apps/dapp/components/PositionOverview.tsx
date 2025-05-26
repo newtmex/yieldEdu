@@ -51,7 +51,7 @@ const PositionOverview = ({
 	};
 
 	return (
-		<Card className="bg-white md:col-span-2 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 backdrop-blur-sm shadow-sm">
+		<Card className="bg-white flex-1 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/50 backdrop-blur-sm shadow-sm">
 			<Tabs className="flex flex-col h-full" defaultValue="overview">
 				<CardHeader>
 					<div className="flex gap-2 flex-wrap justify-between items-center">
@@ -67,24 +67,24 @@ const PositionOverview = ({
 						<div className="space-y-6 h-full">
 							<div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4">
 								<div className="bg-slate-100 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500">
-									<p className="text-md text-slate-400">Deposited</p>
-									<p className="text-xl font-bold">
+									<p className="text-sm text-slate-400">Deposited</p>
+									<p className="text-md font-bold">
 										{userPosition?.amount
 											? `${userPosition.amount} FYT`
 											: "N/A"}
 									</p>
 								</div>
 								<div className="bg-slate-100 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500">
-									<p className="text-md  text-slate-400">Current Yield</p>
-									<p className="text-xl font-bold">
+									<p className="text-sm text-slate-400">Current Yield</p>
+									<p className="text-md font-bold">
 										{userPosition?.expectedYield
 											? `${Number(userPosition.expectedYield).toFixed(8)} FYT`
 											: "N/A"}
 									</p>
 								</div>
 								<div className="bg-slate-100 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500">
-									<p className="text-md text-slate-400">Lock Duration</p>
-									<p className="text-xl font-bold">
+									<p className="text-sm text-slate-400">Lock Duration</p>
+									<p className="text-md font-bold">
 										{userPosition?.lockDuration !== undefined
 											? `${Math.floor(
 													Number(userPosition.lockDuration) / (60 * 60 * 24)
@@ -99,8 +99,8 @@ const PositionOverview = ({
 									</p>
 								</div>
 								<div className="bg-slate-100 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500">
-									<p className="text-md text-slate-400">Time Left</p>
-									<p className="text-xl font-bold">
+									<p className="text-sm text-slate-400">Time Left</p>
+									<p className="text-md font-bold">
 										{userPosition?.timeLeft !== undefined
 											? `${userPosition.timeLeft} ${
 													userPosition.timeLeft === 1 ? "day" : "days"
@@ -116,12 +116,12 @@ const PositionOverview = ({
 										onClick={handlePrevPosition}
 										type="button"
 										className={cn(
-											"flex px-3 text-md disabled:bg-gray-400  bg-lime-700 enabled:hover:bg-lime-600 enabled:active:bg-lime-600/90 text-white border-none w-fit rounded-md"
+											"flex px-3 text-sm disabled:bg-gray-400  bg-lime-700 enabled:hover:bg-lime-600 enabled:active:bg-lime-600/90 text-white border-none w-fit rounded-md"
 										)}
 									>
 										Previous Position
 									</Button>
-									<span className="text-lime-600 font-semibold dark:text-green-400">
+									<span className="text-lime-600 text-sm font-semibold dark:text-green-400">
 										Position {currentPositionIndex + 1} of{" "}
 										{userPositions.length}
 									</span>
@@ -129,7 +129,7 @@ const PositionOverview = ({
 										onClick={handleNextPosition}
 										type="button"
 										className={cn(
-											"flex px-3 text-md disabled:bg-gray-400  bg-lime-700 enabled:hover:bg-lime-600 enabled:active:bg-lime-600/90 text-white border-none w-fit rounded-md"
+											"flex px-3 text-sm disabled:bg-gray-400  bg-lime-700 enabled:hover:bg-lime-600 enabled:active:bg-lime-600/90 text-white border-none w-fit rounded-md"
 										)}
 									>
 										Next Position
