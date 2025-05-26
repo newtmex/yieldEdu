@@ -23,6 +23,7 @@ interface ISToken is ISFTUpgradeable {
      */
     struct TokenAttributes {
         TokenType tokenType;
+        uint256[50] __gap; // Reserved for future variables
     }
 
     /// @notice Mints a new sToken with specified attributes to a given address.
