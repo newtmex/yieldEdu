@@ -76,10 +76,7 @@ const Page = () => {
 									Complete more lessons to increase your APY
 								</p>
 								<Link href={"/dashboard/learn"}>
-									<Button
-										variant="outline"
-										className="w-full border-lime-300 dark:border-lime-500/50 text-lime-700 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-500/10"
-									>
+									<Button variant="secondary" className="w-full">
 										<Book className="w-4 h-4 mr-2" />
 										Go to Learning Center
 									</Button>

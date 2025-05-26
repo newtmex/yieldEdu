@@ -2,7 +2,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { ShieldCheck, Percent, Vault, Coins } from "lucide-react";
-// import DepositForm from "@/components/DepositForm";
 
 import { useBalance, useReadContract } from "wagmi";
 import { useAppKitAccount } from "@reown/appkit/react";
@@ -25,7 +24,6 @@ const FixedYieldDashboard = () => {
 		null
 	);
 	const [showWithdrawModal, setShowWithDrawModal] = useState(false);
-	// const [showModal, setShowModal] = useState(false);
 	const results = useBalance({
 		address: address as unknown as `0x${string}`,
 		token: YieldTokenAddress,
@@ -46,25 +44,18 @@ const FixedYieldDashboard = () => {
 
 	return (
 		<>
-			{/* <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            
-                            <div className="flex gap-4">
-                                <FaucetButton userAddress={address} />
-                            </div>
-                        </div> */}
-			{/* className="" */}
 			<AchievementBanner />
-			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+			<div className="my-4 grid grid-cols-2 [@media(min-width:1200px)]:grid-cols-4 gap-4">
 				<Card className="relative overflow-hidden dark:bg-gradient-to-r from-slate-800/50 to-slate-800/30 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
 					<div className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-yellow-400/10 dark:opacity-10"></div>
-					<CardContent className="p-6">
+					<CardContent>
 						<div className="flex items-center justify-between">
 							<div className="p-3 bg-lime-500/20 rounded-xl">
-								<ShieldCheck className="size-8 text-lime-400" />{" "}
+								<ShieldCheck className="size-5 text-lime-400" />{" "}
 							</div>
 							<div>
 								<p className="text-md text-slate-400">TVL</p>
-								<p className="text-4xl font-bold text-lime-400">
+								<p className="text-3xl font-bold text-lime-400">
 									{parseFloat(formattedTVL).toFixed(2)} FYT
 								</p>
 							</div>
@@ -73,14 +64,14 @@ const FixedYieldDashboard = () => {
 				</Card>
 				<Card className="relative overflow-hidden dark:bg-gradient-to-r from-slate-800/50 to-slate-800/30 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
 					<div className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-yellow-400/10 dark:opacity-10"></div>
-					<CardContent className="p-6">
+					<CardContent>
 						<div className="flex items-center justify-between">
 							<div className="p-3 bg-lime-500/20 rounded-xl">
-								<Percent className="size-8 text-lime-400" />
+								<Percent className="size-5 text-lime-400" />
 							</div>
 							<div>
 								<p className="text-md text-slate-400">Base APY</p>
-								<p className="text-4xl font-bold text-lime-400">{BASE_APY}%</p>
+								<p className="text-3xl font-bold text-lime-400">{BASE_APY}%</p>
 							</div>
 						</div>
 					</CardContent>
@@ -88,15 +79,15 @@ const FixedYieldDashboard = () => {
 				<Card className="relative overflow-hidden dark:bg-gradient-to-r from-slate-800/50 to-slate-800/30 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
 					<div className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-yellow-400/10 dark:opacity-10"></div>
 
-					<CardContent className="p-6">
+					<CardContent>
 						<div className="flex items-center justify-between">
 							<div className="p-3 bg-lime-500/20 rounded-xl">
-								<Vault className="size-8 text-lime-400" />
+								<Vault className="size-5 text-lime-400" />
 							</div>
 
 							<div>
 								<p className="text-md text-slate-400">Total Stakers</p>
-								<p className="text-4xl font-bold text-lime-400">
+								<p className="text-3xl font-bold text-lime-400">
 									{totalStakers ? Number(totalStakers).toString() : "0"}
 								</p>
 							</div>
@@ -105,14 +96,14 @@ const FixedYieldDashboard = () => {
 				</Card>
 				<Card className="relative overflow-hidden dark:bg-gradient-to-r from-slate-800/50 to-slate-800/30 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
 					<div className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-yellow-400/10 dark:opacity-10"></div>
-					<CardContent className="p-6">
+					<CardContent>
 						<div className="flex items-center justify-between">
 							<div className="p-3 bg-lime-500/20 rounded-xl">
-								<Coins className="size-8 text-lime-400" />
+								<Coins className="size-5 text-lime-400" />
 							</div>
 							<div>
-								<p className="text-md text-slate-400">Token Balance (YDU)</p>
-								<p className="text-4xl font-bold text-lime-400">
+								<p className="text-md text-slate-400">Balance (YDU)</p>
+								<p className="text-3xl font-bold text-lime-400">
 									{results?.data?.formatted
 										? parseFloat(results.data.formatted).toFixed(2)
 										: "0.00"}
@@ -123,8 +114,8 @@ const FixedYieldDashboard = () => {
 				</Card>
 			</div>
 
-			<div className="grid grid-cols-1 xl:grid-cols-3 lg:space-y-0  xl:gap-6 h-auto">
-				<StakingCard />
+			<div className="flex flex-col md:flex-row flex-wrap gap-4 h-auto">
+				<StakingCard className="flex-1 w-full" />
 				<PositionOverview
 					positions={positions}
 					setShowWithDrawModal={setShowWithDrawModal}
