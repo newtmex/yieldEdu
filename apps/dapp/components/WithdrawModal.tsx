@@ -21,7 +21,7 @@ const WithdrawModal = ({
 	modalType: "withdraw" | "unstake" | null;
 }) => {
 	const searchParams = useSearchParams();
-	const positionId = searchParams.get("positionId");
+	const positionId = searchParams?.get("positionId") as string;
 	const position = positions.find((p) => Number(p.id) === Number(positionId));
 
 	return (

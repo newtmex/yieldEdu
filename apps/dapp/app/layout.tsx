@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import WagmiContextProvider from "@/components/WagmiContextProvider";
 import { headers } from "next/headers";
@@ -8,9 +8,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import GlobalContextProvider from "@/context/globalContext";
 import { yieldEduMetadata } from "@/utils/metadata";
 import NextTopLoader from "nextjs-toploader";
-const spaceMono = Space_Grotesk({
+const poppins = Poppins({
 	variable: "--font-space-mono",
-	subsets: ["latin", "latin-ext", "vietnamese"],
+	subsets: ["latin", "latin-ext"],
 	weight: ["300", "400", "500", "600", "700"],
 });
 
@@ -26,9 +26,7 @@ export default async function RootLayout({
 
 	return (
 		<html lang="en" suppressHydrationWarning>
-			<body
-				className={`${spaceMono.variable} antialiased bg-slate-50 dark:bg-[#0A0B1E]`}
-			>
+			<body className={`${poppins.variable} antialiased bg-background`}>
 				<NextTopLoader
 					showSpinner={false}
 					color="#84cc16"

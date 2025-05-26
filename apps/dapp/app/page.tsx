@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-	ArrowRight,
-	BookOpen,
-	GraduationCap,
-	Trophy,
-	Users,
-} from "lucide-react";
+import { BookOpen, GraduationCap, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,11 +16,15 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { cn } from "@/lib/utils";
 import { featuresData } from "@/data/features";
+import LoginButton from "../components/LoginButton";
+import { useOCAuth } from "@opencampus/ocid-connect-js";
+// import { useOCAuth } from "@opencampus/ocid-connect-js";
 
 export default function Page() {
 	const { theme } = useTheme();
 	const [color, setColor] = useState("#ffffff");
 	const [userType, setUserType] = useState<"student" | "educator">("student");
+	const { authState } = useOCAuth();
 
 	useEffect(() => {
 		setColor(theme === "dark" ? "#a3e635" : "#000000");
@@ -41,8 +39,6 @@ export default function Page() {
 			theme === "light" ? dashboardWhiteImage : dashboardImage
 		);
 	}, [theme]);
-
-	const handleOCIDConnect = () => {};
 
 	return (
 		<div className="min-h-screen bg-slate-50 dark:bg-[#0A0B1E] text-slate-900 dark:text-slate-100 transition-colors duration-200">
@@ -86,53 +82,41 @@ export default function Page() {
 									</h1>
 									<p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl">
 										YieldEdu combines education with real-world DeFi staking,
-										allowing you to earn while you learn. Connect with OCID to
-										start your journey.
+										allowing you to earn while you learn.
 									</p>
 
 									<div className="space-y-6">
-										<Tabs
-											defaultValue={userType}
-											className="w-full max-w-md"
-											onValueChange={(value) =>
-												setUserType(value as "student" | "educator")
-											}
-										>
-											<TabsList className="grid w-full grid-cols-2 dark:bg-slate-800 bg-slate-200">
-												<TabsTrigger
-													disabled
-													value="educator"
-													className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-yellow-500 data-[state=active]:text-white dark:data-[state=active]:text-slate-900"
-												>
-													<BookOpen className="w-4 h-4 mr-2" />
-													Educator
-												</TabsTrigger>
-												<TabsTrigger
-													value="student"
-													className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-lime-500 data-[state=active]:to-lime-500 data-[state=active]:text-white dark:data-[state=active]:text-slate-900"
-												>
-													<GraduationCap className="w-4 h-4 mr-2" />
-													Student
-												</TabsTrigger>
-											</TabsList>
-										</Tabs>
+										{!authState?.isAuthenticated && (
+											<Tabs
+												defaultValue={userType}
+												className="w-full max-w-md"
+												onValueChange={(value) =>
+													setUserType(value as "student" | "educator")
+												}
+											>
+												<TabsList className="grid w-full grid-cols-2 dark:bg-slate-800 bg-slate-200">
+													<TabsTrigger
+														disabled
+														value="educator"
+														className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-yellow-500 data-[state=active]:text-white dark:data-[state=active]:text-slate-900"
+													>
+														<BookOpen className="w-4 h-4 mr-2" />
+														Educator
+													</TabsTrigger>
+													<TabsTrigger
+														value="student"
+														className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-lime-500 data-[state=active]:to-lime-500 data-[state=active]:text-white dark:data-[state=active]:text-slate-900"
+													>
+														<GraduationCap className="w-4 h-4 mr-2" />
+														Student
+													</TabsTrigger>
+												</TabsList>
+											</Tabs>
+										)}
 
 										<div className="flex flex-col sm:flex-row gap-4">
 											{userType === "student" ? (
-												<Button
-													onClick={handleOCIDConnect}
-													size="lg"
-													className={cn(
-														"text-white dark:text-slate-900 font-semibold hover:opacity-90 px-8",
-														{
-															"bg-gradient-to-r from-lime-500 to-lime-600":
-																userType === "student",
-														}
-													)}
-												>
-													Connect with OCID
-													<ArrowRight className="ml-2 h-5 w-5" />
-												</Button>
+												<LoginButton userType={userType} />
 											) : (
 												<Button
 													disabled
@@ -150,7 +134,7 @@ export default function Page() {
 											)}
 										</div>
 
-										{userType == "student" && (
+										{userType == "student" && !authState?.isAuthenticated && (
 											<p className="text-sm text-slate-500 dark:text-slate-400">
 												Secure authentication via Open Campus ID (OCID)
 											</p>
@@ -313,14 +297,7 @@ export default function Page() {
 							viewport={{ once: true }}
 							className="mt-16 text-center"
 						>
-							<Button
-								onClick={handleOCIDConnect}
-								size="lg"
-								className="bg-gradient-to-r from-lime-500 to-yellow-500 text-slate-900 font-semibold hover:opacity-90 px-8"
-							>
-								Get started now
-								<ArrowRight className="ml-2 h-5 w-5" />
-							</Button>
+							<LoginButton userType="student" />
 						</motion.div>
 					</div>
 				</section>
@@ -403,14 +380,10 @@ export default function Page() {
 								</p>
 
 								<div className="flex flex-col sm:flex-row gap-4 justify-center">
-									<Button
-										onClick={handleOCIDConnect}
-										size="lg"
+									<LoginButton
+										userType="student"
 										className="bg-white text-slate-900 font-semibold hover:bg-white/60 px-8"
-									>
-										<GraduationCap className="mr-2 h-5 w-5" />
-										Join as Student
-									</Button>
+									/>
 								</div>
 							</motion.div>
 						</div>

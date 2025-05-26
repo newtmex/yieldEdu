@@ -6,6 +6,7 @@ import { AccountSettings } from "./components/account-settings";
 import { AppearanceSettings } from "./components/appearance-settings";
 import { yieldEduMetadata } from "@/utils/metadata";
 import { Metadata } from "next";
+import { Lock } from "lucide-react";
 
 export const metadata: Metadata = {
 	...yieldEduMetadata,
@@ -25,10 +26,14 @@ export default function SettingsPage() {
 
 				<Separator />
 
-				<Tabs defaultValue="profile" className="w-full">
+				<Tabs defaultValue="appearance" className="w-full">
 					<TabsList className="grid w-full grid-cols-2 md:grid-cols-5 lg:w-auto">
-						<TabsTrigger value="profile">Profile</TabsTrigger>
-						<TabsTrigger value="account">Account</TabsTrigger>
+						<TabsTrigger disabled value="profile" className="flex gap-2">
+							Profile <Lock size={15} />
+						</TabsTrigger>
+						<TabsTrigger disabled value="account" className="flex gap-2">
+							Account <Lock size={15} />
+						</TabsTrigger>
 						{/* <TabsTrigger value="security">Security</TabsTrigger> */}
 						<TabsTrigger value="appearance">Appearance</TabsTrigger>
 					</TabsList>

@@ -45,7 +45,7 @@ const Analytics = ({ positions }: AnalyticsProps) => {
 	}
 
 	return (
-		<Card className="bg-slate-200 dark:bg-slate-800/50 border-none">
+		<Card className="bg-slate-100 dark:bg-slate-900/50 border-none">
 			<CardContent className="px-2 sm:p-6">
 				<ChartContainer
 					config={chartConfig}
@@ -59,13 +59,12 @@ const Analytics = ({ positions }: AnalyticsProps) => {
 							right: 12,
 						}}
 					>
-						<CartesianGrid vertical={false} />
+						<CartesianGrid vertical={false} strokeOpacity={0.2} />
 						<XAxis
 							dataKey="date"
 							tickLine={false}
 							axisLine={false}
 							tickMargin={8}
-							minTickGap={32}
 							tickFormatter={(value) => {
 								const date = new Date(value);
 								return date.toLocaleDateString("en-US", {
@@ -73,6 +72,10 @@ const Analytics = ({ positions }: AnalyticsProps) => {
 									day: "numeric",
 								});
 							}}
+							fontSize={12}
+							fill="#ffffff"
+							fillRule="evenodd"
+							stroke="#ffffff"
 						/>
 						<ChartTooltip
 							content={

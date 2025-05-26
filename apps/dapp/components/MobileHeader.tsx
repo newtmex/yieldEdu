@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { Moon, Sun, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Feedback from "./Feedback";
+import Link from "next/link";
 
 const MobileHeader = ({
 	setTheme,
@@ -56,30 +57,30 @@ const MobileHeader = ({
 				</Button>
 
 				<nav className="flex flex-col items-center gap-6">
-					<a
+					<Link
 						href="/about-us"
 						className="text-slate-600 dark:text-slate-300 hover:text-lime-500 dark:hover:text-lime-500 transition-colors"
 					>
 						About
-					</a>
-					<a
+					</Link>
+					<Link
 						href="/features"
 						className="text-slate-600 dark:text-slate-300 hover:text-lime-500 dark:hover:text-lime-500 transition-colors"
 					>
 						Features
-					</a>
-					<a
+					</Link>
+					<Link
 						href="/blogs"
 						className="text-slate-600 dark:text-slate-300 hover:text-lime-500 dark:hover:text-lime-500 transition-colors"
 					>
 						Blogs
-					</a>
-					<a
+					</Link>
+					<Link
 						href="/contact-support"
 						className="text-slate-600 dark:text-slate-300 hover:text-lime-500 dark:hover:text-lime-500 transition-colors"
 					>
 						Support
-					</a>
+					</Link>
 				</nav>
 				<Feedback>
 					<Button
@@ -89,12 +90,14 @@ const MobileHeader = ({
 						Feedback
 					</Button>
 				</Feedback>
-				<a
-					href="/dashboard"
-					className="text-slate-600 dark:text-lime-400 hover:text-lime-500 dark:hover:text-lime-500 transition-colors"
-				>
-					Dashboard
-				</a>
+				<Link href="/dashboard" target="_blank">
+					<Button
+						className=" bg-lime-400 hover:bg-lime-400 dark:hover:bg-lime-400/80 text-gray-900 hover:text-slate-900 font-semibold transition-colors"
+						variant="outline"
+					>
+						Launch App
+					</Button>
+				</Link>
 
 				{/* <OCIDLoginButton /> */}
 			</div>
