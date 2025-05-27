@@ -25,9 +25,8 @@ contract STokenTest is STokenFixture {
     }
 
     function testMinterCanMintLearnerToken() public {
-        ISToken.TokenAttributes memory attr = ISToken.TokenAttributes({
-            tokenType: ISToken.TokenType.Learner
-        });
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
 
         vm.prank(minter);
         uint256 tokenId = sToken.sTokenMint(user, 10, attr);
@@ -36,9 +35,8 @@ contract STokenTest is STokenFixture {
     }
 
     function testMintScholarToken() public {
-        ISToken.TokenAttributes memory attr = ISToken.TokenAttributes({
-            tokenType: ISToken.TokenType.Scholar
-        });
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Scholar;
 
         vm.prank(minter);
         uint256 tokenId = sToken.sTokenMint(user, 5, attr);
@@ -47,9 +45,8 @@ contract STokenTest is STokenFixture {
     }
 
     function testNonMinterCannotMint() public {
-        ISToken.TokenAttributes memory attr = ISToken.TokenAttributes({
-            tokenType: ISToken.TokenType.Learner
-        });
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
 
         vm.expectRevert();
         sToken.sTokenMint(user, 1, attr);

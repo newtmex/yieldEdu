@@ -6,6 +6,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 import {Staking} from "../../contracts/staking/Staking.sol";
 import {IdEDU} from "../../contracts/external/IdEDU.sol";
+import {WEDU} from "../../contracts/external/WEDU.sol";
 import {ISToken} from "../../contracts/tokens/ISToken.sol";
 
 import {YLDTokenFixture} from "../tokens/YLDTokenFixture.sol";
@@ -27,22 +28,25 @@ contract MockDEDU is IdEDU, ERC20 {
 contract StakingTest is YLDTokenFixture, STokenFixture {
     Staking public staking;
     MockDEDU public dedu;
+    WEDU public wedu;
 
     address public user = makeAddr("user");
 
     function setUp() public {
         dedu = new MockDEDU();
+        wedu = new WEDU();
 
         Staking impl = new Staking();
         bytes memory initData = abi.encodeWithSelector(
             Staking.initialize.selector,
+            address(wedu),
             address(dedu),
             address(sToken),
             address(yld),
             owner
         );
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
-        staking = Staking(address(proxy));
+        staking = Staking(payable(address(proxy)));
 
         // Grant MINTER_ROLE to staking contract
         yld.grantRole(yld.MINTER_ROLE(), address(staking));
@@ -77,6 +81,23 @@ contract StakingTest is YLDTokenFixture, STokenFixture {
         assertEq(yld.totalSupply(), ethAmount);
     }
 
+    function testStakeWEDUAndMint() public {
+        uint256 ethAmount = 5 ether;
+        vm.deal(user, ethAmount);
+
+        vm.startPrank(user);
+
+        wedu.deposit{value: ethAmount}();
+        wedu.approve(address(staking), ethAmount);
+        staking.stakeWEDU(ISToken.TokenType.Scholar, ethAmount);
+
+        vm.stopPrank();
+
+        assertEq(dedu.balanceOf(address(staking)), ethAmount);
+        assertEq(sToken.totalSupply(), ethAmount);
+        assertEq(yld.totalSupply(), ethAmount);
+    }
+
     function testRevertOnSupplyMismatch() public {
         // Force mismatch by minting YLD ignoring sToken supply
         vm.prank(address(staking));
@@ -96,11 +117,11 @@ contract StakingTest is YLDTokenFixture, STokenFixture {
         // YLD = 5, sToken = 5, dEDU = 4 (insufficient)
         vm.startPrank(address(staking));
         yld.mint(address(0x1), 5 ether);
-        sToken.sTokenMint(
-            address(0x1),
-            5 ether,
-            ISToken.TokenAttributes(ISToken.TokenType.Learner)
-        );
+
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
+
+        sToken.sTokenMint(address(0x1), 5 ether, attr);
         vm.stopPrank();
 
         dedu.mint(address(staking), 4 ether);

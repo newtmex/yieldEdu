@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "../tokens/ISToken.sol";
 import "../tokens/IYLDToken.sol";
 import "../external/IdEDU.sol";
+import "../external/WEDU.sol";
 
 /// @title Staking Contract
 /// @notice Enables staking of native ETH or dEDU ERC-20 to mint sTokens and YLD tokens.
@@ -29,6 +30,7 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     /// @custom:storage-location erc7201:staking.main
     struct StakingStorage {
+        WEDU wedu;
         IdEDU dEDUToken;
         ISToken sToken;
         IYLDToken yldToken;
@@ -69,6 +71,7 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     /// @param _yld Address of the YLD ERC-20 reward token.
     /// @param owner Address that will be granted ownership rights.
     function initialize(
+        address _wedu,
         address _dedu,
         address _sToken,
         address _yld,
@@ -78,6 +81,7 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
 
         StakingStorage storage $ = _getStakingStorage();
+        $.wedu = WEDU(payable(_wedu));
         $.dEDUToken = IdEDU(_dedu);
         $.sToken = ISToken(_sToken);
         $.yldToken = IYLDToken(_yld);
@@ -94,32 +98,49 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
         $.dEDUToken.receiveFor{value: msg.value}(address(this));
 
-        _mintStakePair(
-            _msgSender(),
-            ISToken.TokenAttributes({tokenType: tokenType})
-        );
+        _mintStakePair(_msgSender(), tokenType);
     }
 
     /// @notice Stake existing dEDU ERC-20 tokens.
     /// @param tokenType The type of sToken to mint.
     /// @param amount The amount of dEDU to transfer and stake.
+    function stakeWEDU(ISToken.TokenType tokenType, uint256 amount) external {
+        StakingStorage storage $ = _getStakingStorage();
+        address from = _msgSender();
+
+        // Transfer WEDU from sender to this contract
+        $.wedu.transferFrom(from, address(this), amount);
+
+        // Convert WEDU to ETH (withdraw) and deposit to dEDU
+        $.wedu.withdraw(amount);
+        $.dEDUToken.receiveFor{value: amount}(address(this));
+
+        _mintStakePair(from, tokenType);
+    }
+
+    /// @notice Stake existing WEDU ERC-20 tokens.
+    /// @param tokenType The type of sToken to mint.
+    /// @param amount The amount of WEDU to transfer and stake.
     function stakeDEDU(ISToken.TokenType tokenType, uint256 amount) external {
         StakingStorage storage $ = _getStakingStorage();
 
         address from = _msgSender();
         $.dEDUToken.transferFrom(from, address(this), amount);
 
-        _mintStakePair(from, ISToken.TokenAttributes({tokenType: tokenType}));
+        _mintStakePair(from, tokenType);
     }
 
     /// @dev Internal function that mints a pair of sToken and YLD tokens for a user.
     /// @param to Recipient of the minted tokens.
-    /// @param attributes Metadata for the sToken (e.g., token type).
+    /// @param tokenType The type of sToken to mint (e.g., Learner or Scholar).
     /// @return tokenId The ID of the newly minted sToken.
     function _mintStakePair(
         address to,
-        ISToken.TokenAttributes memory attributes
+        ISToken.TokenType tokenType
     ) internal returns (uint256 tokenId) {
+        ISToken.TokenAttributes memory attributes;
+        attributes.tokenType = tokenType;
+
         StakingStorage storage $ = _getStakingStorage();
 
         uint256 dEDUBalance = $.dEDUToken.balanceOf(address(this));
@@ -150,4 +171,8 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}
+
+    receive() external payable {
+        // Accept ETH deposits directly
+    }
 }
