@@ -106,7 +106,7 @@ contract StakingTest is YLDTokenFixture, STokenFixture {
         uint256 tokenId,
         uint256 shares,
         uint256 amount
-    ) internal view {
+    ) internal {
         assertEq(sToken.balanceOf(user, tokenId), shares);
         assertEq(yld.balanceOf(user), shares);
 
@@ -116,5 +116,19 @@ contract StakingTest is YLDTokenFixture, STokenFixture {
         assertEq(yld.totalSupply(), shares);
 
         assertEq(sToken.totalSupply(), shares);
+
+        //  Test un-staking
+
+        vm.startPrank(user);
+        yld.approve(address(staking), shares);
+        staking.unStake(tokenId, shares);
+        vm.stopPrank();
+
+        assertEq(sToken.balanceOf(user, tokenId), 0);
+        assertEq(yld.balanceOf(user), 0);
+
+        assertEq(dedu.balanceOf(address(staking)), 0);
+
+        assertGe(dedu.balanceOf(address(yld)), 0);
     }
 }

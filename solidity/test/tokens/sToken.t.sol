@@ -75,6 +75,39 @@ contract STokenTest is STokenFixture {
             IAccessControl.AccessControlUnauthorizedAccount.selector
         );
         sToken.sTokenMint(user, 1, attr);
+
+        address userWithTransferRole = makeAddr("userWithTransferRole");
+        sToken.grantRole(sToken.TRANSFER_ROLE(), userWithTransferRole);
+        vm.prank(userWithTransferRole);
+        vm.expectPartialRevert(
+            IAccessControl.AccessControlUnauthorizedAccount.selector
+        );
+        sToken.sTokenMint(user, 1, attr);
+    }
+
+    function testNonMinterCannotBurn() public {
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
+
+        vm.prank(minter);
+        uint256 tokenId = sToken.sTokenMint(user, 10, attr);
+
+        vm.expectPartialRevert(
+            IAccessControl.AccessControlUnauthorizedAccount.selector
+        );
+        sToken.sTokenBurn(user, tokenId, 10);
+
+        address userWithTransferRole = makeAddr("userWithTransferRole");
+        sToken.grantRole(sToken.TRANSFER_ROLE(), userWithTransferRole);
+        vm.prank(userWithTransferRole);
+        vm.expectPartialRevert(
+            IAccessControl.AccessControlUnauthorizedAccount.selector
+        );
+        sToken.sTokenBurn(user, tokenId, 10);
+
+        vm.prank(minter);
+        sToken.sTokenBurn(user, tokenId, 10);
+        assertEq(sToken.balanceOf(user, tokenId), 0);
     }
 
     function testSFTTransferMustBeAllAmount() public {
@@ -96,26 +129,36 @@ contract STokenTest is STokenFixture {
         vm.startPrank(user);
 
         // test transferring less than the full amount
-        vm.expectRevert(
-            abi.encodeWithSignature("MustTransferAllSFTAmount(uint256)", 10)
-        );
+        _expectTransferRevert(10);
         sToken.safeTransferFrom(user, someAddr, learnerId, 5, "");
-        vm.expectRevert(
-            abi.encodeWithSignature("MustTransferAllSFTAmount(uint256)", 5)
-        );
+        _expectTransferRevert(5);
         sToken.safeTransferFrom(user, userWithTransferRole, scholarId, 3, "");
 
         // test transferring more than the full amount
-        vm.expectRevert(
-            abi.encodeWithSignature("MustTransferAllSFTAmount(uint256)", 10)
-        );
+        _expectTransferRevert(10);
         sToken.safeTransferFrom(user, someAddr, learnerId, 15, "");
-        vm.expectRevert(
-            abi.encodeWithSignature("MustTransferAllSFTAmount(uint256)", 5)
-        );
+        _expectTransferRevert(5);
         sToken.safeTransferFrom(user, userWithTransferRole, scholarId, 10, "");
 
         vm.stopPrank();
+
+        // test preventing transfer from a user not having sToken at nonce
+        address randomUser = makeAddr("randomUser");
+        sToken.grantRole(sToken.TRANSFER_ROLE(), randomUser);
+        vm.startPrank(randomUser);
+
+        _expectTransferRevert(0);
+        sToken.safeTransferFrom(randomUser, someAddr, learnerId, 10, "");
+        _expectTransferRevert(0);
+        sToken.safeTransferFrom(randomUser, someAddr, scholarId, 5, "");
+
+        vm.stopPrank();
+    }
+
+    function _expectTransferRevert(uint256 amount) internal {
+        vm.expectRevert(
+            abi.encodeWithSignature("MustTransferAllSFTAmount(uint256)", amount)
+        );
     }
 
     function testOwnerIsAdmin() public view {

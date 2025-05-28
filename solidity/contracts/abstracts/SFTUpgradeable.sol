@@ -204,7 +204,6 @@ abstract contract SFTUpgradeable is
      * - Increments the internal nonce counter to generate a unique token ID.
      * - Associates the provided `attributes` with the new token ID.
      * - Mints `amount` tokens of the new ID to the `to` address.
-     * - Updates the recipient's set of owned nonces.
      *
      * Emits a {TransferSingle} event via the ERC1155 `_mint` function.
      *
@@ -228,8 +227,6 @@ abstract contract SFTUpgradeable is
         $.tokenAttributes[nonce] = attributes;
 
         _mint(to, nonce, amount, "");
-
-        $.addressToNonces[to].add(nonce);
     }
 
     // ================================

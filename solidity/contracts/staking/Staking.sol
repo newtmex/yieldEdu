@@ -25,6 +25,42 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     error InsufficientDEDU();
 
     // -------------------------------------------------------------
+    //                            EVENTS
+    // -------------------------------------------------------------
+
+    /// @notice Emitted when a user unstakes sTokens and redeems their YLD tokens.
+    /// @param user The address receiving values
+    /// @param tokenId The ID of the sToken being burned.
+    /// @param shares The number of shares burned (both sToken and YLD).
+    /// @param withdrawnAmount Total amount of dEDU redeemed and withdrawn.
+    /// @param userAccrual The amount sent to the user (principal + 30% of yield).
+    /// @param protocolPloughBack The yield amount retained by the protocol (70%).
+    event Unstaked(
+        address indexed user,
+        uint256 indexed tokenId,
+        uint256 shares,
+        uint256 withdrawnAmount,
+        uint256 userAccrual,
+        uint256 protocolPloughBack
+    );
+
+    /// @notice Emitted when a user stakes ETH, WEDU, or dEDU and receives sToken and YLD tokens.
+    /// @dev Captures the staking action, including the staker address, amount staked (in dEDU-equivalent),
+    ///      the type and ID of the sToken minted, and the number of YLD shares issued.
+    /// @param user The address of the user recieving the stake.
+    /// @param tokenId The ID of the sToken minted to represent the staked position.
+    /// @param amount The amount of asset staked, denominated in dEDU-equivalent units.
+    /// @param shares The number of YLD shares minted to represent yield entitlement.
+    /// @param tokenType The type of sToken issued (e.g., Learner or Scholar).
+    event Staked(
+        address indexed user,
+        uint256 indexed tokenId,
+        uint256 amount,
+        uint256 shares,
+        ISToken.TokenType tokenType
+    );
+
+    // -------------------------------------------------------------
     //                         STORAGE LAYOUT
     // -------------------------------------------------------------
 
@@ -142,11 +178,18 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         return _mintStakePair(from, tokenType);
     }
 
-    /// @dev Internal function that mints a pair of sToken and YLD tokens for a user.
-    /// @param to Recipient of the minted tokens.
-    /// @param tokenType The type of sToken to mint (e.g., Learner or Scholar).
-    /// @return tokenId The ID of the newly minted sToken.
-    /// @return shares The number of YLD shares minted.
+    /**
+     * @dev Mints an sToken and corresponding YLD shares for the specified user and token type.
+     *
+     * Requirements:
+     * - Contract must hold dEDU prior to minting.
+     * - sToken and YLD total supplies must remain synchronized.
+     *
+     * @param to Address receiving the sToken and YLD tokens.
+     * @param tokenType Enum representing the sToken type (e.g., Learner, Scholar).
+     * @return tokenId ID of the newly minted sToken.
+     * @return shares Amount of YLD shares minted.
+     */
     function _mintStakePair(
         address to,
         ISToken.TokenType tokenType
@@ -157,9 +200,7 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         StakingStorage storage $ = _getStakingStorage();
 
         uint256 assets = $.dEDUToken.balanceOf(address(this));
-        if (assets == 0) {
-            revert InsufficientDEDU();
-        }
+        _assertSufficientDEDU(assets);
 
         shares = $.yldToken.deposit(assets, to);
         tokenId = $.sToken.sTokenMint(to, shares, attributes);
@@ -167,14 +208,81 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         if ($.yldToken.totalSupply() != $.sToken.totalSupply()) {
             revert SupplyMismatch();
         }
+
+        emit Staked(to, tokenId, assets, shares, tokenType);
+    }
+
+    /**
+     * @dev Ensures that the contract holds a non-zero amount of dEDU.
+     * Reverts with {InsufficientDEDU} if balance is zero.
+     * @param amount The dEDU balance to check.
+     */
+    function _assertSufficientDEDU(uint256 amount) internal pure {
+        if (amount == 0) {
+            revert InsufficientDEDU();
+        }
+    }
+
+    /**
+     * @notice Unstakes a previously staked position by burning the user's sToken and redeeming their YLD shares.
+     * @dev This function:
+     *  - Burns the caller’s sToken and YLD tokens.
+     *  - Computes the ETH-equivalent redemption value using the dEDU balance.
+     *  - Distributes 30% of the yield to the user, and ploughs back 70% into the protocol.
+     *  - Transfers both portions as dEDU (not raw ETH).
+     *
+     * Requirements:
+     * - Caller must own the sToken position.
+     * - `shares` must equal the user's YLD and sToken amounts for the given `tokenId`.
+     * - Contract must hold sufficient dEDU.
+     *
+     * Yield Distribution:
+     * - 70% of yield is retained by the protocol for redistribution (educators, funders, learners, protocol).
+     * - 30% of yield is returned to the user along with principal.
+     *
+     * Emits a {Unstaked} event.
+     *
+     * @param tokenId The ERC-1155 token ID of the sToken being burned.
+     * @param shares The amount of shares to redeem (both sToken and YLD).
+     * @return amount Total dEDU redeemed (principal + yield before redistribution).
+     */
+    function unStake(
+        uint256 tokenId,
+        uint256 shares
+    ) external returns (uint256 amount) {
+        StakingStorage storage $ = _getStakingStorage();
+
+        address owner = _msgSender();
+
+        // Burn the sToken and YLD tokens
+        $.sToken.sTokenBurn(owner, tokenId, shares);
+        $.yldToken.redeem(shares, address(this), owner);
+
+        // Redeem dEDU held by the protocol
+        amount = $.dEDUToken.balanceOf(address(this));
+        _assertSufficientDEDU(amount);
+
+        uint256 yield = amount - shares;
+        uint256 ploughBack = (70 * yield) / 100;
+        uint256 accrual = amount - ploughBack;
+
+        // Transfer to user and protocol
+        $.dEDUToken.transfer(owner, accrual);
+        if (ploughBack > 0)
+            $.dEDUToken.transfer(address($.yldToken), ploughBack);
+
+        // Emit unstake event
+        emit Unstaked(owner, tokenId, shares, amount, accrual, ploughBack);
     }
 
     // -------------------------------------------------------------
     //                          MAINTENANCE
     // -------------------------------------------------------------
 
-    /// @notice Grants the YLD token contract infinite approval to pull dEDU from this contract.
-    /// @dev Required for the YLD token's deposit mechanism to function.
+    /**
+     * @notice Grants the YLD contract infinite allowance to transfer dEDU on behalf of this contract.
+     * @dev Enables seamless deposit/redemption operations via the YLD token contract.
+     */
     function grantAUMInfiniteAllowance() public {
         StakingStorage storage $ = _getStakingStorage();
         $.dEDUToken.approve(address($.yldToken), type(uint256).max);

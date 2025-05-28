@@ -76,6 +76,26 @@ contract SToken is SFTUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
         return _mintSFT(to, amount, abi.encode(attributes));
     }
 
+    /**
+     * @notice Burns a specified amount of sTokens (ERC-1155) from a given address.
+     * @dev Callable only by accounts with the `MINTER_ROLE`.
+     *
+     * Requirements:
+     * - Caller must have the `MINTER_ROLE`.
+     * - `from` must own exactly `amount` of the token with the specified `nonce`.
+     *
+     * @param from The address from which the sTokens will be burned.
+     * @param nonce The unique token ID (nonce) corresponding to the sToken type.
+     * @param amount The amount of tokens to burn.
+     */
+    function sTokenBurn(
+        address from,
+        uint256 nonce,
+        uint256 amount
+    ) external onlyRole(MINTER_ROLE) {
+        _burn(from, nonce, amount);
+    }
+
     /// @dev Token Transfer Authorization
     /// @notice Ensures that only authorized transfers of non-Learner tokens are permitted.
     /// @dev This function overrides a base implementation to enforce custom transfer rules based on token type and roles.

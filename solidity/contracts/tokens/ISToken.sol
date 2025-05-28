@@ -37,4 +37,6 @@ interface ISToken is ISFTUpgradeable {
         uint256 amount,
         TokenAttributes calldata attributes
     ) external returns (uint256 nonce);
+
+    function sTokenBurn(address from, uint256 nonce, uint256 amount) external;
 }
