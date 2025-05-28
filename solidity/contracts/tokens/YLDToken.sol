@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IYLDToken} from "./IYLDToken.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 /**
  * @title YLDToken
@@ -23,7 +25,7 @@ import {IYLDToken} from "./IYLDToken.sol";
  */
 contract YLDToken is
     Initializable,
-    ERC20Upgradeable,
+    ERC4626Upgradeable,
     AccessControlUpgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable,
@@ -56,27 +58,43 @@ contract YLDToken is
     function initialize(
         string memory name,
         string memory symbol,
-        address initialOwner
+        address initialOwner,
+        IERC20 asset
     ) public initializer {
+        __UUPSUpgradeable_init();
+
         __ERC20_init(name, symbol);
+        __ERC4626_init(asset);
+
         __AccessControl_init();
         __Ownable_init(initialOwner);
-        __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
     }
 
     /**
-     * @notice Mints new tokens to the specified address.
-     * @dev Caller must have the MINTER_ROLE.
-     *
-     * @param to The address to receive the newly minted tokens.
-     * @param amount The number of tokens to mint (in wei).
-     *
-     * Emits a {Transfer} event from the zero address.
+     * @dev Overrides the `_deposit` function to restrict access to accounts with MINTER_ROLE.
      */
-    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
-        _mint(to, amount);
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override onlyRole(MINTER_ROLE) {
+        super._deposit(caller, receiver, assets, shares);
+    }
+
+    /**
+     * @dev Overrides the `_withdraw` function to restrict access to accounts with MINTER_ROLE.
+     */
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override onlyRole(MINTER_ROLE) {
+        super._withdraw(caller, receiver, owner, assets, shares);
     }
 
     /**

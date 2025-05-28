@@ -45,4 +45,6 @@ interface IdEDU is IERC20 {
      * @param owner The beneficiary address that receives the dEDU tokens, in this case must be the YieldEDU protocol.
      */
     function receiveFor(address owner) external payable;
+
+    function receiveForSpender(address owner, address spender) external payable;
 }

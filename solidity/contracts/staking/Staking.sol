@@ -66,13 +66,12 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Initializes the staking contract with the provided token addresses and owner.
-    /// @param _dedu Address of the dEDU ERC-20 token.
+    /// @param _wedu Address of the WEDU ERC-20 token.
     /// @param _sToken Address of the sToken contract (ERC-1155).
     /// @param _yld Address of the YLD ERC-20 reward token.
     /// @param owner Address that will be granted ownership rights.
     function initialize(
         address _wedu,
-        address _dedu,
         address _sToken,
         address _yld,
         address owner
@@ -81,10 +80,15 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
 
         StakingStorage storage $ = _getStakingStorage();
+
         $.wedu = WEDU(payable(_wedu));
-        $.dEDUToken = IdEDU(_dedu);
+
         $.sToken = ISToken(_sToken);
         $.yldToken = IYLDToken(_yld);
+
+        $.dEDUToken = IdEDU($.yldToken.asset());
+
+        grantAUMInfiniteAllowance();
     }
 
     // -------------------------------------------------------------
@@ -93,18 +97,23 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     /// @notice Stake native ETH which is wrapped into dEDU via `receiveFor`.
     /// @param tokenType The type of sToken to mint (e.g., Learner or Scholar).
-    function stakeEDU(ISToken.TokenType tokenType) external payable {
+    function stakeEDU(
+        ISToken.TokenType tokenType
+    ) external payable returns (uint256 tokenId, uint256 shares) {
         StakingStorage storage $ = _getStakingStorage();
 
         $.dEDUToken.receiveFor{value: msg.value}(address(this));
 
-        _mintStakePair(_msgSender(), tokenType);
+        return _mintStakePair(_msgSender(), tokenType);
     }
 
     /// @notice Stake existing dEDU ERC-20 tokens.
     /// @param tokenType The type of sToken to mint.
     /// @param amount The amount of dEDU to transfer and stake.
-    function stakeWEDU(ISToken.TokenType tokenType, uint256 amount) external {
+    function stakeWEDU(
+        ISToken.TokenType tokenType,
+        uint256 amount
+    ) external returns (uint256 tokenId, uint256 shares) {
         StakingStorage storage $ = _getStakingStorage();
         address from = _msgSender();
 
@@ -115,19 +124,22 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         $.wedu.withdraw(amount);
         $.dEDUToken.receiveFor{value: amount}(address(this));
 
-        _mintStakePair(from, tokenType);
+        return _mintStakePair(from, tokenType);
     }
 
     /// @notice Stake existing WEDU ERC-20 tokens.
     /// @param tokenType The type of sToken to mint.
     /// @param amount The amount of WEDU to transfer and stake.
-    function stakeDEDU(ISToken.TokenType tokenType, uint256 amount) external {
+    function stakeDEDU(
+        ISToken.TokenType tokenType,
+        uint256 amount
+    ) external returns (uint256 tokenId, uint256 shares) {
         StakingStorage storage $ = _getStakingStorage();
 
         address from = _msgSender();
         $.dEDUToken.transferFrom(from, address(this), amount);
 
-        _mintStakePair(from, tokenType);
+        return _mintStakePair(from, tokenType);
     }
 
     /// @dev Internal function that mints a pair of sToken and YLD tokens for a user.
@@ -137,29 +149,26 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _mintStakePair(
         address to,
         ISToken.TokenType tokenType
-    ) internal returns (uint256 tokenId) {
+    ) internal returns (uint256 tokenId, uint256 shares) {
         ISToken.TokenAttributes memory attributes;
         attributes.tokenType = tokenType;
 
         StakingStorage storage $ = _getStakingStorage();
 
-        uint256 dEDUBalance = $.dEDUToken.balanceOf(address(this));
-        uint256 yldSupply = $.yldToken.totalSupply();
-        uint256 sTokenSupply = $.sToken.totalSupply();
-
-        if (yldSupply != sTokenSupply) {
-            revert SupplyMismatch();
-        }
-
-        if (dEDUBalance <= yldSupply) {
+        uint256 assets = $.dEDUToken.balanceOf(address(this));
+        if (assets == 0) {
             revert InsufficientDEDU();
         }
 
-        // Calculate the amount of tokens to mint based on excess dEDU.
-        uint256 amount = dEDUBalance - yldSupply;
+        tokenId = $.sToken.sTokenMint(
+            to,
+            shares = $.yldToken.deposit(assets, to),
+            attributes
+        );
 
-        tokenId = $.sToken.sTokenMint(to, amount, attributes);
-        $.yldToken.mint(to, amount);
+        if ($.yldToken.totalSupply() != $.sToken.totalSupply()) {
+            revert SupplyMismatch();
+        }
     }
 
     // -------------------------------------------------------------
@@ -171,6 +180,11 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}
+
+    function grantAUMInfiniteAllowance() public {
+        StakingStorage storage $ = _getStakingStorage();
+        $.dEDUToken.approve(address($.yldToken), type(uint256).max);
+    }
 
     receive() external payable {
         // Accept ETH deposits directly
