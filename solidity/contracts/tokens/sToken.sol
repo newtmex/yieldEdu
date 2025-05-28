@@ -76,6 +76,35 @@ contract SToken is SFTUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
         return _mintSFT(to, amount, abi.encode(attributes));
     }
 
+    /// @dev Token Transfer Authorization
+    /// @notice Ensures that only authorized transfers of non-Learner tokens are permitted.
+    /// @dev This function overrides a base implementation to enforce custom transfer rules based on token type and roles.
+    function _ensureCanTransfer(
+        uint256 nonce,
+        address from,
+        address to,
+        bytes memory attributes
+    ) internal view override {
+        ISToken.TokenAttributes memory tokenAttributes = abi.decode(
+            attributes,
+            (ISToken.TokenAttributes)
+        );
+
+        // All learner tokens are updatable without permission, but others require authorization.
+        if (tokenAttributes.tokenType != ISToken.TokenType.Learner) {
+            address caller = _msgSender();
+
+            bool callerAuthorized = hasRole(MINTER_ROLE, caller) ||
+                hasRole(TRANSFER_ROLE, caller);
+            bool recipientAuthorized = hasRole(MINTER_ROLE, to) ||
+                hasRole(TRANSFER_ROLE, to);
+
+            if (!callerAuthorized && !recipientAuthorized) {
+                revert UnAuthorizedSFTTransfer(nonce, from, to, caller);
+            }
+        }
+    }
+
     /**
      * @dev Authorizes contract upgrades via the UUPS pattern.
      * Only callable by the contract owner.

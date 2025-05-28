@@ -38,8 +38,12 @@ contract STokenTest is STokenFixture {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Scholar;
 
-        vm.prank(minter);
+        address authorizedUser = makeAddr("authorizedUser");
+        sToken.grantRole(sToken.TRANSFER_ROLE(), authorizedUser);
+
+        vm.startPrank(minter);
         uint256 tokenId = sToken.sTokenMint(user, 5, attr);
+        vm.stopPrank();
 
         assertEq(sToken.balanceOf(user, tokenId), 5);
     }

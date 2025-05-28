@@ -28,11 +28,12 @@ abstract contract SFTUpgradeable is
     error MustTransferAllSFTAmount(uint256 amount);
 
     /**
-     * @dev Thrown when an unauthorized user attempts to perform an action on an SFT they do not own.
+     * @dev Thrown when an unauthorized user attempts to perform an update action on an SFT.
      */
-    error UnAuthorizedSFTOwnerAction(
+    error UnAuthorizedSFTTransfer(
         uint256 nonce,
-        address owner,
+        address from,
+        address to,
         address caller
     );
 
@@ -44,6 +45,11 @@ abstract contract SFTUpgradeable is
      * @dev Role identifier for the minter role.
      */
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    /**
+     * @dev Role identifier for the can send role.
+     */
+    bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
     // ================================
     // ========== Structs =============
@@ -265,6 +271,7 @@ abstract contract SFTUpgradeable is
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 id = ids[i];
             uint256 amount = values[i];
+            _ensureCanTransfer(id, from, to, $.tokenAttributes[id]);
 
             // When not minting
             if (from != address(0)) {
@@ -288,6 +295,23 @@ abstract contract SFTUpgradeable is
         }
 
         super._update(from, to, ids, values);
+    }
+
+    /**
+     * @dev must be overridden by inheriting contracts to ensure that the caller is authorized to perform update actions on the SFT.
+     * @param nonce The unique identifier of the SFT being updated.
+     * @param from The address of the SFT owner.
+     * @param to The address of the SFT receipient.
+     * @notice This function is called internally to enforce access control for SFT updates.
+     * @custom:error UnAuthorizedSFTTransfer Thrown when the caller is not authorized to update the SFT.
+     */
+    function _ensureCanTransfer(
+        uint256 nonce,
+        address from,
+        address to,
+        bytes memory /* attributes */
+    ) internal view virtual {
+        if (true) revert UnAuthorizedSFTTransfer(nonce, from, to, _msgSender());
     }
 
     function totalSupply() external view returns (uint256) {
