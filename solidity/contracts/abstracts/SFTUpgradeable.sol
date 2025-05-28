@@ -275,8 +275,9 @@ abstract contract SFTUpgradeable is
 
             // When not minting
             if (from != address(0)) {
-                if (balanceOf(from, id) != amount) {
-                    revert MustTransferAllSFTAmount(amount);
+                uint256 balance = balanceOf(from, id);
+                if (balance != amount) {
+                    revert MustTransferAllSFTAmount(balance);
                 }
                 $.addressToNonces[from].remove(id);
             }
