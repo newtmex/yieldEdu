@@ -24,12 +24,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *   - Yield portion is extracted and redistributed as ETH rewards to:
  *     - Learners (on milestone completion),
  *     - Educators (based on course performance),
- *     - Funders (passive yield share).
+ *     - Funders (passive yield share),
  *     - YieldEDU Protocol (for protocol sustainability).
  *
  * This interface is intentionally minimal. YieldEDU does not manage dEDU issuance directly but integrates with this interface to stake ETH and track exposure.
- *
- * @notice Extends IERC20 with a single entry-point method for ETH deposits.
  */
 interface IdEDU is IERC20 {
     /**
@@ -42,9 +40,21 @@ interface IdEDU is IERC20 {
      * - Caller must send a non-zero amount of ETH.
      * - `owner` must be a valid, non-zero address.
      *
-     * @param owner The beneficiary address that receives the dEDU tokens, in this case must be the YieldEDU protocol.
+     * @param owner The beneficiary address that receives the dEDU tokens (e.g., the YieldEDU protocol).
      */
     function receiveFor(address owner) external payable;
 
+    /**
+     * @notice Stakes ETH on behalf of a user but allows a different address (spender) to interact with the dEDU on their behalf.
+     * @dev Useful in more advanced integrations where delegated access or smart contract wallets are involved.
+     *
+     * Requirements:
+     * - Caller must send a non-zero amount of ETH.
+     * - `owner` must be a valid address receiving the dEDU.
+     * - `spender` must be a valid address authorized to act on behalf of the owner.
+     *
+     * @param owner The recipient of the minted dEDU tokens.
+     * @param spender The address allowed to manage the staked position.
+     */
     function receiveForSpender(address owner, address spender) external payable;
 }

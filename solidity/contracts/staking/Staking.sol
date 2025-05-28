@@ -11,7 +11,7 @@ import "../external/IdEDU.sol";
 import "../external/WEDU.sol";
 
 /// @title Staking Contract
-/// @notice Enables staking of native ETH or dEDU ERC-20 to mint sTokens and YLD tokens.
+/// @notice Enables staking of native ETH, WEDU, or dEDU to mint sTokens and YLD tokens.
 /// @dev Implements ERC-7201-compliant storage layout and UUPS upgradeable architecture.
 contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     // -------------------------------------------------------------
@@ -56,10 +56,7 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     //                          INITIALIZER
     // -------------------------------------------------------------
 
-    /**
-     * @dev Constructor that disables initializers to prevent the implementation contract from being initialized.
-     * This is a security measure to ensure that the implementation contract cannot be misused.
-     */
+    /// @dev Constructor that disables initializers to prevent misuse of implementation contract.
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -82,7 +79,6 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         StakingStorage storage $ = _getStakingStorage();
 
         $.wedu = WEDU(payable(_wedu));
-
         $.sToken = ISToken(_sToken);
         $.yldToken = IYLDToken(_yld);
 
@@ -97,6 +93,8 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     /// @notice Stake native ETH which is wrapped into dEDU via `receiveFor`.
     /// @param tokenType The type of sToken to mint (e.g., Learner or Scholar).
+    /// @return tokenId The ID of the minted sToken.
+    /// @return shares The number of YLD shares minted.
     function stakeEDU(
         ISToken.TokenType tokenType
     ) external payable returns (uint256 tokenId, uint256 shares) {
@@ -107,9 +105,12 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         return _mintStakePair(_msgSender(), tokenType);
     }
 
-    /// @notice Stake existing dEDU ERC-20 tokens.
+    /// @notice Stake existing WEDU ERC-20 tokens.
+    /// @dev Internally unwraps WEDU to ETH and deposits it into dEDU, then stakes.
     /// @param tokenType The type of sToken to mint.
-    /// @param amount The amount of dEDU to transfer and stake.
+    /// @param amount The amount of WEDU to transfer and stake.
+    /// @return tokenId The ID of the minted sToken.
+    /// @return shares The number of YLD shares minted.
     function stakeWEDU(
         ISToken.TokenType tokenType,
         uint256 amount
@@ -117,19 +118,18 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         StakingStorage storage $ = _getStakingStorage();
         address from = _msgSender();
 
-        // Transfer WEDU from sender to this contract
         $.wedu.transferFrom(from, address(this), amount);
-
-        // Convert WEDU to ETH (withdraw) and deposit to dEDU
         $.wedu.withdraw(amount);
         $.dEDUToken.receiveFor{value: amount}(address(this));
 
         return _mintStakePair(from, tokenType);
     }
 
-    /// @notice Stake existing WEDU ERC-20 tokens.
+    /// @notice Stake existing dEDU ERC-20 tokens directly.
     /// @param tokenType The type of sToken to mint.
-    /// @param amount The amount of WEDU to transfer and stake.
+    /// @param amount The amount of dEDU to transfer and stake.
+    /// @return tokenId The ID of the minted sToken.
+    /// @return shares The number of YLD shares minted.
     function stakeDEDU(
         ISToken.TokenType tokenType,
         uint256 amount
@@ -146,6 +146,7 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     /// @param to Recipient of the minted tokens.
     /// @param tokenType The type of sToken to mint (e.g., Learner or Scholar).
     /// @return tokenId The ID of the newly minted sToken.
+    /// @return shares The number of YLD shares minted.
     function _mintStakePair(
         address to,
         ISToken.TokenType tokenType
@@ -160,11 +161,8 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             revert InsufficientDEDU();
         }
 
-        tokenId = $.sToken.sTokenMint(
-            to,
-            shares = $.yldToken.deposit(assets, to),
-            attributes
-        );
+        shares = $.yldToken.deposit(assets, to);
+        tokenId = $.sToken.sTokenMint(to, shares, attributes);
 
         if ($.yldToken.totalSupply() != $.sToken.totalSupply()) {
             revert SupplyMismatch();
@@ -172,21 +170,26 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     // -------------------------------------------------------------
-    //                          UPGRADE LOGIC
+    //                          MAINTENANCE
     // -------------------------------------------------------------
 
-    /// @dev UUPS authorization function.
-    /// @param newImplementation Address of the new implementation contract.
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
-
+    /// @notice Grants the YLD token contract infinite approval to pull dEDU from this contract.
+    /// @dev Required for the YLD token's deposit mechanism to function.
     function grantAUMInfiniteAllowance() public {
         StakingStorage storage $ = _getStakingStorage();
         $.dEDUToken.approve(address($.yldToken), type(uint256).max);
     }
 
-    receive() external payable {
-        // Accept ETH deposits directly
-    }
+    /// @notice Accepts direct ETH transfers.
+    receive() external payable {}
+
+    // -------------------------------------------------------------
+    //                       UPGRADE AUTHORIZATION
+    // -------------------------------------------------------------
+
+    /// @dev UUPS authorization function to control who can upgrade the contract.
+    /// @param newImplementation Address of the new implementation contract.
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 }
