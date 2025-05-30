@@ -5,6 +5,7 @@ import {ERC1155Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {ISFTUpgradeable} from "../abstracts/ISFTUpgradeable.sol";
 
 /**
  * @title SFTUpgradeable
@@ -12,6 +13,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
  *      Inherits from ERC1155Upgradeable and AccessControlUpgradeable.
  */
 abstract contract SFTUpgradeable is
+    ISFTUpgradeable,
     Initializable,
     ERC1155Upgradeable,
     AccessControlUpgradeable
@@ -54,15 +56,6 @@ abstract contract SFTUpgradeable is
     // ================================
     // ========== Structs =============
     // ================================
-
-    /**
-     * @dev Struct representing the balance and attributes of an SFT.
-     */
-    struct SftBalance {
-        uint256 nonce;
-        uint256 amount;
-        bytes attributes;
-    }
 
     /**
      * @dev Storage layout following ERC-7201 namespaced storage pattern.

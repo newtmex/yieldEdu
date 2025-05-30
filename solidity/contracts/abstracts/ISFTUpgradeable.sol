@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/access/IAccessControl.sol";
-
 /**
  * @title ISFTUpgradeable
  * @dev Interface for the SFTUpgradeable contract, defining essential functions and structures.
  */
-interface ISFTUpgradeable is IERC1155, IAccessControl {
+interface ISFTUpgradeable {
     /**
      * @dev Struct representing the balance and attributes of an SFT.
      */

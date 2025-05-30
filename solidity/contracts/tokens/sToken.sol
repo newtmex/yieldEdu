@@ -22,7 +22,12 @@ import {ISToken} from "./ISToken.sol";
  *
  * This contract is designed to support the dynamic needs of educational platforms, facilitating the issuance and management of various educational credentials and rewards.
  */
-contract SToken is SFTUpgradeable, OwnableUpgradeable, UUPSUpgradeable {
+contract SToken is
+    ISToken,
+    SFTUpgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
     /**
      * @dev Constructor that disables initializers to prevent the implementation contract from being initialized.
      * This is a security measure to ensure that the implementation contract cannot be misused.
