@@ -38,7 +38,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 						<div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-20"></div>
 						<div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-20"></div>
 					</div>
-					<Header />
+					
+					 <Header />
 					<main className="flex pt-3 flex-1 flex-col">{children}</main>
 				</div>
 			</SidebarInset>
