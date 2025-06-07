@@ -44,7 +44,7 @@ const AppSidebar = () => {
 	const router = useRouter();
 	const { isMobile } = useSidebar();
 
-	const teams = [
+	const view = [
 		{
 			name: "Default",
 			logo: null,
@@ -55,7 +55,7 @@ const AppSidebar = () => {
 		},
 	];
 
-	const [activeTeam, setActiveTeam] = React.useState(teams[0]);
+	const [activeView, setActiveView] = React.useState(view[0]);
 
 	useEffect(() => {
 		if (pathname === "/dashboard/learn") {
@@ -101,7 +101,7 @@ const AppSidebar = () => {
 								</DropdownMenuLabel>
 								<DropdownMenuItem
 									onClick={() =>
-										setActiveTeam({
+										setActiveView({
 											name: "Default",
 											logo: null,
 										})
@@ -110,7 +110,7 @@ const AppSidebar = () => {
 										"flex items-center cursor-pointer gap-2 p-2 w-full overflow-x-clip py-2 rounded-lg transition-colors text-slate-600 dark:text-slate-300 hover:!bg-slate-100 hover:dark:!bg-slate-700/60",
 										{
 											"bg-lime-100  hover:!bg-lime-100 !text-lime-700 dark:hover:!bg-lime-500/10 dark:bg-lime-500/10 dark:!text-lime-400 ":
-												activeTeam.name === "Default",
+												activeView.name === "Default",
 										}
 									)}
 								>
@@ -119,7 +119,7 @@ const AppSidebar = () => {
 								<DropdownMenuItem
 									disabled
 									// onClick={() =>
-									// 	setActiveTeam({
+									// 	setActiveView({
 									// 		name: "Investor",
 									// 		logo: null,
 									// 	})
@@ -128,7 +128,7 @@ const AppSidebar = () => {
 									// 	"flex items-center gap-2 p-2 w-full overflow-x-clip py-2 rounded-lg transition-colors text-slate-600 dark:text-slate-300 hover:!bg-slate-100 hover:dark:!bg-slate-700/60",
 									// 	{
 									// 		"bg-lime-100  hover:!bg-lime-100 !text-lime-700 dark:hover:!bg-lime-500/10 dark:bg-lime-500/10 dark:!text-lime-400 ":
-									// 			activeTeam.name === "Investor",
+									// 			activeView.name === "Investor",
 									// 	}
 									// )}
 								>
@@ -263,7 +263,6 @@ function SidebarLink({
 	) : (
 		<Link
 			href={link}
-			
 			className={cn(
 				"flex items-center gap-3 w-full px-3 overflow-x-clip py-2 rounded-lg transition-colors",
 				{

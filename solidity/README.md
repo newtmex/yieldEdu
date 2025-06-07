@@ -36,8 +36,8 @@ const { sToken } = await deploySTokenFixture();
 
 ```ts
 const { staking, wedu } = await deployStakingContractFixture({
-    yldAddress: yldToken.getAddress(),
-    sTokenAddress: sToken.getAddress(),
+	yldAddress: yldToken.getAddress(),
+	sTokenAddress: sToken.getAddress(),
 });
 ```
 
@@ -58,8 +58,8 @@ await sToken.grantRole(await sToken.MINTER_ROLE(), staking.getAddress());
 await staking.connect(user).stakeEDU(courseId, { value: amount });
 ```
 
--   Stakes native ETH
--   Mints `YLD` (ERC-20) and `sToken` (ERC-1155)
+- Stakes native ETH
+- Mints `YLD` (ERC-20) and `sToken` (ERC-1155)
 
 #### stakeWEDU
 
@@ -69,7 +69,7 @@ await wedu.connect(user).approve(staking, amount);
 await staking.connect(user).stakeWEDU(courseId, amount);
 ```
 
--   Stakes `WEDU` tokens
+- Stakes `WEDU` tokens
 
 #### stakeDEDU
 
@@ -79,7 +79,7 @@ await dEDUToken.connect(user).approve(staking, amount);
 await staking.connect(user).stakeDEDU(courseId, amount);
 ```
 
--   Stakes dEDU (e.g., aLSDAI or stETH in production)
+- Stakes dEDU (e.g., aLSDAI or stETH in production)
 
 ---
 
@@ -92,8 +92,8 @@ await yldToken.connect(user).approve(staking, shares);
 await staking.connect(user).unStake(tokenId, shares);
 ```
 
--   Burns `YLD`, transfers base token + yield to user
--   Can trigger fee logic and share distribution
+- Burns `YLD`, transfers base token + yield to user
+- Can trigger fee logic and share distribution
 
 ---
 
@@ -101,10 +101,10 @@ await staking.connect(user).unStake(tokenId, shares);
 
 Tests cover:
 
--   ✅ ETH/WEDU/dEDU staking
--   ✅ Correct minting of YLD/sToken
--   ✅ Yield accrual
--   ✅ Unstake + yield redemption
+- ✅ ETH/WEDU/dEDU staking
+- ✅ Correct minting of YLD/sToken
+- ✅ Yield accrual
+- ✅ Unstake + yield redemption
 
 Run with:
 
@@ -116,13 +116,20 @@ npx hardhat test
 
 ### 📦 Frontend Integration Notes
 
--   **Contract Addresses**: Persist deployed addresses via `.env` or frontend config
--   **ABI Imports**: Export ABI JSON from `artifacts/` and load with `ethers.Contract`
--   **Events**: Listen for `Staked`, `Unstaked` to trigger UI updates
--   **Course Selection**: Use the `courseId` argument to represent different SFT types
--   **Wallets**: Must support sending native ETH and ERC-20 approvals
+- **Contract Addresses**: Persist deployed addresses via `.env` or frontend config
+- **ABI Imports**: Export ABI JSON from `artifacts/` and load with `ethers.Contract`
+- **Events**: Listen for `Staked`, `Unstaked` to trigger UI updates
+- **Course Selection**: Use the `courseId` argument to represent different SFT types
+- **Wallets**: Must support sending native ETH and ERC-20 approvals
 
 ---
+
+run
+
+```ts
+ npx hardhat node //in another terminal
+ npx hardhat run scripts/deploy.ts  //to generate abis and addresses
+```
 
 ### 🧩 Example Frontend Call (ETH Staking)
 
@@ -144,6 +151,6 @@ await staking.stakeEDU(0, { value: ethers.utils.parseEther("1") });
 
 ### 🚀 Next Steps
 
--   Replace `MockDEDU` with real yield-bearing assets via GainzSwap
--   Implement on-chain course metadata for sToken
--   Add frontend UI for staking flows, claim history, yield stats
+- Replace `MockDEDU` with real yield-bearing assets via GainzSwap
+- Implement on-chain course metadata for sToken
+- Add frontend UI for staking flows, claim history, yield stats

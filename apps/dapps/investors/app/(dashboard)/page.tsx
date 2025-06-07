@@ -1,0 +1,152 @@
+"use client";
+// import { ChartAreaInteractive } from "@/components/chart-area-interactive";
+import { DataTable, tableSchema } from "@/components/data-table";
+import { SectionCards } from "@/components/section-cards";
+import z from "zod";
+import InvestmentCard from "@/components/invest";
+import {
+	Card,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { useAccount, useBalance, useReadContract } from "wagmi";
+import contractAddresses from "@/contract-deployments/deployments.json";
+import { Abi, formatUnits } from "viem";
+import { useEffect, useState } from "react";
+import sTokenAbi from "@/contract-deployments/abis/SToken.json";
+import { readContract } from "@wagmi/core";
+import { config } from "@/lib/wagmi";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+
+export default function Page() {
+	const sTokenAddress = contractAddresses.sToken as `0x${string}`;
+	const YLDtokenAddress = contractAddresses.yldToken as `0x${string}`;
+	const { address } = useAccount();
+	const [totalStaked, setTotalStaked] = useState<bigint>(BigInt(0));
+
+	const transactions: z.infer<typeof tableSchema>[] = [
+		{
+			investmentId: "24h2jh342",
+			associatedCourse: "Defi",
+			earnedYield: "2.33543545",
+			investedAmount: "5",
+			sTokenStatus: "Completed & Unbound",
+		},
+	];
+
+	//  nonces array for the user
+	const {
+		data: nonces,
+		isLoading: noncesLoading,
+		error: noncesError,
+		refetch: refetchNonces,
+	} = useReadContract({
+		address: sTokenAddress,
+		abi: sTokenAbi.abi as Abi,
+		functionName: "getNonces",
+		args: [address as `0x${string}`],
+		query: {
+			enabled: !!address,
+		},
+	});
+
+	useEffect(() => {
+		if (!nonces || !Array.isArray(nonces)) return;
+		const nonceArray = Array.isArray(nonces) ? nonces : [];
+		async function fetchBalances() {
+			const balances = (await Promise.all(
+				nonceArray.map((nonce: bigint) =>
+					readContract(config, {
+						address: sTokenAddress,
+						abi: sTokenAbi.abi as Abi,
+						functionName: "balanceOf",
+						args: [address as `0x${string}`, nonce],
+					}).catch(() => BigInt(0))
+				)
+			)) as bigint[];
+
+			const total = balances.reduce(
+				(acc: bigint, bal: bigint) => acc + bal,
+				BigInt(0)
+			);
+			setTotalStaked(total);
+		}
+
+		fetchBalances();
+	}, [nonces, address, sTokenAddress]);
+
+	if (noncesError) {
+		console.log(noncesError);
+		toast.error("could not fetch sTokens");
+	}
+
+	const {
+		data: userYLDs,
+		refetch: refetchUserYLDs,
+		isPending: isUserYldsPending,
+	} = useBalance({
+		address: address as unknown as `0x${string}`,
+		token: YLDtokenAddress,
+		query: {
+			enabled: !!address,
+		},
+	});
+
+	return (
+		<div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+			<SectionCards isUserYldsPending={isUserYldsPending} userYLDs={userYLDs} />
+			<div className="px-4 lg:px-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+				<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
+					<InvestmentCard
+						refetchAll={() => {
+							refetchNonces();
+							refetchUserYLDs();
+						}}
+					/>
+				</div>
+				<div
+					className="grid grid-cols-2 gap-5 h-fit	*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs
+				"
+				>
+					{noncesLoading ? (
+						<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-[218px] *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
+							<Skeleton className="h-[23px] bg-gray-500/20 w-[150px]" />
+							<Skeleton className="h-[15px] bg-gray-500/20 w-[100px]" />
+						</Skeleton>
+					) : (
+						<Card className="@container/card">
+							<CardHeader>
+								<CardDescription>Granted sTokens</CardDescription>
+								<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+									{totalStaked
+										? parseFloat(formatUnits(totalStaked, 18)).toFixed(4)
+										: "0.0000"}
+								</CardTitle>
+								{/* <CardAction>
+					<Badge variant="outline">
+						<IconTrendingUp />
+						+12.5%
+					</Badge>
+				</CardAction> */}
+							</CardHeader>
+							{/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
+				<div className="line-clamp-1 flex gap-2 font-medium">
+					Trending up this month <IconTrendingUp className="size-4" />
+				</div>
+				<div className="text-muted-foreground">
+					Visitors for the last 6 months
+				</div>
+			</CardFooter> */}
+						</Card>
+					)}
+				</div>
+				{/* <ChartAreaInteractive /> */}
+			</div>
+			<div className="px-4">
+				<DataTable data={transactions} />
+			</div>
+		</div>
+	);
+}
