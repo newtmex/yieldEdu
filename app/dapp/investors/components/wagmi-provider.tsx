@@ -12,11 +12,21 @@ if (!projectId) {
 	throw new Error("Project ID is not defined");
 }
 
+// Extend the BigInt interface to include toJSON for TypeScript
+declare global {
+	interface BigInt {
+		toJSON(): string;
+	}
+}
+
 const clientFromReactQuery = new QueryClient({
 	defaultOptions: {
 		queries: {
-			refetchOnWindowFocus: false,
-			refetchOnMount: false,
+			refetchOnReconnect: true, // refetch when network reconnects
+			refetchOnWindowFocus: true, // refetch when user switches back to tab
+			refetchOnMount: true, // refetch when component mounts
+			refetchInterval: 10000, // auto refetch every 10 seconds
+			staleTime: 5000, // data considered fresh for 5 seconds after fetching
 		},
 	},
 });

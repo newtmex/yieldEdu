@@ -3,10 +3,6 @@
 import * as React from "react";
 
 import {
-	SortableContext,
-	verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import {
 	IconChevronDown,
 	IconChevronLeft,
 	IconChevronRight,
@@ -79,7 +75,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { UniqueIdentifier } from "@dnd-kit/core";
+import { formatUnits } from "viem";
 
 export const tableSchema = z.object({
 	investmentId: z.string(),
@@ -87,7 +83,21 @@ export const tableSchema = z.object({
 	earnedYield: z.string(),
 	associatedCourse: z.string(),
 	sTokenStatus: z.string(),
+	shares: z.string(),
+	timeStamp: z.string(),
+	tokenId: z.string(),
+	tokenType: z.string(),
+	type: z.enum(["staked", "unstaked"]),
 });
+import contractAddresses from "@/contract-deployments/deployments.json";
+import yldABI from "@/contract-deployments/abis/YLDToken.json";
+import { readContract } from "@wagmi/core";
+
+import { config } from "@/lib/wagmi";
+import { Skeleton } from "./ui/skeleton";
+import { cn } from "@/lib/utils";
+
+const yldAddress = contractAddresses.yldToken as `0x${string}`;
 
 const columns: ColumnDef<z.infer<typeof tableSchema>>[] = [
 	{
@@ -98,22 +108,100 @@ const columns: ColumnDef<z.infer<typeof tableSchema>>[] = [
 		},
 		enableHiding: false,
 	},
+	// {
+	// 	accessorKey: "tokenId",
+	// 	header: "Token Id",
+	// 	cell: ({ row }) => {
+	// 		return row.original.tokenId;
+	// 	},
+	// 	enableHiding: false,
+	// },
+	{
+		accessorKey: "shares",
+		header: "YLDs (Shares)",
+		cell: ({ row }) => {
+			return row.original.shares ? (
+				<span className="text-lime-500 font-semibold">
+					{parseFloat(formatUnits(BigInt(row.original.shares), 18)).toFixed(4)}
+				</span>
+			) : (
+				"0.00"
+			);
+		},
+		enableHiding: false,
+	},
+	{
+		accessorKey: "timeStamp",
+		header: "TimeStamp",
+		cell: ({ row }) => {
+			const date = new Date(row.original.timeStamp);
+			return isNaN(date.getTime())
+				? row.original.timeStamp
+				: `${date.getDate()}${
+						["th", "st", "nd", "rd"][
+							date.getDate() % 10 > 3 ||
+							(date.getDate() % 100 >= 11 && date.getDate() % 100 <= 13)
+								? 0
+								: date.getDate() % 10
+						]
+				  } ${date.toLocaleString(undefined, {
+						month: "long",
+				  })} ${date.getFullYear()}, ${
+						date.getHours() % 12 === 0 ? 12 : date.getHours() % 12
+				  }:${date.getMinutes()?.toString().padStart(2, "0")}${
+						date.getHours() < 12 ? "AM" : "PM"
+				  }`;
+		},
+		enableHiding: false,
+	},
+
+	{
+		accessorKey: "tokenType",
+		header: "Token Type",
+		cell: ({ row }) => {
+			return (
+				<TableCellViewer
+					item={
+						Number(row.original.tokenType) === 1
+							? "Investor Token"
+							: "Learner Token"
+					}
+				/>
+			);
+		},
+		enableHiding: false,
+	},
 	{
 		accessorKey: "investedAmount",
 		header: "Investment Amount",
-		cell: () => (
-			<TableCellViewer item={"Invested Amount"} />
-			// <div className="w-32">
-			// 	<Badge variant="outline" className="text-muted-foreground px-1.5">
-			// 		{row.original.investedAmount}
-			// 	</Badge>
-			// </div>
-		),
+		cell: ({ row }) => {
+			return row.original.shares ? (
+				<span className="text-blue-500 font-semibold">
+					{parseFloat(
+						formatUnits(BigInt(row.original.investedAmount), 18)
+					).toFixed(4)}
+				</span>
+			) : (
+				"0.00"
+			);
+		},
+		// <div className="w-32">
+		// 	<Badge variant="outline" className="text-muted-foreground px-1.5">
+		// 		{row.original.investedAmount}
+		// 	</Badge>
+		// </div>
 	},
 	{
 		accessorKey: "earnedYield",
 		header: "Earned YLD",
-		cell: ({ row }) => row.original.earnedYield,
+		cell: ({ row }) => {
+			return (
+				<span className="text-lime-500 font-semibold">
+					{row.original.earnedYield}
+				</span>
+			);
+		},
+
 		// <Badge variant="outline" className="text-muted-foreground px-1.5">
 		// 	{row.original.status === "Done" ? (
 		// 		<IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
@@ -130,7 +218,7 @@ const columns: ColumnDef<z.infer<typeof tableSchema>>[] = [
 	},
 	{
 		accessorKey: "sTokenStatus",
-		header: "Stoken Status",
+		header: "sToken Status",
 		cell: ({ row }) => <TableCellViewer item={row.original.sTokenStatus} />,
 	},
 
@@ -162,10 +250,13 @@ const columns: ColumnDef<z.infer<typeof tableSchema>>[] = [
 
 export function DataTable({
 	data: initialData,
+	isLoading,
 }: {
 	data: z.infer<typeof tableSchema>[];
+	isLoading?: boolean;
 }) {
-	const [data] = React.useState(() => initialData);
+	const [data, setData] = React.useState(() => initialData);
+
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
@@ -178,10 +269,38 @@ export function DataTable({
 		pageSize: 10,
 	});
 
-	const dataIds = React.useMemo<UniqueIdentifier[]>(
-		() => data?.map(({ investmentId }) => investmentId) || [],
-		[data]
-	);
+	React.useEffect(() => {
+		const generateYLDs = async (value: string) => {
+			const response = await readContract(config, {
+				address: yldAddress,
+				abi: yldABI.abi,
+				functionName: "previewRedeem",
+				args: [value],
+			});
+			return response;
+		};
+
+		const updateData = async () => {
+			if (initialData.length >= 1) {
+				const updatedData = await Promise.all(
+					initialData.map(async (initData) => {
+						const currentReturns = await generateYLDs(initData.earnedYield);
+						return {
+							...initData,
+							earnedYield: currentReturns
+								? parseFloat(formatUnits(currentReturns as bigint, 18)).toFixed(
+										4
+								  )
+								: "0.00",
+						};
+					})
+				);
+				setData(updatedData);
+			}
+		};
+
+		updateData();
+	}, [initialData]);
 
 	const table = useReactTable({
 		data,
@@ -193,7 +312,7 @@ export function DataTable({
 			columnFilters,
 			pagination,
 		},
-		getRowId: (row) => row.investmentId.toString(),
+		getRowId: (row) => row.investmentId?.toString(),
 		enableRowSelection: true,
 		onRowSelectionChange: setRowSelection,
 		onSortingChange: setSorting,
@@ -210,72 +329,82 @@ export function DataTable({
 
 	return (
 		<div className="grid grid-cols-1 gap-4">
-			<div className="flex items-center ml-auto gap-2">
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="outline" size="sm">
-							<IconLayoutColumns />
-							<span className="hidden lg:inline">Customize Columns</span>
-							<span className="lg:hidden">Columns</span>
-							<IconChevronDown />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end" className="w-56">
-						{table
-							.getAllColumns()
-							.filter(
-								(column) =>
-									typeof column.accessorFn !== "undefined" &&
-									column.getCanHide()
-							)
-							.map((column) => {
-								return (
-									<DropdownMenuCheckboxItem
-										key={column.id}
-										className="capitalize"
-										checked={column.getIsVisible()}
-										onCheckedChange={(value) =>
-											column.toggleVisibility(!!value)
-										}
-									>
-										{column.id}
-									</DropdownMenuCheckboxItem>
-								);
-							})}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
-
-			<div className="overflow-hidden rounded-lg border">
-				<Table>
-					<TableHeader className="bg-muted sticky top-0 z-10">
-						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow key={headerGroup.id}>
-								{headerGroup.headers.map((header) => {
+			{isLoading ? (
+				<Skeleton className="h-[32px] bg-gray-500/20 w-[160px] ml-auto" />
+			) : (
+				<div className="flex items-center ml-auto gap-2">
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="sm">
+								<IconLayoutColumns />
+								<span className="hidden lg:inline">Customize Columns</span>
+								<span className="lg:hidden">Columns</span>
+								<IconChevronDown />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="w-56">
+							{table
+								.getAllColumns()
+								.filter(
+									(column) =>
+										typeof column.accessorFn !== "undefined" &&
+										column.getCanHide()
+								)
+								.map((column) => {
 									return (
-										<TableHead key={header.id} colSpan={header.colSpan}>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-														header.column.columnDef.header,
-														header.getContext()
-												  )}
-										</TableHead>
+										<DropdownMenuCheckboxItem
+											key={column.id}
+											className="capitalize"
+											checked={column.getIsVisible()}
+											onCheckedChange={(value) =>
+												column.toggleVisibility(!!value)
+											}
+										>
+											{column.id}
+										</DropdownMenuCheckboxItem>
 									);
 								})}
-							</TableRow>
-						))}
-					</TableHeader>
-					<TableBody className="**:data-[slot=table-cell]:first:w-8">
-						{table.getRowModel().rows?.length ? (
-							<SortableContext
-								items={dataIds}
-								strategy={verticalListSortingStrategy}
-							>
-								{table.getRowModel().rows.map((row) => (
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+			)}
+
+			{isLoading ? (
+				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[250px] w-full *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
+					<Skeleton className="h-[23px] bg-gray-500/20 w-[80%]" />
+					<Skeleton className="grid bg-gray-500/20 grid-cols-1 place-content-center gap-3 pl-4 h-[50px] w-[98%] *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card" />
+				</Skeleton>
+			) : (
+				<div className="overflow-hidden rounded-lg border">
+					<Table>
+						<TableHeader className="bg-muted sticky top-0 z-10">
+							{table.getHeaderGroups().map((headerGroup) => (
+								<TableRow key={headerGroup.id}>
+									{headerGroup.headers.map((header) => {
+										return (
+											<TableHead key={header.id} colSpan={header.colSpan}>
+												{header.isPlaceholder
+													? null
+													: flexRender(
+															header.column.columnDef.header,
+															header.getContext()
+													  )}
+											</TableHead>
+										);
+									})}
+								</TableRow>
+							))}
+						</TableHeader>
+						<TableBody className="**:data-[slot=table-cell]:first:w-8  dark:bg-lime-400/20">
+							{table.getRowModel().rows?.length ? (
+								table.getRowModel().rows.map((row) => (
 									<TableRow
 										key={row.id}
-										className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+										title={row.original.type === "unstaked" ? "Withdrawn" : ""}
+										className={cn("relative z-0 dark:hover:bg-green-400/10", {
+											"bg-blue-500/20 hover:bg-blue-500/25 dark:hover:bg-blue-500/25 dark:bg-blue-500/20 opacity-80":
+												row.original.type === "unstaked",
+										})}
 									>
 										{row.getVisibleCells().map((cell) => (
 											<TableCell key={cell.id}>
@@ -286,98 +415,102 @@ export function DataTable({
 											</TableCell>
 										))}
 									</TableRow>
-								))}
-							</SortableContext>
-						) : (
-							<TableRow>
-								<TableCell
-									colSpan={columns.length}
-									className="h-24 text-center"
-								>
-									No results.
-								</TableCell>
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
-			</div>
-			<div className="flex items-center justify-between px-4">
-				<div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-					{table.getFilteredSelectedRowModel().rows.length} of{" "}
-					{table.getFilteredRowModel().rows.length} row(s) selected.
+								))
+							) : (
+								<TableRow>
+									<TableCell
+										colSpan={columns.length}
+										className="h-24 text-center"
+									>
+										No results.
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+					</Table>
 				</div>
-				<div className="flex w-full items-center gap-8 lg:w-fit">
-					<div className="hidden items-center gap-2 lg:flex">
-						<Label htmlFor="rows-per-page" className="text-sm font-medium">
-							Rows per page
-						</Label>
-						<Select
-							value={`${table.getState().pagination.pageSize}`}
-							onValueChange={(value) => {
-								table.setPageSize(Number(value));
-							}}
-						>
-							<SelectTrigger size="sm" className="w-20" id="rows-per-page">
-								<SelectValue
-									placeholder={table.getState().pagination.pageSize}
-								/>
-							</SelectTrigger>
-							<SelectContent side="top">
-								{[10, 20, 30, 40, 50].map((pageSize) => (
-									<SelectItem key={pageSize} value={`${pageSize}`}>
-										{pageSize}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+			)}
+			{isLoading ? (
+				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[90px] w-full *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card" />
+			) : (
+				<div className="flex items-center justify-between px-4">
+					<div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+						{table.getFilteredSelectedRowModel().rows.length} of{" "}
+						{table.getFilteredRowModel().rows.length} row(s) selected.
 					</div>
-					<div className="flex w-fit items-center justify-center text-sm font-medium">
-						Page {table.getState().pagination.pageIndex + 1} of{" "}
-						{table.getPageCount()}
-					</div>
-					<div className="ml-auto flex items-center gap-2 lg:ml-0">
-						<Button
-							variant="outline"
-							className="hidden h-8 w-8 p-0 lg:flex"
-							onClick={() => table.setPageIndex(0)}
-							disabled={!table.getCanPreviousPage()}
-						>
-							<span className="sr-only">Go to first page</span>
-							<IconChevronsLeft />
-						</Button>
-						<Button
-							variant="outline"
-							className="size-8"
-							size="icon"
-							onClick={() => table.previousPage()}
-							disabled={!table.getCanPreviousPage()}
-						>
-							<span className="sr-only">Go to previous page</span>
-							<IconChevronLeft />
-						</Button>
-						<Button
-							variant="outline"
-							className="size-8"
-							size="icon"
-							onClick={() => table.nextPage()}
-							disabled={!table.getCanNextPage()}
-						>
-							<span className="sr-only">Go to next page</span>
-							<IconChevronRight />
-						</Button>
-						<Button
-							variant="outline"
-							className="hidden size-8 lg:flex"
-							size="icon"
-							onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-							disabled={!table.getCanNextPage()}
-						>
-							<span className="sr-only">Go to last page</span>
-							<IconChevronsRight />
-						</Button>
+					<div className="flex w-full items-center gap-8 lg:w-fit">
+						<div className="hidden items-center gap-2 lg:flex">
+							<Label htmlFor="rows-per-page" className="text-sm font-medium">
+								Rows per page
+							</Label>
+							<Select
+								value={`${table.getState().pagination.pageSize}`}
+								onValueChange={(value) => {
+									table.setPageSize(Number(value));
+								}}
+							>
+								<SelectTrigger size="sm" className="w-20" id="rows-per-page">
+									<SelectValue
+										placeholder={table.getState().pagination.pageSize}
+									/>
+								</SelectTrigger>
+								<SelectContent side="top">
+									{[10, 20, 30, 40, 50].map((pageSize) => (
+										<SelectItem key={pageSize} value={`${pageSize}`}>
+											{pageSize}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="flex w-fit items-center justify-center text-sm font-medium">
+							Page {table.getState().pagination.pageIndex + 1} of{" "}
+							{table.getPageCount()}
+						</div>
+						<div className="ml-auto flex items-center gap-2 lg:ml-0">
+							<Button
+								variant="outline"
+								className="hidden h-8 w-8 p-0 lg:flex"
+								onClick={() => table.setPageIndex(0)}
+								disabled={!table.getCanPreviousPage()}
+							>
+								<span className="sr-only">Go to first page</span>
+								<IconChevronsLeft />
+							</Button>
+							<Button
+								variant="outline"
+								className="size-8"
+								size="icon"
+								onClick={() => table.previousPage()}
+								disabled={!table.getCanPreviousPage()}
+							>
+								<span className="sr-only">Go to previous page</span>
+								<IconChevronLeft />
+							</Button>
+							<Button
+								variant="outline"
+								className="size-8"
+								size="icon"
+								onClick={() => table.nextPage()}
+								disabled={!table.getCanNextPage()}
+							>
+								<span className="sr-only">Go to next page</span>
+								<IconChevronRight />
+							</Button>
+							<Button
+								variant="outline"
+								className="hidden size-8 lg:flex"
+								size="icon"
+								onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+								disabled={!table.getCanNextPage()}
+							>
+								<span className="sr-only">Go to last page</span>
+								<IconChevronsRight />
+							</Button>
+						</div>
 					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 }
@@ -408,7 +541,10 @@ function TableCellViewer({ item }: { item: string }) {
 	return (
 		<Drawer direction={isMobile ? "bottom" : "right"}>
 			<DrawerTrigger asChild>
-				<Button variant="link" className="text-foreground w-fit px-0 text-left">
+				<Button
+					variant="link"
+					className="text-foreground underline opacity-70 hover:opacity-100 w-fit px-0 text-left"
+				>
 					{item}
 				</Button>
 			</DrawerTrigger>

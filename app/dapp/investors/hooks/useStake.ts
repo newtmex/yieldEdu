@@ -88,7 +88,6 @@ export const useStake = ({
 				toast.error("Wallet not connected");
 				return;
 			}
-			toast.error("Approval simulation error: " + approveError.message);
 		}
 	}, [isApproveError, approveError]);
 
@@ -101,7 +100,7 @@ export const useStake = ({
 		const amountInWei = parseEther(amount);
 
 		const needsApproval =
-			!allowance || BigInt(allowance.toString()) < amountInWei;
+			!allowance || BigInt(allowance?.toString()) < amountInWei;
 
 		try {
 			// Approve if needed
@@ -152,8 +151,6 @@ export const useStake = ({
 			return;
 		}
 
-		console.log(STokenType);
-
 		try {
 			setIsStaking(true);
 			stakeWrite(
@@ -166,14 +163,14 @@ export const useStake = ({
 					? {
 							...getStakingConfig("stakeDEDU", [
 								STokenType,
-								parseEther(amount).toString(),
+								parseEther(amount)?.toString(),
 							]),
 					  }
 					: selectedToken === "stakeWEDU"
 					? {
 							...getStakingConfig("stakeWEDU", [
 								STokenType,
-								parseEther(amount).toString(),
+								parseEther(amount)?.toString(),
 							]),
 					  }
 					: {

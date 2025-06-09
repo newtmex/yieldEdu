@@ -29,6 +29,7 @@ import { useAccount, useBalance } from "wagmi";
 import { Skeleton } from "./ui/skeleton";
 import contractAddresses from "@/contract-deployments/deployments.json";
 import { formatUnits } from "viem";
+import { useQueryClient } from "@tanstack/react-query";
 
 export enum STokenType {
 	LEARNER,
@@ -71,6 +72,7 @@ const InvestmentCard = ({
 			enabled: !!address,
 		},
 	});
+	const queryClient = useQueryClient();
 
 	const { isApproving, isStaking, handleStake } = useStake({
 		amount,
@@ -84,6 +86,9 @@ const InvestmentCard = ({
 			});
 			refetchTokenBalance();
 			refetchAll?.();
+			queryClient.invalidateQueries({
+				queryKey: ["active-investments"],
+			});
 		},
 	});
 
@@ -116,7 +121,6 @@ const InvestmentCard = ({
 	const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!validateInput()) return;
-
 		handleStake();
 	};
 	return (

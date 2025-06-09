@@ -5,6 +5,7 @@ import {
 	IconDashboard,
 	IconGift,
 	IconHelp,
+	IconRectangularPrism,
 	IconSettings,
 	IconTrendingUp,
 } from "@tabler/icons-react";
@@ -45,6 +46,11 @@ const data = {
 			title: "Dashboard",
 			url: "/",
 			icon: IconDashboard,
+		},
+		{
+			title: "Transactions",
+			url: "/transactions",
+			icon: IconRectangularPrism,
 		},
 		{
 			title: "Invest",

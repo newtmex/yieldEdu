@@ -1,8 +1,7 @@
 "use client";
 // import { ChartAreaInteractive } from "@/components/chart-area-interactive";
-import { DataTable, tableSchema } from "@/components/data-table";
+import { DataTable } from "@/components/data-table";
 import { SectionCards } from "@/components/section-cards";
-import z from "zod";
 import InvestmentCard from "@/components/invest";
 import {
 	Card,
@@ -19,6 +18,8 @@ import { readContract } from "@wagmi/core";
 import { config } from "@/lib/wagmi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Page() {
 	const sTokenAddress = contractAddresses.sToken as `0x${string}`;
@@ -26,16 +27,38 @@ export default function Page() {
 	const { address } = useAccount();
 	const [totalStaked, setTotalStaked] = useState<bigint>(BigInt(0));
 
-	const transactions: z.infer<typeof tableSchema>[] = [
-		{
-			investmentId: "24h2jh342",
-			associatedCourse: "Defi",
-			earnedYield: "2.33543545",
-			investedAmount: "5",
-			sTokenStatus: "Completed & Unbound",
-		},
-	];
+	const { data, isPending, error } = useQuery({
+		queryKey: ["active-investments"],
+		queryFn: async () => {
+			const response = await supabase
+				.from("staked_events")
+				.select("*")
+				.eq("user_address", address)
+				.order("timestamp", { ascending: false }); // Optional
 
+			const processedData = (response?.data ?? []).map((transaction) => {
+				return {
+					investmentId: transaction.id,
+					associatedCourse: "N/A",
+					earnedYield: transaction.shares,
+					investedAmount: transaction.amount,
+					shares: transaction.shares,
+					timeStamp: transaction.timestamp,
+					tokenId: transaction.token_id,
+					tokenType: transaction.token_type,
+					type: "staked" as "staked" | "unstaked",
+					sTokenStatus: "N/A",
+				};
+			});
+
+			return processedData;
+		},
+		enabled: !!address,
+	});
+
+	if (error) {
+		console.log(error);
+	}
 	//  nonces array for the user
 	const {
 		data: nonces,
@@ -94,9 +117,19 @@ export default function Page() {
 		},
 	});
 
+	const totalInvestment = data?.reduce(
+		(acc, curr) => acc + BigInt(curr.investedAmount),
+		BigInt(0)
+	);
 	return (
 		<div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-			<SectionCards isUserYldsPending={isUserYldsPending} userYLDs={userYLDs} />
+			<SectionCards
+				investmentsPending={isPending}
+				totalInvestment={totalInvestment}
+				isUserYldsPending={isUserYldsPending}
+				userYLDs={userYLDs}
+				activeInvestments={data?.length ?? 0}
+			/>
 			<div className="px-4 lg:px-6 grid grid-cols-1 md:grid-cols-2 gap-5">
 				<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
 					<InvestmentCard
@@ -145,7 +178,7 @@ export default function Page() {
 				{/* <ChartAreaInteractive /> */}
 			</div>
 			<div className="px-4">
-				<DataTable data={transactions} />
+				<DataTable data={data ?? []} isLoading={isPending} />
 			</div>
 		</div>
 	);

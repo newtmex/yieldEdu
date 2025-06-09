@@ -8,6 +8,7 @@
 // import { useEffect } from "react";
 import { Button } from "./ui/button";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const FaucetButton = ({ userAddress }: { userAddress?: string }) => {
 	// const { data: mintSimulator, error: simulateError } = useSimulateContract({
 	// 	...getYieldTokenConfig("mint", [userAddress, parseEther("1.0")]),
