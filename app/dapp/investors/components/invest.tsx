@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import {
 	Card,
 	CardContent,
@@ -28,8 +28,9 @@ import { toast } from "sonner";
 import { useAccount, useBalance } from "wagmi";
 import { Skeleton } from "./ui/skeleton";
 import contractAddresses from "@/contract-deployments/deployments.json";
-import { formatUnits } from "viem";
+import { formatUnits, parseUnits } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
+import WithdrawModal from "./Modal";
 
 export enum STokenType {
 	LEARNER,
@@ -39,10 +40,14 @@ export enum STokenType {
 const InvestmentCard = ({
 	children,
 	refetchAll,
+	setShowWithDrawModal,
+	showWithdrawModal,
 }: {
 	className?: ClassValue;
 	children?: React.ReactNode;
 	refetchAll?: () => void;
+	setShowWithDrawModal: Dispatch<SetStateAction<boolean>>;
+	showWithdrawModal: boolean;
 }) => {
 	const [amount, setAmount] = useState("");
 	const [selectedToken, setSelectedToken] = useState<
@@ -73,22 +78,46 @@ const InvestmentCard = ({
 		},
 	});
 	const queryClient = useQueryClient();
-
+	const amountInWei = parseUnits(amount || "0", 18);
 	const { isApproving, isStaking, handleStake } = useStake({
 		amount,
 		address,
 		STokenType: STokenType.INVESTOR,
 		selectedToken,
 		onStakeSuccess: () => {
+			// Construct optimistic investment
+			const optimisticInvestment = {
+				associatedCourse: "N/A",
+				earnedYield: amountInWei.toString(),
+				investedAmount: amountInWei.toString(),
+				investmentId: crypto.randomUUID(),
+				sTokenStatus: "N/A",
+				shares: amountInWei.toString(),
+				timeStamp: new Date().toISOString(),
+				tokenId: Math.floor(Math.random() * 100000),
+				tokenType: 1,
+				type: "staked",
+				__optimistic: true,
+			};
+
+			// Add to cached investments
+			queryClient.setQueryData(
+				["active-investments"],
+				(old: unknown[] = []) => [optimisticInvestment, ...old]
+			);
 			setAmount("");
+
+			// Sync with server
+			// Delay query invalidation
+			setTimeout(() => {
+				queryClient.invalidateQueries({ queryKey: ["active-investments"] });
+			}, 8000);
+
 			toast.success("Transaction successful!", {
 				description: "Your investment was successful!",
 			});
 			refetchTokenBalance();
 			refetchAll?.();
-			queryClient.invalidateQueries({
-				queryKey: ["active-investments"],
-			});
 		},
 	});
 
@@ -100,14 +129,6 @@ const InvestmentCard = ({
 			});
 			return false;
 		}
-
-		// const hasBalance = results?.data?.formatted
-		// 	? Number(results?.data?.formatted) > 0
-		// 	: false;
-		// if (!hasBalance && isConnected) {
-		// 	setShowModal(true);
-		// 	return false;
-		// }
 
 		return true;
 	};
@@ -233,7 +254,10 @@ const InvestmentCard = ({
 					</form>
 				</CardContent>
 			</Card>
-			{/* <Modal setShowModal={setShowModal} showModal={showModal} /> */}
+			<WithdrawModal
+				setShowWithDrawModal={setShowWithDrawModal}
+				showWithdrawModal={showWithdrawModal}
+			/>
 		</>
 	);
 };

@@ -26,6 +26,7 @@ export default function Page() {
 	const YLDtokenAddress = contractAddresses.yldToken as `0x${string}`;
 	const { address } = useAccount();
 	const [totalStaked, setTotalStaked] = useState<bigint>(BigInt(0));
+	const [showWithdrawModal, setShowWithDrawModal] = useState(false);
 
 	const { data, isPending, error } = useQuery({
 		queryKey: ["active-investments"],
@@ -54,6 +55,7 @@ export default function Page() {
 			return processedData;
 		},
 		enabled: !!address,
+		refetchInterval: 10000, // auto refetch every 10 seconds
 	});
 
 	if (error) {
@@ -133,6 +135,8 @@ export default function Page() {
 			<div className="px-4 lg:px-6 grid grid-cols-1 md:grid-cols-2 gap-5">
 				<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
 					<InvestmentCard
+						setShowWithDrawModal={setShowWithDrawModal}
+						showWithdrawModal={showWithdrawModal}
 						refetchAll={() => {
 							refetchNonces();
 							refetchUserYLDs();
@@ -178,7 +182,11 @@ export default function Page() {
 				{/* <ChartAreaInteractive /> */}
 			</div>
 			<div className="px-4">
-				<DataTable data={data ?? []} isLoading={isPending} />
+				<DataTable
+					data={data ?? []}
+					isLoading={isPending}
+					setShowWithDrawModal={setShowWithDrawModal}
+				/>
 			</div>
 		</div>
 	);

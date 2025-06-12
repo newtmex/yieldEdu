@@ -2,6 +2,14 @@
 
 This guide walks you through deploying and integrating the YieldEDU staking protocol in a production frontend environment. It covers core contract deployment, staking/unstaking flows, and contract roles.
 
+run
+
+```ts
+ npx hardhat node //in another terminal
+ npx hardhat run scripts/deploy.ts --network localhost  //to generate abis and addresses remember to have ponder running
+
+```
+
 ---
 
 ### 🧱 Contracts Overview
@@ -123,13 +131,6 @@ npx hardhat test
 - **Wallets**: Must support sending native ETH and ERC-20 approvals
 
 ---
-
-run
-
-```ts
- npx hardhat node //in another terminal
- npx hardhat run scripts/deploy.ts  //to generate abis and addresses
-```
 
 ### 🧩 Example Frontend Call (ETH Staking)
 

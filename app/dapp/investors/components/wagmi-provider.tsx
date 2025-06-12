@@ -25,8 +25,8 @@ const clientFromReactQuery = new QueryClient({
 			refetchOnReconnect: true, // refetch when network reconnects
 			refetchOnWindowFocus: true, // refetch when user switches back to tab
 			refetchOnMount: true, // refetch when component mounts
-			refetchInterval: 10000, // auto refetch every 10 seconds
 			staleTime: 5000, // data considered fresh for 5 seconds after fetching
+			retry: 1,
 		},
 	},
 });

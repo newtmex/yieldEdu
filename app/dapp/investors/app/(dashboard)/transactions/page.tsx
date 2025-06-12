@@ -45,6 +45,7 @@ export default function Page() {
 			return processedData;
 		},
 		enabled: !!address,
+		refetchInterval: 10000, // auto refetch every 10 seconds
 	});
 
 	if (error) {

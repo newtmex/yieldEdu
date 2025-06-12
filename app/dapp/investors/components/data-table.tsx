@@ -54,7 +54,7 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
+	// DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -99,7 +99,9 @@ import { cn } from "@/lib/utils";
 
 const yldAddress = contractAddresses.yldToken as `0x${string}`;
 
-const columns: ColumnDef<z.infer<typeof tableSchema>>[] = [
+const columns = (
+	setShowWithDrawModal?: React.Dispatch<React.SetStateAction<boolean>>
+): ColumnDef<z.infer<typeof tableSchema>>[] => [
 	{
 		accessorKey: "investmentId",
 		header: "Investment Id",
@@ -224,7 +226,7 @@ const columns: ColumnDef<z.infer<typeof tableSchema>>[] = [
 
 	{
 		id: "actions",
-		cell: () => (
+		cell: ({ row }) => (
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
@@ -237,11 +239,20 @@ const columns: ColumnDef<z.infer<typeof tableSchema>>[] = [
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-32">
-					<DropdownMenuItem>Edit</DropdownMenuItem>
-					<DropdownMenuItem>Make a copy</DropdownMenuItem>
-					<DropdownMenuItem>Favorite</DropdownMenuItem>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+					{/* <DropdownMenuItem variant="destructive">Opt out</DropdownMenuItem> */}
+					<DropdownMenuItem
+						onClick={() => {
+							const searchParams = new URLSearchParams(window.location.search);
+							const tokenId = row.original.tokenId;
+							const params = new URLSearchParams(searchParams.toString());
+							params.set("tokenId", tokenId);
+							window.history.pushState({}, "", `?${params.toString()}`);
+							setShowWithDrawModal?.(true);
+						}}
+					>
+						Claim Position
+					</DropdownMenuItem>
+					{/* <DropdownMenuSeparator /> */}
 				</DropdownMenuContent>
 			</DropdownMenu>
 		),
@@ -251,9 +262,11 @@ const columns: ColumnDef<z.infer<typeof tableSchema>>[] = [
 export function DataTable({
 	data: initialData,
 	isLoading,
+	setShowWithDrawModal,
 }: {
 	data: z.infer<typeof tableSchema>[];
 	isLoading?: boolean;
+	setShowWithDrawModal?: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
 	const [data, setData] = React.useState(() => initialData);
 
@@ -304,7 +317,7 @@ export function DataTable({
 
 	const table = useReactTable({
 		data,
-		columns,
+		columns: columns(setShowWithDrawModal),
 		state: {
 			sorting,
 			columnVisibility,
@@ -418,10 +431,7 @@ export function DataTable({
 								))
 							) : (
 								<TableRow>
-									<TableCell
-										colSpan={columns.length}
-										className="h-24 text-center"
-									>
+									<TableCell colSpan={12} className="h-24 text-center">
 										No results.
 									</TableCell>
 								</TableRow>
