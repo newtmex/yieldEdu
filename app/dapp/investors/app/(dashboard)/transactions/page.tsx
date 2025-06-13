@@ -25,19 +25,24 @@ export default function Page() {
 					.order("timestamp", { ascending: false }),
 			]);
 
-			const response = [...(stakedRes.data ?? []), ...(unstakedRes.data ?? [])];
+			const merged = [...(stakedRes.data ?? []), ...(unstakedRes.data ?? [])];
+			const response = merged.sort(
+				(a, b) =>
+					new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+			);
 
 			const processedData = (response ?? []).map((transaction) => {
 				return {
 					investmentId: transaction.id,
-					associatedCourse: "N/A",
-					earnedYield: transaction.shares.toString(),
-					investedAmount: transaction.amount.toString(),
+					associatedCourse: transaction.associatedCourse,
+					earnedYield: transaction.shares,
+					investedAmount: transaction.amount,
 					shares: transaction.shares,
 					timeStamp: transaction.timestamp,
 					tokenId: transaction.token_id,
 					tokenType: transaction.token_type,
-					sTokenStatus: "N/A",
+					sTokenStatus: transaction.sTokenStatus,
+					userAddress: transaction.user_address,
 					type: transaction.type,
 				};
 			});
@@ -54,7 +59,7 @@ export default function Page() {
 
 	return (
 		<div className="p-4">
-			<DataTable data={data ?? []} isLoading={isLoading} />
+			<DataTable data={data ?? []} isLoading={isLoading} showOptions={false} />
 		</div>
 	);
 }

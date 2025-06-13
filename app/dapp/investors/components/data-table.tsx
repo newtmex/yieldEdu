@@ -3,6 +3,8 @@
 import * as React from "react";
 
 import {
+	IconArrowDown,
+	IconArrowUp,
 	IconChevronDown,
 	IconChevronLeft,
 	IconChevronRight,
@@ -93,13 +95,14 @@ import { Skeleton } from "./ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const columns = (
-	setShowWithDrawModal?: React.Dispatch<React.SetStateAction<boolean>>
+	setShowWithDrawModal?: React.Dispatch<React.SetStateAction<boolean>>,
+	showOptions?: boolean
 ): ColumnDef<z.infer<typeof tableSchema>>[] => [
 	{
 		accessorKey: "investmentId",
 		header: "Investment Id",
 		cell: ({ row }) => {
-			return row.original.investmentId;
+			return row.original.investmentId.slice(0, 7) + "...";
 		},
 		enableHiding: false,
 	},
@@ -116,7 +119,13 @@ const columns = (
 		header: "YLDs (Shares)",
 		cell: ({ row }) => {
 			return row.original.shares ? (
-				<span className="text-lime-500 font-semibold">
+				<span
+					className={cn("flex items-center gap-1", {
+						"text-lime-500 font-semibold": row.original.type === "staked",
+						"text-red-500 font-semibold": row.original.type === "unstaked",
+					})}
+				>
+					{row.original.type === "unstaked" ? "-" : "+"}
 					{parseFloat(formatUnits(BigInt(row.original.shares), 18)).toFixed(4)}
 				</span>
 			) : (
@@ -171,10 +180,54 @@ const columns = (
 		header: "Investment Amount",
 		cell: ({ row }) => {
 			return row.original.shares ? (
-				<span className="text-blue-500 font-semibold">
+				<span
+					className={cn({
+						"text-lime-500 font-semibold": row.original.type === "staked",
+						"text-red-500 font-semibold": row.original.type === "unstaked",
+					})}
+				>
+					{row.original.type === "unstaked" ? "-" : "+"}
 					{parseFloat(
-						formatUnits(BigInt(row.original.investedAmount), 18)
+						formatUnits(row.original.investedAmount as unknown as bigint, 18)
 					).toFixed(4)}
+				</span>
+			) : (
+				"0.00"
+			);
+		},
+		// <div className="w-32">
+		// 	<Badge variant="outline" className="text-muted-foreground px-1.5">
+		// 		{row.original.investedAmount}
+		// 	</Badge>
+		// </div>
+	},
+	{
+		accessorKey: "type",
+		header: "Type",
+		cell: ({ row }) => {
+			return row.original.shares ? (
+				<span
+					className={cn("flex items-center gap-1", {
+						"text-lime-500 font-semibold": row.original.type === "staked",
+						"text-red-500 font-semibold": row.original.type === "unstaked",
+					})}
+				>
+					{row.original.type === "staked" ? (
+						<IconArrowUp size={20} />
+					) : (
+						<IconArrowDown size={20} />
+					)}
+					<span
+						className={cn(
+							" px-3 py-1 rounded-2xl",
+							{
+								"bg-red-500/15": row.original.type === "unstaked",
+							},
+							{ "bg-lime-500/15": row.original.type === "staked" }
+						)}
+					>
+						{row.original.type === "unstaked" ? "Withdrawn" : "Invested"}
+					</span>
 				</span>
 			) : (
 				"0.00"
@@ -191,8 +244,17 @@ const columns = (
 		header: "Earned YLD",
 		cell: ({ row }) => {
 			return (
-				<span className="text-lime-500 font-semibold">
-					{row.original.earnedYield}
+				<span
+					className={cn("flex items-center gap-1", {
+						"text-lime-500 font-semibold": row.original.type === "staked",
+						"text-red-500 font-semibold": row.original.type === "unstaked",
+					})}
+				>
+					{row.original.type === "unstaked" ? "-" : "+"}
+
+					{parseFloat(
+						formatUnits(row.original.earnedYield as unknown as bigint, 18)
+					).toFixed(4)}
 				</span>
 			);
 		},
@@ -219,36 +281,39 @@ const columns = (
 
 	{
 		id: "actions",
-		cell: ({ row }) => (
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button
-						variant="ghost"
-						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-						size="icon"
-					>
-						<IconDotsVertical />
-						<span className="sr-only">Open menu</span>
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-32">
-					{/* <DropdownMenuItem variant="destructive">Opt out</DropdownMenuItem> */}
-					<DropdownMenuItem
-						onClick={() => {
-							const searchParams = new URLSearchParams(window.location.search);
-							const tokenId = row.original.tokenId;
-							const params = new URLSearchParams(searchParams.toString());
-							params.set("tokenId", tokenId);
-							window.history.pushState({}, "", `?${params.toString()}`);
-							setShowWithDrawModal?.(true);
-						}}
-					>
-						Claim Position
-					</DropdownMenuItem>
-					{/* <DropdownMenuSeparator /> */}
-				</DropdownMenuContent>
-			</DropdownMenu>
-		),
+		cell: ({ row }) =>
+			showOptions && (
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							variant="ghost"
+							className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+							size="icon"
+						>
+							<IconDotsVertical />
+							<span className="sr-only">Open menu</span>
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" className="w-32">
+						{/* <DropdownMenuItem variant="destructive">Opt out</DropdownMenuItem> */}
+						<DropdownMenuItem
+							onClick={() => {
+								const searchParams = new URLSearchParams(
+									window.location.search
+								);
+								const tokenId = row.original.tokenId;
+								const params = new URLSearchParams(searchParams.toString());
+								params.set("tokenId", tokenId);
+								window.history.pushState({}, "", `?${params.toString()}`);
+								setShowWithDrawModal?.(true);
+							}}
+						>
+							Claim Position
+						</DropdownMenuItem>
+						{/* <DropdownMenuSeparator /> */}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			),
 	},
 ];
 
@@ -256,10 +321,12 @@ export function DataTable({
 	data: initialData,
 	isLoading,
 	setShowWithDrawModal,
+	showOptions = true,
 }: {
 	data: z.infer<typeof tableSchema>[];
 	isLoading?: boolean;
 	setShowWithDrawModal?: React.Dispatch<React.SetStateAction<boolean>>;
+	showOptions?: boolean;
 }) {
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [columnVisibility, setColumnVisibility] =
@@ -275,7 +342,7 @@ export function DataTable({
 
 	const table = useReactTable({
 		data: initialData,
-		columns: columns(setShowWithDrawModal),
+		columns: columns(setShowWithDrawModal, showOptions),
 		state: {
 			sorting,
 			columnVisibility,
@@ -373,7 +440,7 @@ export function DataTable({
 										key={row.id}
 										title={row.original.type === "unstaked" ? "Withdrawn" : ""}
 										className={cn("relative z-0 dark:hover:bg-green-400/10", {
-											"bg-blue-500/20 hover:bg-blue-500/25 dark:hover:bg-blue-500/25 dark:bg-blue-500/20 opacity-80":
+											"bg-red-500/20 hover:bg-red-500/25 dark:hover:bg-red-500/25 dark:bg-red-500/20 opacity-80":
 												row.original.type === "unstaked",
 										})}
 									>
