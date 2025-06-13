@@ -10,9 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-// import { storeTransaction } from "@/utils/supabase/helpers";
 import { ClassValue } from "clsx";
-// import { toast } from "sonner";
 import {
 	Select,
 	SelectContent,
@@ -75,9 +73,14 @@ const InvestmentCard = ({
 				: weduTokenAddress,
 		query: {
 			enabled: !!address,
+			select: (data) => ({
+				value: data.value.toString(),
+				decimals: data.decimals,
+			}),
 		},
 	});
 	const queryClient = useQueryClient();
+
 	const amountInWei = parseUnits(amount || "0", 18);
 	const { isApproving, isStaking, handleStake } = useStake({
 		amount,
@@ -99,20 +102,17 @@ const InvestmentCard = ({
 				type: "staked",
 				__optimistic: true,
 			};
-
 			// Add to cached investments
 			queryClient.setQueryData(
 				["active-investments"],
 				(old: unknown[] = []) => [optimisticInvestment, ...old]
 			);
 			setAmount("");
-
 			// Sync with server
 			// Delay query invalidation
 			setTimeout(() => {
 				queryClient.invalidateQueries({ queryKey: ["active-investments"] });
-			}, 8000);
-
+			}, 2000);
 			toast.success("Transaction successful!", {
 				description: "Your investment was successful!",
 			});
@@ -139,11 +139,12 @@ const InvestmentCard = ({
 		}
 	}, [isTokenError, tokenBalanceError]);
 
-	const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+	const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		if (!validateInput()) return;
 		handleStake();
 	};
+
 	return (
 		<>
 			<Card>
@@ -218,7 +219,7 @@ const InvestmentCard = ({
 									<span className="text-lime-400 font-medium">
 										{tokenBalance?.value
 											? parseFloat(
-													formatUnits(tokenBalance?.value, 18)
+													formatUnits(BigInt(tokenBalance?.value), 18)
 											  ).toFixed(4)
 											: "0.0000"}{" "}
 										{selectedToken === "stakeEDU"

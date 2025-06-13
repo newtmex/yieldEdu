@@ -31,8 +31,8 @@ export default function Page() {
 				return {
 					investmentId: transaction.id,
 					associatedCourse: "N/A",
-					earnedYield: transaction.shares,
-					investedAmount: transaction.amount,
+					earnedYield: transaction.shares.toString(),
+					investedAmount: transaction.amount.toString(),
 					shares: transaction.shares,
 					timeStamp: transaction.timestamp,
 					tokenId: transaction.token_id,

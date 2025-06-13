@@ -9,6 +9,12 @@ import { formatUnits } from "viem";
 import { useReadContract } from "wagmi";
 import contractAddresses from "@/contract-deployments/deployments.json";
 import yldABI from "@/contract-deployments/abis/YLDToken.json";
+import {
+	IconActivity,
+	IconCurrencyDollar,
+	IconDropletBolt,
+	IconTrendingUp,
+} from "@tabler/icons-react";
 export function SectionCards({
 	isUserYldsPending,
 	userYLDs,
@@ -17,7 +23,7 @@ export function SectionCards({
 	investmentsPending,
 }: {
 	isUserYldsPending?: boolean;
-	userYLDs?: { value: bigint; decimals: number };
+	userYLDs?: { value: string; decimals: number };
 	totalInvestment?: bigint;
 	activeInvestments?: number;
 	investmentsPending?: boolean;
@@ -29,6 +35,10 @@ export function SectionCards({
 		abi: yldABI.abi,
 		functionName: "previewRedeem",
 		args: [userYLDs?.value],
+		query: {
+			enabled: !!userYLDs?.value,
+			select: (data: unknown) => (data as bigint).toString(),
+		},
 	});
 
 	return (
@@ -41,7 +51,10 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription>Total Investments</CardDescription>
+						<CardDescription className="flex items-center gap-2">
+							<IconCurrencyDollar size={20} />
+							Total Investments
+						</CardDescription>
 						<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 							{currentReturns
 								? parseFloat(
@@ -74,7 +87,10 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription>Active Investments</CardDescription>
+						<CardDescription className="flex items-center gap-2">
+							<IconActivity size={20} />
+							Active Investments
+						</CardDescription>
 						<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 							{activeInvestments}
 						</CardTitle>
@@ -103,12 +119,13 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription>Current Returns</CardDescription>
+						<CardDescription className="flex items-center gap-2">
+							<IconTrendingUp size={20} />
+							Current Returns
+						</CardDescription>
 						<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 							{currentReturns
-								? parseFloat(formatUnits(currentReturns as bigint, 18)).toFixed(
-										4
-								  )
+								? parseFloat(formatUnits(BigInt(currentReturns), 18)).toFixed(4)
 								: "0.00"}
 						</CardTitle>
 						{/* <CardAction>
@@ -134,11 +151,14 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription>YLDs (Shares)</CardDescription>
+						<CardDescription className="flex items-center gap-2">
+							<IconDropletBolt size={20} />
+							YLDs (Shares)
+						</CardDescription>
 						<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 							{userYLDs?.value
 								? parseFloat(
-										formatUnits(userYLDs.value, userYLDs.decimals)
+										formatUnits(BigInt(userYLDs.value), userYLDs.decimals)
 								  ).toFixed(4)
 								: "0.00"}
 						</CardTitle>

@@ -9,7 +9,7 @@ import {
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "./ui/skeleton";
 import { formatUnits } from "viem";
@@ -35,6 +35,7 @@ const WithdrawModal = ({
 	const [isPending, setIsPending] = useState(false);
 	const searchParams = useSearchParams();
 	const tokenId = searchParams.get("tokenId");
+	const queryClient = useQueryClient();
 
 	const { data: activePosition, isPending: isPositionPending } = useQuery({
 		queryKey: ["active-position", tokenId],
@@ -53,6 +54,10 @@ const WithdrawModal = ({
 		abi: yldABI.abi,
 		functionName: "previewRedeem",
 		args: [activePosition?.[0]?.shares ?? 0],
+		query: {
+			enabled: !!activePosition?.[0]?.shares,
+			select: (data: unknown) => (data as bigint).toString(),
+		},
 	});
 
 	const { data, error } = useSimulateContract({
@@ -74,33 +79,46 @@ const WithdrawModal = ({
 
 	const handleWithdraw = async () => {
 		try {
-			if (data?.request) {
-				setIsPending(true);
-				const hash = await writeContract(config, data?.request);
-				toast.success("Rewards has been successfully claimed", {
-					description: `transaction hash: ${hash}`,
-				});
-				const { error } = await supabase
-					.from("staked_events")
-					.delete()
-					.eq("token_id", tokenId);
-				if (error) {
-					console.log(error);
-				}
-				setShowWithDrawModal(false);
-				return;
+			if (!data?.request) return;
+
+			setIsPending(true);
+
+			const hash = await writeContract(config, data.request);
+			toast.success("Rewards has been successfully claimed", {
+				description: `transaction hash: ${hash}`,
+			});
+
+			const { error } = await supabase
+				.from("staked_events")
+				.delete()
+				.eq("token_id", tokenId);
+
+			if (error) {
+				console.error("Supabase delete error:", error);
+				return; // Stop if delete fails
 			}
 
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			queryClient.setQueryData(["active-position"], (oldData: any) => {
+				if (!oldData) return oldData;
+				const newData = oldData.filter(
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					(item: any) => Number(item.token_id) !== Number(tokenId)
+				);
+				return newData;
+			});
+
+			setShowWithDrawModal(false);
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} catch (error: any) {
 			if (error.message.includes("User rejected the request")) {
 				toast.error("User rejected the request", {
-					description: "transaction has been rejected",
+					description: "Transaction has been rejected.",
 				});
 				return;
 			}
 
-			console.log("could not claim rewards", error);
+			console.error("Withdraw error:", error);
 			toast.error("Could not claim rewards", {
 				description: "Please try again later.",
 			});
@@ -138,7 +156,7 @@ const WithdrawModal = ({
 							<p className="text-xl font-bold">
 								{activePosition && activePosition[0]?.amount
 									? parseFloat(
-											formatUnits(activePosition[0].amount as bigint, 18)
+											formatUnits(activePosition[0].amount, 18)
 									  ).toFixed(4) + " EDU"
 									: "0.00"}
 							</p>
@@ -155,7 +173,7 @@ const WithdrawModal = ({
 							<p className="text-xl font-bold">
 								{activePosition && activePosition[0]?.shares
 									? parseFloat(
-											formatUnits(activePosition[0].shares as bigint, 18)
+											formatUnits(activePosition[0].shares, 18)
 									  ).toFixed(4) + " YLD"
 									: "0.00"}
 							</p>
@@ -173,9 +191,9 @@ const WithdrawModal = ({
 							<p className="text-sm">Expected Earn</p>
 							<p className="text-xl font-bold">
 								{currentReturns
-									? parseFloat(
-											formatUnits(currentReturns as bigint, 18)
-									  ).toFixed(4) + " YLD"
+									? parseFloat(formatUnits(BigInt(currentReturns), 18)).toFixed(
+											4
+									  ) + " YLD"
 									: "0.00"}
 							</p>
 						</Card>

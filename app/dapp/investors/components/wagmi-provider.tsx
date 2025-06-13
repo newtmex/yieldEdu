@@ -1,6 +1,6 @@
 "use client";
 
-import { wagmiAdapter, projectId, eduTestnet, localhost } from "@/lib/wagmi";
+import { wagmiAdapter, eduTestnet, localhost } from "@/lib/wagmi";
 import { createAppKit } from "@reown/appkit/react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
 // import { arbitrum } from "@reown/appkit/networks";
@@ -8,15 +8,10 @@ import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
+const projectId = process.env.NEXT_PUBLIC_PROJECT_ID;
+
 if (!projectId) {
 	throw new Error("Project ID is not defined");
-}
-
-// Extend the BigInt interface to include toJSON for TypeScript
-declare global {
-	interface BigInt {
-		toJSON(): string;
-	}
 }
 
 const clientFromReactQuery = new QueryClient({

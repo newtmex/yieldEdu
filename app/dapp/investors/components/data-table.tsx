@@ -89,15 +89,8 @@ export const tableSchema = z.object({
 	tokenType: z.string(),
 	type: z.enum(["staked", "unstaked"]),
 });
-import contractAddresses from "@/contract-deployments/deployments.json";
-import yldABI from "@/contract-deployments/abis/YLDToken.json";
-import { readContract } from "@wagmi/core";
-
-import { config } from "@/lib/wagmi";
 import { Skeleton } from "./ui/skeleton";
 import { cn } from "@/lib/utils";
-
-const yldAddress = contractAddresses.yldToken as `0x${string}`;
 
 const columns = (
 	setShowWithDrawModal?: React.Dispatch<React.SetStateAction<boolean>>
@@ -268,8 +261,6 @@ export function DataTable({
 	isLoading?: boolean;
 	setShowWithDrawModal?: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-	const [data, setData] = React.useState(() => initialData);
-
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
@@ -282,41 +273,8 @@ export function DataTable({
 		pageSize: 10,
 	});
 
-	React.useEffect(() => {
-		const generateYLDs = async (value: string) => {
-			const response = await readContract(config, {
-				address: yldAddress,
-				abi: yldABI.abi,
-				functionName: "previewRedeem",
-				args: [value],
-			});
-			return response;
-		};
-
-		const updateData = async () => {
-			if (initialData.length >= 1) {
-				const updatedData = await Promise.all(
-					initialData.map(async (initData) => {
-						const currentReturns = await generateYLDs(initData.earnedYield);
-						return {
-							...initData,
-							earnedYield: currentReturns
-								? parseFloat(formatUnits(currentReturns as bigint, 18)).toFixed(
-										4
-								  )
-								: "0.00",
-						};
-					})
-				);
-				setData(updatedData);
-			}
-		};
-
-		updateData();
-	}, [initialData]);
-
 	const table = useReactTable({
-		data,
+		data: initialData,
 		columns: columns(setShowWithDrawModal),
 		state: {
 			sorting,

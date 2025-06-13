@@ -20,13 +20,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
+import yldABI from "@/contract-deployments/abis/YLDToken.json";
+import { IconFingerprint } from "@tabler/icons-react";
 
 export default function Page() {
 	const sTokenAddress = contractAddresses.sToken as `0x${string}`;
 	const YLDtokenAddress = contractAddresses.yldToken as `0x${string}`;
 	const { address } = useAccount();
-	const [totalStaked, setTotalStaked] = useState<bigint>(BigInt(0));
+	const [totalStaked, setTotalStaked] = useState<string>("");
 	const [showWithdrawModal, setShowWithDrawModal] = useState(false);
+	const yldAddress = contractAddresses.yldToken as `0x${string}`;
 
 	const { data, isPending, error } = useQuery({
 		queryKey: ["active-investments"],
@@ -35,27 +38,41 @@ export default function Page() {
 				.from("staked_events")
 				.select("*")
 				.eq("user_address", address)
-				.order("timestamp", { ascending: false }); // Optional
+				.order("timestamp", { ascending: false });
 
-			const processedData = (response?.data ?? []).map((transaction) => {
-				return {
-					investmentId: transaction.id,
-					associatedCourse: "N/A",
-					earnedYield: transaction.shares,
-					investedAmount: transaction.amount,
-					shares: transaction.shares,
-					timeStamp: transaction.timestamp,
-					tokenId: transaction.token_id,
-					tokenType: transaction.token_type,
-					type: "staked" as "staked" | "unstaked",
-					sTokenStatus: "N/A",
-				};
-			});
+			const rawData = response?.data ?? [];
+
+			// Call previewRedeem for each and format
+			const processedData = await Promise.all(
+				rawData.map(async (transaction) => {
+					const preview = (await readContract(config, {
+						address: yldAddress,
+						abi: yldABI.abi,
+						functionName: "previewRedeem",
+						args: [transaction.shares.toString()],
+					})) as bigint;
+
+					return {
+						investmentId: transaction.id,
+						associatedCourse: "N/A",
+						earnedYield: parseFloat(formatUnits(BigInt(preview), 18)).toFixed(
+							4
+						),
+						investedAmount: transaction.amount.toString(),
+						shares: transaction.shares,
+						timeStamp: transaction.timestamp,
+						tokenId: transaction.token_id,
+						tokenType: transaction.token_type,
+						type: "staked" as const,
+						sTokenStatus: "N/A",
+					};
+				})
+			);
 
 			return processedData;
 		},
 		enabled: !!address,
-		refetchInterval: 10000, // auto refetch every 10 seconds
+		refetchInterval: 10000,
 	});
 
 	if (error) {
@@ -74,6 +91,8 @@ export default function Page() {
 		args: [address as `0x${string}`],
 		query: {
 			enabled: !!address,
+			select: (data: unknown) =>
+				(data as bigint[])?.map((n: bigint) => n.toString()),
 		},
 	});
 
@@ -82,7 +101,7 @@ export default function Page() {
 		const nonceArray = Array.isArray(nonces) ? nonces : [];
 		async function fetchBalances() {
 			const balances = (await Promise.all(
-				nonceArray.map((nonce: bigint) =>
+				nonceArray.map((nonce) =>
 					readContract(config, {
 						address: sTokenAddress,
 						abi: sTokenAbi.abi as Abi,
@@ -96,7 +115,7 @@ export default function Page() {
 				(acc: bigint, bal: bigint) => acc + bal,
 				BigInt(0)
 			);
-			setTotalStaked(total);
+			setTotalStaked(total.toString());
 		}
 
 		fetchBalances();
@@ -116,6 +135,10 @@ export default function Page() {
 		token: YLDtokenAddress,
 		query: {
 			enabled: !!address,
+			select: (data) => ({
+				value: data.value.toString(),
+				decimals: data.decimals,
+			}),
 		},
 	});
 
@@ -123,6 +146,7 @@ export default function Page() {
 		(acc, curr) => acc + BigInt(curr.investedAmount),
 		BigInt(0)
 	);
+
 	return (
 		<div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
 			<SectionCards
@@ -155,10 +179,15 @@ export default function Page() {
 					) : (
 						<Card className="@container/card">
 							<CardHeader>
-								<CardDescription>Granted sTokens</CardDescription>
+								<CardDescription className="flex items-center gap-2">
+									<IconFingerprint />
+									Granted sTokens
+								</CardDescription>
 								<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 									{totalStaked
-										? parseFloat(formatUnits(totalStaked, 18)).toFixed(4)
+										? parseFloat(formatUnits(BigInt(totalStaked), 18)).toFixed(
+												4
+										  )
 										: "0.0000"}
 								</CardTitle>
 								{/* <CardAction>
