@@ -33,12 +33,16 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
 import { useAppKit } from "@reown/appkit/react";
+import { useRouter, useSearchParams } from "next/navigation";
 const Page = () => {
 	const [disableUpdate, setDisableUpdate] = useState(true);
 	const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 	const { address, isConnected } = useAccount();
 	const { open } = useAppKit();
 	const queryClient = useQueryClient();
+	const searchParams = useSearchParams();
+	const currentTab = searchParams.get("tab") || "profile";
+	const router = useRouter();
 
 	const FormSchema = z.object({
 		name: z.string().min(5, {
@@ -144,6 +148,12 @@ const Page = () => {
 		return () => subscription.unsubscribe();
 	}, [form, profileDetails]);
 
+	const handleTabChange = (tab: string) => {
+		const params = new URLSearchParams(Array.from(searchParams.entries()));
+		params.set("tab", tab);
+		router.replace(`?${params.toString()}`, { scroll: false }); // keep scroll position
+	};
+
 	useEffect(() => {
 		if (profileDetails) {
 			form.reset({
@@ -156,7 +166,11 @@ const Page = () => {
 
 	return (
 		<div className="w-full p-5">
-			<Tabs defaultValue="profile" className="flex flex-col md:flex-row gap-5">
+			<Tabs
+				defaultValue={currentTab}
+				onValueChange={handleTabChange}
+				className="flex flex-col md:flex-row gap-5"
+			>
 				<TabsList className="md:flex-col gap-2 h-full flex-[15%] items-start bg-transparent">
 					<TabsTrigger
 						value="profile"

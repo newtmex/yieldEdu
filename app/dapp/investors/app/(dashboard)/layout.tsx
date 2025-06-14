@@ -10,6 +10,7 @@ import { headers } from "next/headers";
 import { Toaster } from "sonner";
 import NextTopLoader from "nextjs-toploader";
 import { yieldEduMetadata } from "@/metadata";
+import SyncUserToDb from "@/components/auth/sync-user";
 
 const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
@@ -69,6 +70,7 @@ export default async function RootLayout({
 								<DashboardHeader />
 								<div className="flex flex-1 flex-col">
 									<main className="@container/main flex flex-1 flex-col gap-2">
+										<SyncUserToDb />
 										{children}
 										<Toaster richColors />
 									</main>

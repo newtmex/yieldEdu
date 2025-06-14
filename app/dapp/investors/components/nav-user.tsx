@@ -2,7 +2,6 @@
 
 import {
 	IconDotsVertical,
-	IconLock,
 	IconLogin,
 	IconLogout,
 	IconUserCircle,
@@ -32,6 +31,9 @@ import {
 	useDisconnect,
 } from "@reown/appkit/react";
 import { toast } from "sonner";
+import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabaseClient";
 
 export function NavUser({
 	showInfo = true,
@@ -46,15 +48,33 @@ export function NavUser({
 	const { isConnected, caipAddress, address, embeddedWalletInfo } =
 		useAppKitAccount();
 
+	const queryClient = useQueryClient();
 	const handleDisconnect = async () => {
 		try {
-			await disconnect().then(() => toast.success("Disconnected successfully"));
+			await disconnect();
+			toast.success("Disconnected successfully");
+			queryClient.removeQueries({
+				queryKey: ["profile-details", address],
+			});
 		} catch (error) {
 			console.error("Failed to disconnect:", error);
 			toast.error("Failed to disconnect.");
 		}
 	};
 
+	const { data: profileDetails } = useQuery({
+		queryKey: ["profile-details", address],
+		queryFn: async () => {
+			const response = await supabase
+				.from("investors")
+				.select("*")
+				.eq("address", address)
+				.single();
+
+			return response.data;
+		},
+		enabled: !!address,
+	});
 	return (
 		<SidebarMenu className={cn(className)}>
 			<SidebarMenuItem>
@@ -70,16 +90,31 @@ export function NavUser({
 							<Avatar className="h-8 w-8 rounded-full grayscale">
 								<AvatarImage src={""} alt={""} />
 								<AvatarFallback className="rounded-full">
-									{embeddedWalletInfo?.user?.username?.charAt(0) ?? "AN"}
+									{(embeddedWalletInfo?.user?.username?.charAt(0) ||
+										profileDetails?.username?.charAt(0)) ??
+										"AN"}
 								</AvatarFallback>
 							</Avatar>
 							{showInfo && (
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-medium">
-										{embeddedWalletInfo?.user?.username ?? address}
+										{(embeddedWalletInfo?.user?.username ||
+											profileDetails?.username) ??
+											address}
 									</span>
 									<span className="text-muted-foreground truncate text-xs">
-										{embeddedWalletInfo?.user?.email ?? caipAddress}
+										{(() => {
+											if (
+												embeddedWalletInfo?.user?.email &&
+												embeddedWalletInfo.authProvider === "google"
+											) {
+												return embeddedWalletInfo.user.email;
+											}
+											if (profileDetails?.email) {
+												return profileDetails.email;
+											}
+											return caipAddress;
+										})()}
 									</span>
 								</div>
 							)}
@@ -96,25 +131,43 @@ export function NavUser({
 							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
 								<Avatar className="h-8 w-8 rounded-full">
 									<AvatarImage src={""} alt={""} />
-									<AvatarFallback className="rounded-full">CN</AvatarFallback>
+									<AvatarFallback className="rounded-full">
+										{(embeddedWalletInfo?.user?.username?.charAt(0) ||
+											profileDetails?.username?.charAt(0)) ??
+											"AN"}
+									</AvatarFallback>
 								</Avatar>
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-medium">
-										{embeddedWalletInfo?.user?.username ?? address}
+										{(embeddedWalletInfo?.user?.username ||
+											profileDetails?.username) ??
+											address}
 									</span>
 									<span className="text-muted-foreground truncate text-xs">
-										{embeddedWalletInfo?.user?.email ?? caipAddress}
+										{(() => {
+											if (
+												embeddedWalletInfo?.user?.email &&
+												embeddedWalletInfo.authProvider === "google"
+											) {
+												return embeddedWalletInfo.user.email;
+											}
+											if (profileDetails?.email) {
+												return profileDetails.email;
+											}
+											return caipAddress;
+										})()}
 									</span>
 								</div>
 							</div>
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem disabled>
-								<IconUserCircle />
-								Profile
-								<IconLock />
-							</DropdownMenuItem>
+							<Link href={"/settings?tab=profile"}>
+								<DropdownMenuItem>
+									<IconUserCircle />
+									Profile
+								</DropdownMenuItem>
+							</Link>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						{!isConnected ? (
