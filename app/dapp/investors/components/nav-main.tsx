@@ -53,11 +53,11 @@ export function NavMain({
 										className={cn(
 											"flex items-center gap-3 text-sm w-full px-3 overflow-x-clip py-2 rounded-lg cursor-pointer transition-colors",
 											{
-												"text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60":
+												"text-slate-600 dark:text-slate-300 hover:bg-lime-100 dark:hover:bg-lime-800/10":
 													pathname !== item.url,
 											},
 											{
-												"bg-primary/10 text-primary  hover:text-primary hover:bg-primary/10 dark:hover:!bg-lime-500/10 dark:bg-lime-500/10 dark:!text-lime-400":
+												"text-slate-800 bg-lime-300 hover:bg-lime-300 dark:hover:!bg-lime-500/10 dark:bg-lime-500/10 dark:!text-lime-400":
 													pathname === item.url,
 											}
 										)}
