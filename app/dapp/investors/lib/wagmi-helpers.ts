@@ -10,7 +10,7 @@ export const stakingContractAddress =
 
 export const getStakingConfig = (
 	functionName: string,
-	args?: [STokenType, string] | number[]
+	args?: [STokenType, string] | number[] | string[]
 ) => {
 	return {
 		abi: stakingConfig as unknown as Abi,

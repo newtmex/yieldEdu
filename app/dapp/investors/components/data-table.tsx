@@ -102,7 +102,7 @@ const columns = (
 		accessorKey: "investmentId",
 		header: "Investment Id",
 		cell: ({ row }) => {
-			return row.original.investmentId.slice(0, 7) + "...";
+			return row.original?.investmentId?.slice(0, 7) + "...";
 		},
 		enableHiding: false,
 	},
@@ -179,6 +179,9 @@ const columns = (
 		accessorKey: "investedAmount",
 		header: "Investment Amount",
 		cell: ({ row }) => {
+			const value = row.original.investedAmount;
+			if (!value) return "-";
+
 			return row.original.shares ? (
 				<span
 					className={cn({
@@ -187,19 +190,16 @@ const columns = (
 					})}
 				>
 					{row.original.type === "unstaked" ? "-" : "+"}
-					{parseFloat(
-						formatUnits(row.original.investedAmount as unknown as bigint, 18)
-					).toFixed(4)}
+					{row.original.investedAmount
+						? parseFloat(
+								formatUnits(BigInt(row.original.investedAmount), 18)
+						  ).toFixed(4)
+						: "0.00"}
 				</span>
 			) : (
 				"0.00"
 			);
 		},
-		// <div className="w-32">
-		// 	<Badge variant="outline" className="text-muted-foreground px-1.5">
-		// 		{row.original.investedAmount}
-		// 	</Badge>
-		// </div>
 	},
 	{
 		accessorKey: "type",
@@ -233,11 +233,6 @@ const columns = (
 				"0.00"
 			);
 		},
-		// <div className="w-32">
-		// 	<Badge variant="outline" className="text-muted-foreground px-1.5">
-		// 		{row.original.investedAmount}
-		// 	</Badge>
-		// </div>
 	},
 	{
 		accessorKey: "earnedYield",
@@ -302,9 +297,9 @@ const columns = (
 									window.location.search
 								);
 								const tokenId = row.original.tokenId;
-								const params = new URLSearchParams(searchParams.toString());
+								const params = new URLSearchParams(searchParams?.toString());
 								params.set("tokenId", tokenId);
-								window.history.pushState({}, "", `?${params.toString()}`);
+								window.history.pushState({}, "", `?${params?.toString()}`);
 								setShowWithDrawModal?.(true);
 							}}
 						>
@@ -425,7 +420,7 @@ export function DataTable({
 													? null
 													: flexRender(
 															header.column.columnDef.header,
-															header.getContext()
+															header?.getContext()
 													  )}
 											</TableHead>
 										);
@@ -608,7 +603,7 @@ function TableCellViewer({ item }: { item: string }) {
 										tickLine={false}
 										axisLine={false}
 										tickMargin={8}
-										tickFormatter={(value) => value.slice(0, 3)}
+										tickFormatter={(value) => value?.slice(0, 3)}
 										hide
 									/>
 									<ChartTooltip

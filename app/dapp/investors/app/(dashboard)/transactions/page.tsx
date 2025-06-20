@@ -8,8 +8,8 @@ import { supabase } from "@/lib/supabaseClient";
 export default function Page() {
 	const { address } = useAccount();
 
-	const { data, isLoading, error } = useQuery({
-		queryKey: ["active-investments"],
+	const { data, isPending, error } = useQuery({
+		queryKey: ["general-events"],
 		queryFn: async () => {
 			const [stakedRes, unstakedRes] = await Promise.all([
 				supabase
@@ -34,14 +34,14 @@ export default function Page() {
 			const processedData = (response ?? []).map((transaction) => {
 				return {
 					investmentId: transaction.id,
-					associatedCourse: transaction.associatedCourse,
+					associatedCourse: transaction.associatedCourse ?? "N/A",
 					earnedYield: transaction.shares,
 					investedAmount: transaction.amount,
 					shares: transaction.shares,
 					timeStamp: transaction.timestamp,
 					tokenId: transaction.token_id,
 					tokenType: transaction.token_type,
-					sTokenStatus: transaction.sTokenStatus,
+					sTokenStatus: transaction.sTokenStatus ?? "N/A",
 					userAddress: transaction.user_address,
 					type: transaction.type,
 				};
@@ -54,12 +54,12 @@ export default function Page() {
 	});
 
 	if (error) {
-		console.log(error);
+		console.log("transactionError", error);
 	}
 
 	return (
 		<div className="p-4">
-			<DataTable data={data ?? []} isLoading={isLoading} showOptions={false} />
+			<DataTable data={data ?? []} isLoading={isPending} showOptions={false} />
 		</div>
 	);
 }
