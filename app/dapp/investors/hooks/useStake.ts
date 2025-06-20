@@ -11,6 +11,40 @@ import deduTokenAbi from "@/contract-deployments/abis/MockDEDU.json";
 import { getStakingConfig } from "@/lib/wagmi-helpers";
 import { STokenType } from "@/components/invest";
 
+export const extractRevertReason = (message: string) => {
+	const match = message.match(/reverted with reason string ['"](.+?)['"]/);
+	return match ? match[1] : "Transaction reverted.";
+};
+
+export const handleTxError = (
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	error: any,
+	fallbackMsg = "Something went wrong"
+) => {
+	const msg = error?.message || "";
+
+	if (msg.includes("User rejected")) {
+		toast.error("Transaction rejected", {
+			description: "You rejected the transaction.",
+		});
+	} else if (msg.toLowerCase().includes("insufficient funds")) {
+		toast.error("Insufficient funds", {
+			description: "You don't have enough ETH for gas.",
+		});
+	} else if (msg.toLowerCase().includes("execution reverted")) {
+		toast.error("Transaction failed", {
+			description: extractRevertReason(msg),
+		});
+	} else if (msg.toLowerCase().includes("chain not supported")) {
+		toast.error("Wrong network", {
+			description: "Please switch to the supported network.",
+		});
+	} else {
+		toast.error(fallbackMsg, {
+			description: msg,
+		});
+	}
+};
 export const useStake = ({
 	amount,
 	address,
@@ -147,38 +181,6 @@ export const useStake = ({
 				onError(err);
 			}
 		);
-	};
-
-	const extractRevertReason = (message: string) => {
-		const match = message.match(/reverted with reason string ['"](.+?)['"]/);
-		return match ? match[1] : "Transaction reverted.";
-	};
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const handleTxError = (error: any, fallbackMsg = "Something went wrong") => {
-		const msg = error?.message || "";
-
-		if (msg.includes("User rejected")) {
-			toast.error("Transaction rejected", {
-				description: "You rejected the transaction.",
-			});
-		} else if (msg.toLowerCase().includes("insufficient funds")) {
-			toast.error("Insufficient funds", {
-				description: "You don't have enough ETH for gas.",
-			});
-		} else if (msg.toLowerCase().includes("execution reverted")) {
-			toast.error("Transaction failed", {
-				description: extractRevertReason(msg),
-			});
-		} else if (msg.toLowerCase().includes("chain not supported")) {
-			toast.error("Wrong network", {
-				description: "Please switch to the supported network.",
-			});
-		} else {
-			toast.error(fallbackMsg, {
-				description: msg,
-			});
-		}
 	};
 
 	const handleStake = async () => {

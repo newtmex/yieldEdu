@@ -64,7 +64,7 @@ export default function Page() {
 						tokenId: transaction.token_id,
 						tokenType: transaction.token_type,
 						type: "staked" as const,
-						sTokenStatus: "N/A",
+						sTokenStatus: transaction.sTokenStatus,
 					};
 				})
 			);
@@ -81,7 +81,7 @@ export default function Page() {
 	//  nonces array for the user
 	const {
 		data: nonces,
-		isLoading: noncesLoading,
+		isPending: noncesLoading,
 		error: noncesError,
 		refetch: refetchNonces,
 	} = useReadContract({
