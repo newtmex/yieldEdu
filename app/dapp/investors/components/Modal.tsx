@@ -9,7 +9,7 @@ import {
 import { Dispatch, SetStateAction } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "./ui/skeleton";
 import { formatUnits } from "viem";
@@ -31,9 +31,10 @@ const WithdrawModal = ({
 	const searchParams = useSearchParams();
 	const tokenId = searchParams.get("tokenId");
 	const { address } = useAccount();
+	const queryClient = useQueryClient();
 
 	const { data: activePosition, isPending: isPositionPending } = useQuery({
-		queryKey: ["active-position", tokenId],
+		queryKey: ["active-investments", tokenId],
 		queryFn: async () => {
 			const response = await supabase
 				.from("staked_events")
@@ -60,6 +61,7 @@ const WithdrawModal = ({
 		position: activePosition?.[0],
 		tokenId,
 		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["active-investments"] });
 			window?.history.pushState({}, "", `/`);
 			setShowWithDrawModal(false);
 		},

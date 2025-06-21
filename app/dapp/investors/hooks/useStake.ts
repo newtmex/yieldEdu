@@ -46,7 +46,7 @@ export const handleTxError = (
 		});
 	} else {
 		toast.error(fallbackMsg, {
-			description: msg,
+			description: "something went wrong",
 		});
 	}
 };
@@ -244,7 +244,7 @@ export const useStake = ({
 							toast.success("Approval successful");
 							await refetchAllowance();
 							setIsApproving(false);
-							await stakeTokens(); // ⬅️ only stake *after* approval
+							await stakeTokens();
 						},
 						onError: (err) => {
 							console.log(err);
@@ -297,7 +297,10 @@ export const useStake = ({
 			},
 			{
 				onSuccess: () => {
-					toast.success("Staked successfully!");
+					toast.success("Transaction successful!", {
+						description: "Your investment was successful!",
+					});
+
 					refetchAllowance();
 					onStakeSuccess?.();
 					setIsStaking(false);

@@ -37,6 +37,7 @@ export default function Page() {
 				.from("staked_events")
 				.select("*")
 				.eq("user_address", address)
+				.eq("status", "active")
 				.order("timestamp", { ascending: false });
 
 			const rawData = response?.data ?? [];
