@@ -60,6 +60,7 @@ const WithdrawModal = ({
 		position: activePosition?.[0],
 		tokenId,
 		onSuccess: () => {
+			window?.history.pushState({}, "", `/`);
 			setShowWithDrawModal(false);
 		},
 	});
@@ -69,7 +70,7 @@ const WithdrawModal = ({
 			modal={true}
 			open={showWithdrawModal}
 			onOpenChange={(state) => (
-				window.history.pushState({}, "", `/`), setShowWithDrawModal(state)
+				window?.history.pushState({}, "", `/`), setShowWithDrawModal(state)
 			)}
 		>
 			<DialogContent className="m-2 rounded-xl border bg-card dark:bg-card overflow-y-auto h-full md:h-fit">
@@ -141,7 +142,6 @@ const WithdrawModal = ({
 						isPositionPending || isRedeemPending || isApproving || isClaiming
 					}
 					onClick={claim}
-					// onClick={handleWithdraw}
 					type="button"
 					variant={"default"}
 				>
@@ -150,9 +150,9 @@ const WithdrawModal = ({
 							<div className="size-4 rounded-full animate-[spin_0.5s_linear_infinite] border-b-transparent border-[3px] border-white" />
 						)}
 						{isApproving
-							? "Waiting for approval..."
+							? "Approving transaction..."
 							: isClaiming
-							? "Waiting for claim approval..."
+							? "Processing claim..."
 							: "Claim Position"}
 					</>
 				</Button>

@@ -87,7 +87,7 @@ export const useClaim = ({
 				toast.warning(`${label} request timed out`, { id: "tx-timeout" });
 				setLoading(false);
 			}
-		}, 25000);
+		}, 35000);
 
 		action(
 			() => {
