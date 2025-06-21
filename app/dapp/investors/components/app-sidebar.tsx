@@ -8,7 +8,7 @@ import {
 	IconRectangularPrism,
 	IconSettings,
 } from "@tabler/icons-react";
-import YieldEDUIcon from "@/public/icon2.png";
+import YieldEDUIcon from "@/public/yieldedu.svg";
 
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
@@ -115,8 +115,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							<Link href={"/"}>
 								<Image
 									src={YieldEDUIcon}
-									alt="YieldEdu Logo"
-									className="size-10 aspect-square"
+									alt="YieldEdu"
+									className="size-8"
 									priority
 								/>
 							</Link>

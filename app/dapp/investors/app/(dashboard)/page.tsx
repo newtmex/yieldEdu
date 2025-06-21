@@ -123,7 +123,7 @@ export default function Page() {
 
 	if (noncesError) {
 		console.log(noncesError);
-		toast.error("could not fetch sTokens");
+		toast.warning("could not fetch sTokens");
 	}
 
 	const {

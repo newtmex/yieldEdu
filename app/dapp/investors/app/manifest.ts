@@ -5,22 +5,24 @@ export default function manifest(): MetadataRoute.Manifest {
 		name: "YieldEdu",
 		short_name: "YieldEdu",
 		description:
-			"Invest in education and earn returns while supporting a smarter future. Your investment powers learning and rewards your impact.",
+			"The future of on-chain education. YieldEdu lets you invest in learning, earn from participation, and power a smarter, decentralized world—whether you're an investor or a learner.",
 		start_url: "/",
 		display: "standalone",
+		display_override: ["window-controls-overlay", "standalone"],
 		background_color: "#f0f4f8",
 		theme_color: "#84cc16",
 		scope: "/",
+		categories: ["education", "productivity", "finance"],
 		screenshots: [
 			{
-				src: "/yieldedu-screenshot1.png",
+				src: "/yieldedu-screenshot-1.png",
 				type: "image/png",
-				sizes: "1896x812",
+				sizes: "1216x832",
 				form_factor: "wide",
 			},
 			{
-				src: "/yieldedu-screenshot2.png",
-				sizes: "1900x821",
+				src: "/yieldedu-screenshot-2.png",
+				sizes: "540x720",
 				type: "image/png",
 				form_factor: "narrow",
 			},
@@ -30,6 +32,12 @@ export default function manifest(): MetadataRoute.Manifest {
 				src: "/icon2.png",
 				sizes: "200x200",
 				type: "image/png",
+			},
+		],
+		protocol_handlers: [
+			{
+				protocol: "web+yieldedu",
+				url: "/handle-protocol?url=%s",
 			},
 		],
 	};
