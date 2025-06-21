@@ -38,8 +38,14 @@ export function SectionCards({
 		query: {
 			enabled: !!userYLDs?.value,
 			select: (data: unknown) => (data as bigint).toString(),
+			refetchInterval: 5 * 60 * 1000,
+			staleTime: 5 * 60 * 1000,
+			refetchOnWindowFocus: false,
 		},
 	});
+
+	console.log("userYLDs?.value:", userYLDs); // should log a number (even 0)
+	console.log("enabled:", userYLDs?.value != null); // should log true
 
 	return (
 		<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-2 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-4 @5xl/main:grid-cols-4">
@@ -51,7 +57,7 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription className="flex items-center gap-2">
+						<CardDescription className="flex items-center gap-2 text-lime-400">
 							<IconCurrencyDollar size={20} />
 							Total Investments
 						</CardDescription>
@@ -87,7 +93,7 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription className="flex items-center gap-2">
+						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconActivity size={20} />
 							Active Investments
 						</CardDescription>
@@ -119,7 +125,7 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription className="flex items-center gap-2">
+						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconTrendingUp size={20} />
 							Current Returns
 						</CardDescription>
@@ -151,7 +157,7 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription className="flex items-center gap-2">
+						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconDropletBolt size={20} />
 							YLDs (Shares)
 						</CardDescription>

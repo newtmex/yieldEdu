@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useWriteContract, useReadContract, useSimulateContract } from "wagmi";
+import {
+	useWriteContract,
+	useReadContract,
+	useSimulateContract,
+	useBalance,
+} from "wagmi";
 import { Abi, parseEther } from "viem";
 import { toast } from "sonner";
 import contractAddresses from "@/contract-deployments/deployments.json";
@@ -158,14 +163,13 @@ export const useStake = ({
 		const timeout = setTimeout(() => {
 			if (!resolved) {
 				timedOut = true;
-				toast.error(`${label} request timed out`, { id: "tx-timeout" });
+				toast.warning(`${label} request timed out`, { id: "tx-timeout" });
 				setLoading(false);
 			}
-		}, 25000);
+		}, 35000);
 
 		action(
 			() => {
-				if (timedOut) return; // already timed out, ignore
 				resolved = true;
 				clearTimeout(timeout);
 				clearTimeout(infoTimeout);
@@ -183,9 +187,37 @@ export const useStake = ({
 		);
 	};
 
+	const { data: tokenBalance } = useBalance({
+		address: address as unknown as `0x${string}`,
+		token:
+			selectedToken == "stakeEDU"
+				? yldTokenAddress
+				: selectedToken === "stakeDEDU"
+				? deduTokenAddress
+				: weduTokenAddress,
+		query: {
+			enabled: !!address,
+			select: (data) => ({
+				value: data.value.toString(),
+				decimals: data.decimals,
+			}),
+			refetchInterval: 5 * 60 * 1000,
+			staleTime: 5 * 60 * 1000,
+			refetchOnWindowFocus: false,
+		},
+	});
+
 	const handleStake = async () => {
 		if (!address) {
 			toast.error("Please connect your wallet");
+			return;
+		}
+
+		if (
+			tokenBalance?.value &&
+			BigInt(tokenBalance.value) < parseEther(amount)
+		) {
+			toast.error("Insufficient balance for this investment.");
 			return;
 		}
 

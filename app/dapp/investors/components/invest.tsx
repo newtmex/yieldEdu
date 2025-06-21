@@ -77,6 +77,9 @@ const InvestmentCard = ({
 				value: data.value.toString(),
 				decimals: data.decimals,
 			}),
+			refetchInterval: 5 * 60 * 1000,
+			staleTime: 5 * 60 * 1000,
+			refetchOnWindowFocus: false,
 		},
 	});
 	const queryClient = useQueryClient();
@@ -164,26 +167,44 @@ const InvestmentCard = ({
 							<label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">
 								Amount
 							</label>
-							<Input
-								disabled={isApproving || isStaking}
-								type="number"
-								min={0}
-								step="any"
-								required
-								placeholder="Enter EDU amount"
-								value={amount}
-								onChange={(e) => {
-									const value = e.target.value;
-									// Only allow empty string or positive numbers (including decimals)
-									if (
-										value === "" ||
-										(/^\d*\.?\d*$/.test(value) && Number(value) >= 0)
-									) {
-										setAmount(value);
-									}
-								}}
-								className="focus:!ring-lime-500 dark:focus:!ring-lime-500 focus:!border-transparent focus:ring-offset-2 dark:ring-offset-lime-700"
-							/>
+							<div className="flex gap-2">
+								<Input
+									disabled={isApproving || isStaking}
+									type="number"
+									min={0}
+									step="any"
+									required
+									placeholder="Enter EDU amount"
+									value={amount}
+									onChange={(e) => {
+										const value = e.target.value;
+										// Only allow empty string or positive numbers (including decimals)
+										if (
+											value === "" ||
+											(/^\d*\.?\d*$/.test(value) && Number(value) >= 0)
+										) {
+											setAmount(value);
+										}
+									}}
+									className="focus:!ring-lime-500 dark:focus:!ring-lime-500 focus:!border-transparent focus:ring-offset-2 dark:ring-offset-lime-700"
+								/>
+								<Button
+									type="button"
+									variant="outline"
+									className="px-3 py-1 text-xs"
+									disabled={isApproving || isStaking || !tokenBalance?.value}
+									onClick={() => {
+										if (tokenBalance?.value) {
+											const formatted = parseFloat(
+												formatUnits(BigInt(tokenBalance.value), 18)
+											).toString();
+											setAmount(formatted);
+										}
+									}}
+								>
+									Max
+								</Button>
+							</div>
 						</div>
 						<div className="w-full">
 							<label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">

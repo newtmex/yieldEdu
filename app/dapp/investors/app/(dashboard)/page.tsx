@@ -17,7 +17,6 @@ import sTokenAbi from "@/contract-deployments/abis/SToken.json";
 import { readContract } from "@wagmi/core";
 import { config } from "@/lib/wagmi";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import yldABI from "@/contract-deployments/abis/YLDToken.json";
@@ -72,7 +71,9 @@ export default function Page() {
 			return processedData;
 		},
 		enabled: !!address,
-		refetchInterval: 10000,
+		refetchInterval: 5 * 60 * 1000, // 5 minutes
+		staleTime: 5 * 60 * 1000, // 5 minutes, marks data fresh
+		refetchOnWindowFocus: false,
 	});
 
 	if (error) {
@@ -93,6 +94,9 @@ export default function Page() {
 			enabled: !!address,
 			select: (data: unknown) =>
 				(data as bigint[])?.map((n: bigint) => n.toString()),
+			refetchInterval: 5 * 60 * 1000,
+			staleTime: 5 * 60 * 1000,
+			refetchOnWindowFocus: false,
 		},
 	});
 
@@ -123,7 +127,6 @@ export default function Page() {
 
 	if (noncesError) {
 		console.log(noncesError);
-		toast.warning("could not fetch sTokens");
 	}
 
 	const {
@@ -139,6 +142,9 @@ export default function Page() {
 				value: data.value.toString(),
 				decimals: data.decimals,
 			}),
+			refetchInterval: 5 * 60 * 1000,
+			staleTime: 5 * 60 * 1000,
+			refetchOnWindowFocus: false,
 		},
 	});
 
@@ -179,7 +185,7 @@ export default function Page() {
 					) : (
 						<Card className="@container/card">
 							<CardHeader>
-								<CardDescription className="flex items-center gap-2">
+								<CardDescription className="flex text-lime-400 items-center gap-2">
 									<IconFingerprint />
 									Granted sTokens
 								</CardDescription>
