@@ -26,9 +26,9 @@ import { toast } from "sonner";
 import { useAccount, useBalance } from "wagmi";
 import { Skeleton } from "./ui/skeleton";
 import contractAddresses from "@/contract-deployments/deployments.json";
-import { formatUnits, parseUnits } from "viem";
-import { useQueryClient } from "@tanstack/react-query";
+import { formatUnits } from "viem";
 import WithdrawModal from "./Modal";
+import { useQueryClient } from "@tanstack/react-query";
 
 export enum STokenType {
 	LEARNER,
@@ -56,7 +56,7 @@ const InvestmentCard = ({
 	const eduTokenAddress = contractAddresses.yldToken as `0x${string}`;
 	const deduTokenAddress = contractAddresses.dEDUToken as `0x${string}`;
 	const weduTokenAddress = contractAddresses.wedu as `0x${string}`;
-
+	const queryClient = useQueryClient();
 	const {
 		data: tokenBalance,
 		refetch: refetchTokenBalance,
@@ -82,43 +82,39 @@ const InvestmentCard = ({
 			refetchOnWindowFocus: false,
 		},
 	});
-	const queryClient = useQueryClient();
 
-	const amountInWei = parseUnits(amount || "0", 18);
+	const waitForStake = async (prevCount: number) => {
+		let attempts = 0;
+
+		while (attempts < 10) {
+			await queryClient.invalidateQueries({ queryKey: ["active-investments"] });
+
+			const updated =
+				(queryClient.getQueryData(["active-investments"]) as []) || [];
+			if (updated.length > prevCount) break;
+
+			await new Promise((res) => setTimeout(res, 1000));
+			attempts++;
+		}
+	};
+
 	const { isApproving, isStaking, handleStake } = useStake({
 		amount,
 		address,
 		STokenType: STokenType.INVESTOR,
 		selectedToken,
-		onStakeSuccess: () => {
-			// Construct optimistic investment
-			const optimisticInvestment = {
-				associatedCourse: "N/A",
-				earnedYield: amountInWei.toString(),
-				investedAmount: amountInWei.toString(),
-				investmentId: crypto.randomUUID(),
-				sTokenStatus: "N/A",
-				shares: amountInWei.toString(),
-				timeStamp: new Date().toISOString(),
-				tokenId: Math.floor(Math.random() * 100000),
-				tokenType: 1,
-				type: "staked",
-				__optimistic: true,
-			};
-			// Add to cached investments
-			queryClient.setQueryData(
-				["active-investments"],
-				(old: unknown[] = []) => [optimisticInvestment, ...old]
-			);
+		onStakeSuccess: async () => {
 			setAmount("");
-			// Sync with server
-			// Delay query invalidation
-			setTimeout(() => {
-				queryClient.invalidateQueries({ queryKey: ["active-investments"] });
-			}, 2000);
-			toast.success("Transaction successful!", {
-				description: "Your investment was successful!",
+			const prevInvestments =
+				(queryClient.getQueryData(["active-investments"]) as []) || [];
+			const prevCount = prevInvestments.length;
+
+			toast.success("Transaction submitted!", {
+				description: "Waiting for confirmation...",
 			});
+
+			await waitForStake(prevCount); // Wait until data appears in DB
+
 			refetchTokenBalance();
 			refetchAll?.();
 		},

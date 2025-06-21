@@ -15,15 +15,15 @@ if (!projectId) {
 }
 
 const clientFromReactQuery = new QueryClient({
-	defaultOptions: {
-		queries: {
-			refetchOnReconnect: true, // refetch when network reconnects
-			refetchOnWindowFocus: true, // refetch when user switches back to tab
-			refetchOnMount: true, // refetch when component mounts
-			staleTime: 5000, // data considered fresh for 5 seconds after fetching
-			retry: 1,
-		},
-	},
+	// defaultOptions: {
+	// queries: {
+	// 	refetchOnReconnect: true, // refetch when network reconnects
+	// 	refetchOnWindowFocus: true, // refetch when user switches back to tab
+	// 	refetchOnMount: true, // refetch when component mounts
+	// 	staleTime: 5000, // data considered fresh for 5 seconds after fetching
+	// 	retry: 1,
+	// },
+	// },
 });
 
 const metadata = {

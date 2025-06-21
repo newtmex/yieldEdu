@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import contractAddresses from "@/contract-deployments/deployments.json";
 import { erc20Abi } from "viem";
 import { supabase } from "@/lib/supabaseClient";
-import { useQueryClient } from "@tanstack/react-query";
 import { handleTxError } from "./useStake";
 import { getStakingConfig } from "@/lib/wagmi-helpers";
 
@@ -26,7 +25,6 @@ export const useClaim = ({
 }) => {
 	const [isClaiming, setIsUnstaking] = useState(false);
 	const [isApproving, setIsApproving] = useState(false);
-	const queryClient = useQueryClient();
 	const stakingAddress = contractAddresses.staking as `0x${string}`;
 	const yldTokenAddress = contractAddresses.yldToken as `0x${string}`;
 	const { writeContract: claimWrite } = useWriteContract();
@@ -149,7 +147,7 @@ export const useClaim = ({
 			}
 		} catch (err: any) {
 			console.error(err);
-			toast.error("Claim failed: " + err.message);
+			handleTxError(err, "Claim failed");
 		}
 	};
 
@@ -173,16 +171,15 @@ export const useClaim = ({
 				setLoading: setIsUnstaking,
 				onSuccess: async () => {
 					toast.success("Claim successful");
-
-					await supabase.from("staked_events").delete().eq("token_id", tokenId);
-
-					queryClient.setQueryData(["active-position"], (old: any) => {
-						if (!old) return old;
-						return old.filter(
-							(item: any) => Number(item.token_id) !== Number(tokenId)
-						);
-					});
-
+					const { error } = await supabase
+						.from("staked_events")
+						.update({ status: "inactive" })
+						.eq("token_id", tokenId);
+					if (error) {
+						console.log(error);
+						toast.error("Claim failed");
+						return;
+					}
 					onSuccess?.();
 				},
 
