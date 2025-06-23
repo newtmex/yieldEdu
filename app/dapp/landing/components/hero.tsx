@@ -12,6 +12,7 @@ import {
 } from "framer-motion";
 import { Badge } from "./ui/badge";
 import { PlasticButton } from "./plastic-button";
+import Link from "next/link";
 
 const COLORS_TOP = ["#13FFAA", "#1E67C6", "#CE84CF", "#DD335C"];
 
@@ -64,7 +65,12 @@ export const Hero = () => {
 					>
 						Start Learning
 					</motion.button>
-					<PlasticButton text="Launch App" />
+					<Link
+						target="_blank"
+						href={process.env.NEXT_PUBLIC_INVESTORS_DASHBOARD_URL!}
+					>
+						<PlasticButton text="Launch App" className="z-30" />
+					</Link>
 				</div>
 			</div>
 

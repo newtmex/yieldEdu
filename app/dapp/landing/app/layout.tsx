@@ -18,6 +18,34 @@ export default function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const learnersDashboardUrl = process.env.NEXT_PUBLIC_LEARNERS_DASHBOARD_URL;
+	const investorsDashboardUrl = process.env.NEXT_PUBLIC_INVESTORS_DASHBOARD_URL;
+	const supportUrl = process.env.NEXT_PUBLIC_TELEGRAM_URL;
+	const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL;
+	const telegramCommunityUrl = process.env.NEXT_PUBLIC_TWITTER_URL;
+	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+	const anonkeyUrl = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+	if (!websiteUrl) {
+		throw new Error("Environment variable for website URL is not set.");
+	}
+
+	if (!supabaseUrl || !anonkeyUrl) {
+		throw new Error(
+			"Environment variable for Supabase URL and anonkey is not set."
+		);
+	}
+
+	if (!telegramCommunityUrl || !supportUrl) {
+		throw new Error(
+			"Environment variable for Telegram community and support URL is not set."
+		);
+	}
+
+	if (!learnersDashboardUrl || !investorsDashboardUrl) {
+		throw new Error("Environment variables for dashboard URLs are not set.");
+	}
+
 	return (
 		<html lang="en">
 			<body className={`${montserrat.variable} antialiased`}>
