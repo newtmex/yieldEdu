@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "./ui/button";
 import { IconBrandTelegram, IconBrandX } from "@tabler/icons-react";
+import Link from "next/link";
 
 const CommunityCTA = () => {
 	return (
@@ -18,12 +19,16 @@ const CommunityCTA = () => {
 						</p>
 					</div>
 					<div className="flex flex-row gap-4">
-						<Button className="gap-4" variant="outline">
-							Join Telegram <IconBrandTelegram className="w-4 h-4" />
-						</Button>
-						<Button className="gap-4">
-							Follow Us <IconBrandX className="w-4 h-4" />
-						</Button>
+						<Link href={process.env.NEXT_PUBLIC_TELEGRAM_URL!} target="_blank">
+							<Button className="gap-4" variant="outline">
+								Join Telegram <IconBrandTelegram className="w-4 h-4" />
+							</Button>
+						</Link>
+						<Link href={process.env.NEXT_PUBLIC_TWITTER_URL!} target="_blank">
+							<Button className="gap-4">
+								Follow Us <IconBrandX className="w-4 h-4" />
+							</Button>
+						</Link>
 					</div>
 				</div>
 			</div>

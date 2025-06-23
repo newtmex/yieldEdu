@@ -126,7 +126,12 @@ const Navigation = () => {
 						transition={{ duration: 0.3, delay: 0.2 }}
 						whileHover={{ scale: 1.05 }}
 					>
-						<PlasticButton text="Launch App" />
+						<Link
+							target="_blank"
+							href={process.env.NEXT_PUBLIC_INVESTORS_DASHBOARD_URL!}
+						>
+							<PlasticButton text="Launch App" />
+						</Link>
 					</motion.div>
 
 					{/* Mobile Menu Button */}
@@ -185,7 +190,12 @@ const Navigation = () => {
 									exit={{ opacity: 0, y: 20 }}
 									className="pt-6"
 								>
-									<PlasticButton text="Launch App" />
+									<Link
+										target="_blank"
+										href={process.env.NEXT_PUBLIC_INVESTORS_DASHBOARD_URL!}
+									>
+										<PlasticButton text="Launch App" />
+									</Link>
 								</motion.div>
 							</div>
 						</motion.div>

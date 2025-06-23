@@ -3,36 +3,44 @@ import { IconBrandTelegram, IconBrandX } from "@tabler/icons-react";
 import { animate, motion, useMotionValue } from "framer-motion";
 import React from "react";
 import Link from "next/link";
+import { ClassValue } from "clsx";
+import { cn } from "@/lib/utils";
 
 const COLORS_TOP = ["#13FFAA", "#1E67C6", "#CE84CF", "#DD335C"];
 
-const Footer = () => {
+const Footer = ({ className }: { className?: ClassValue }) => {
 	const defaultLegalLinks = [
-		{ name: "Terms and Conditions", href: "#" },
-		{ name: "Privacy Policy", href: "#" },
+		{ name: "Terms and Conditions", href: "/terms&conditions" },
+		{ name: "Privacy Policy", href: "/privacy-policy" },
 	];
 
 	const defaultSocialLinks = [
 		{
 			icon: <IconBrandTelegram className="size-5" />,
-			href: "#",
+			href: process.env.NEXT_PUBLIC_TELEGRAM_URL!,
 			label: "Telegram",
 		},
-		{ icon: <IconBrandX className="size-5" />, href: "#", label: "Twitter" },
+		{
+			icon: <IconBrandX className="size-5" />,
+			href: process.env.NEXT_PUBLIC_TWITTER_URL!,
+			label: "Twitter",
+		},
 	];
 
 	const defaultSections = [
 		{
 			title: "Platform",
 			links: [
-				{ name: "Features", href: "#" },
-				{ name: "About", href: "#" },
-				{ name: "Support", href: "#" },
+				{ name: "Features", href: "/features" },
+				{ name: "About", href: "/about" },
+				{ name: "Support", href: "/support" },
 			],
 		},
 		{
 			title: "Resources",
-			links: [{ name: "Community", href: "#" }],
+			links: [
+				{ name: "Community", href: process.env.NEXT_PUBLIC_TELEGRAM_URL! },
+			],
 		},
 	];
 
@@ -48,7 +56,7 @@ const Footer = () => {
 	}, []);
 
 	return (
-		<section className="container p-6 xl:px-12">
+		<section className={cn("container p-6 xl:px-12")}>
 			<div className="container mx-auto">
 				<div className="flex w-full flex-col justify-between gap-10 lg:flex-row lg:items-start lg:text-left">
 					<div className="flex w-full flex-col justify-between gap-6 lg:items-start">
@@ -109,10 +117,17 @@ const Footer = () => {
 						</p>
 						<ul className="flex items-center space-x-6 text-muted-foreground">
 							{defaultSocialLinks.map((social, idx) => (
-								<li key={idx} className="font-medium hover:text-primary">
-									<a href={social.href} aria-label={social.label}>
+								<li
+									key={idx}
+									className={cn("font-medium hover:text-primary", className)}
+								>
+									<Link
+										target="_blank"
+										href={social.href}
+										aria-label={social.label}
+									>
 										{social.icon}
-									</a>
+									</Link>
 								</li>
 							))}
 						</ul>
@@ -125,7 +140,10 @@ const Footer = () => {
 									{section.links.map((link, linkIdx) => (
 										<li
 											key={linkIdx}
-											className="font-medium hover:text-primary"
+											className={cn(
+												"font-medium hover:text-primary",
+												className
+											)}
 										>
 											<a href={link.href}>{link.name}</a>
 										</li>
@@ -136,10 +154,12 @@ const Footer = () => {
 					</div>
 				</div>
 				<div className="mt-8 flex flex-col justify-between gap-4 border-t py-8 text-xs font-medium text-muted-foreground md:flex-row md:items-center md:text-left">
-					<p className="order-2 lg:order-1">{`© ${new Date().getFullYear()}. yieldedu.xyz All rights reserved.`}</p>
+					<p className="order-2 lg:order-1">{`© ${new Date().getFullYear()}. ${
+						process.env.NEXT_PUBLIC_WEBSITE_URL
+					} All rights reserved.`}</p>
 					<ul className="order-1 flex flex-col gap-2 md:order-2 md:flex-row">
 						{defaultLegalLinks.map((link, idx) => (
-							<li key={idx} className="hover:text-primary">
+							<li key={idx} className={cn("hover:text-primary", className)}>
 								<a href={link.href}> {link.name}</a>
 							</li>
 						))}

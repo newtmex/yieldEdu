@@ -68,9 +68,12 @@ const Page = () => {
 									</p>
 								</div>
 								<Button variant="outline" className="mr-auto" asChild>
-									<a href="#" target="_blank">
+									<Link
+										href={process.env.NEXT_PUBLIC_INVESTORS_DASHBOARD_URL!}
+										target="_blank"
+									>
 										Go to Investor Dashboard
-									</a>
+									</Link>
 								</Button>
 							</div>
 							<div className="flex flex-col justify-between gap-6 rounded-xl bg-muted p-7 md:w-1/2 lg:w-auto">

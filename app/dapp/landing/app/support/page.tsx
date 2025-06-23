@@ -307,7 +307,7 @@ const Page = () => {
 					<Scene performanceLevel={performanceLevel} />
 				</div>
 			</main>
-			<Footer />
+			<Footer className="hover:text-white" />
 		</div>
 	);
 };

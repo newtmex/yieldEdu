@@ -77,7 +77,10 @@ const CTAsection = () => {
 						</p>
 						<div className="flex w-full flex-col justify-center gap-2 sm:flex-row lg:justify-start">
 							<Button asChild>
-								<Link href="#" target="_blank">
+								<Link
+									href={process.env.NEXT_PUBLIC_INVESTORS_DASHBOARD_URL!}
+									target="_blank"
+								>
 									Go to Investor Dashboard
 								</Link>
 							</Button>

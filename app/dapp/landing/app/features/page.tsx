@@ -5,6 +5,7 @@ import { PlasticButton } from "@/components/plastic-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield, Users } from "lucide-react";
+import Link from "next/link";
 
 function Page() {
 	return (
@@ -33,9 +34,14 @@ function Page() {
 							DeFi education accessible and rewarding
 						</p>
 						<div className="my-10 flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
-							<Button asChild>
-								<PlasticButton text="Go to Investor Dashboard" />
-							</Button>
+							<Link
+								href={process.env.NEXT_PUBLIC_INVESTORS_DASHBOARD_URL!}
+								target="_blank"
+							>
+								<Button asChild>
+									<PlasticButton text="Go to Investor Dashboard" />
+								</Button>
+							</Link>
 							<Button disabled variant="outline">
 								{/* <Link href={buttonSecondary.href!} target="_blank"> */}
 								Start Learning
