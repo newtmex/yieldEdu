@@ -120,7 +120,7 @@ const Page = () => {
 
 	useEffect(() => {
 		if (isProfileDetailsError && profileDetailsError) {
-			toast.error("Could not fetch profile details", {
+			toast.warning("Could not fetch profile details", {
 				description: profileDetailsError.message,
 			});
 		}

@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useWriteContract, useReadContract, useSimulateContract } from "wagmi";
+import {
+	useWriteContract,
+	useReadContract,
+	useSimulateContract,
+	useBalance,
+} from "wagmi";
 import { Abi, parseEther } from "viem";
 import { toast } from "sonner";
 import contractAddresses from "@/contract-deployments/deployments.json";
@@ -11,6 +16,40 @@ import deduTokenAbi from "@/contract-deployments/abis/MockDEDU.json";
 import { getStakingConfig } from "@/lib/wagmi-helpers";
 import { STokenType } from "@/components/invest";
 
+export const extractRevertReason = (message: string) => {
+	const match = message.match(/reverted with reason string ['"](.+?)['"]/);
+	return match ? match[1] : "Transaction reverted.";
+};
+
+export const handleTxError = (
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	error: any,
+	fallbackMsg = "Something went wrong"
+) => {
+	const msg = error?.message || "";
+
+	if (msg.includes("User rejected")) {
+		toast.error("Transaction rejected", {
+			description: "You rejected the transaction.",
+		});
+	} else if (msg.toLowerCase().includes("insufficient funds")) {
+		toast.error("Insufficient funds", {
+			description: "You don't have enough ETH for gas.",
+		});
+	} else if (msg.toLowerCase().includes("execution reverted")) {
+		toast.error("Transaction failed", {
+			description: extractRevertReason(msg),
+		});
+	} else if (msg.toLowerCase().includes("chain not supported")) {
+		toast.error("Wrong network", {
+			description: "Please switch to the supported network.",
+		});
+	} else {
+		toast.error(fallbackMsg, {
+			description: "something went wrong",
+		});
+	}
+};
 export const useStake = ({
 	amount,
 	address,
@@ -124,14 +163,13 @@ export const useStake = ({
 		const timeout = setTimeout(() => {
 			if (!resolved) {
 				timedOut = true;
-				toast.error(`${label} request timed out`, { id: "tx-timeout" });
+				toast.warning(`${label} request timed out`, { id: "tx-timeout" });
 				setLoading(false);
 			}
-		}, 25000);
+		}, 35000);
 
 		action(
 			() => {
-				if (timedOut) return; // already timed out, ignore
 				resolved = true;
 				clearTimeout(timeout);
 				clearTimeout(infoTimeout);
@@ -149,41 +187,37 @@ export const useStake = ({
 		);
 	};
 
-	const extractRevertReason = (message: string) => {
-		const match = message.match(/reverted with reason string ['"](.+?)['"]/);
-		return match ? match[1] : "Transaction reverted.";
-	};
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const handleTxError = (error: any, fallbackMsg = "Something went wrong") => {
-		const msg = error?.message || "";
-
-		if (msg.includes("User rejected")) {
-			toast.error("Transaction rejected", {
-				description: "You rejected the transaction.",
-			});
-		} else if (msg.toLowerCase().includes("insufficient funds")) {
-			toast.error("Insufficient funds", {
-				description: "You don't have enough ETH for gas.",
-			});
-		} else if (msg.toLowerCase().includes("execution reverted")) {
-			toast.error("Transaction failed", {
-				description: extractRevertReason(msg),
-			});
-		} else if (msg.toLowerCase().includes("chain not supported")) {
-			toast.error("Wrong network", {
-				description: "Please switch to the supported network.",
-			});
-		} else {
-			toast.error(fallbackMsg, {
-				description: msg,
-			});
-		}
-	};
+	const { data: tokenBalance } = useBalance({
+		address: address as unknown as `0x${string}`,
+		token:
+			selectedToken == "stakeEDU"
+				? yldTokenAddress
+				: selectedToken === "stakeDEDU"
+				? deduTokenAddress
+				: weduTokenAddress,
+		query: {
+			enabled: !!address,
+			select: (data) => ({
+				value: data.value.toString(),
+				decimals: data.decimals,
+			}),
+			refetchInterval: 5 * 60 * 1000,
+			staleTime: 5 * 60 * 1000,
+			refetchOnWindowFocus: false,
+		},
+	});
 
 	const handleStake = async () => {
 		if (!address) {
 			toast.error("Please connect your wallet");
+			return;
+		}
+
+		if (
+			tokenBalance?.value &&
+			BigInt(tokenBalance.value) < parseEther(amount)
+		) {
+			toast.error("Insufficient balance for this investment.");
 			return;
 		}
 
@@ -210,7 +244,7 @@ export const useStake = ({
 							toast.success("Approval successful");
 							await refetchAllowance();
 							setIsApproving(false);
-							await stakeTokens(); // ⬅️ only stake *after* approval
+							await stakeTokens();
 						},
 						onError: (err) => {
 							console.log(err);
@@ -263,7 +297,10 @@ export const useStake = ({
 			},
 			{
 				onSuccess: () => {
-					toast.success("Staked successfully!");
+					toast.success("Transaction successful!", {
+						description: "Your investment was successful!",
+					});
+
 					refetchAllowance();
 					onStakeSuccess?.();
 					setIsStaking(false);

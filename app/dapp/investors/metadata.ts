@@ -1,6 +1,6 @@
 import icon from "@/public/icon2.png";
-import openGraphImage from "@/public/YieldEDU.png";
 import { Metadata } from "next";
+import ogImage from "@/public/opengraph.png";
 
 export const yieldEduMetadata: Metadata = {
 	title: "YieldEdu - Investor",
@@ -11,13 +11,24 @@ export const yieldEduMetadata: Metadata = {
 
 	authors: [{ name: "Kamasah Dickson", url: "https://github.com/Bruh-Codes" }],
 	keywords: [
-		"Web3",
-		"Yield",
+		"Web3 Education",
+		"DeFi Learning",
+		"On-chain Education",
+		"Guaranteed Yield",
+		"Yield Farming",
 		"Decentralized Finance",
-		"Defi",
-		"Guaranteed Yields",
-		"educhain",
-		"Defi Ai",
+		"Earn While You Learn",
+		"EduChain",
+		"Staking Rewards",
+		"Crypto Education",
+		"Learn and Earn",
+		"Education dApp",
+		"AI in Education",
+		"DeFi AI",
+		"AI Web3",
+		"AI-Powered Learning",
+		"YieldEdu",
+		"Web3 AI Assistant",
 	],
 	creator: "Kamasah Dickson",
 
@@ -28,7 +39,13 @@ export const yieldEduMetadata: Metadata = {
 		siteName: "YieldEdu",
 		description:
 			"Invest in education and earn returns while supporting a smarter future. Your investment powers learning and rewards your impact.",
-		images: [openGraphImage.src, icon.src],
+		images: [
+			{
+				url: ogImage.src,
+				width: ogImage.width,
+				height: ogImage.height,
+			},
+		],
 	},
 
 	twitter: {
@@ -36,15 +53,15 @@ export const yieldEduMetadata: Metadata = {
 		title: "YieldEdu",
 		description:
 			"Invest in education and earn returns while supporting a smarter future. Your investment powers learning and rewards your impact.",
-		images: [openGraphImage.src, icon.src],
+		images: ["/opengraph.png"],
 		creator: "@bruh_codes",
 	},
 	metadataBase: new URL(process.env.NEXT_PUBLIC_WEBSITE_URL as string),
 
-	category: "Defi",
+	category: "education",
 
 	alternates: {
-		canonical: process.env.NEXT_PUBLIC_WEBSITE_URL,
+		canonical: "./",
 		languages: {
 			"en-US": "/en-US",
 		},

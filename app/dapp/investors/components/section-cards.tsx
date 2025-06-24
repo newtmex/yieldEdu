@@ -38,6 +38,9 @@ export function SectionCards({
 		query: {
 			enabled: !!userYLDs?.value,
 			select: (data: unknown) => (data as bigint).toString(),
+			refetchInterval: 5 * 60 * 1000,
+			staleTime: 5 * 60 * 1000,
+			refetchOnWindowFocus: false,
 		},
 	});
 
@@ -51,7 +54,7 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription className="flex items-center gap-2">
+						<CardDescription className="flex items-center gap-2 text-lime-400">
 							<IconCurrencyDollar size={20} />
 							Total Investments
 						</CardDescription>
@@ -87,7 +90,7 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription className="flex items-center gap-2">
+						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconActivity size={20} />
 							Active Investments
 						</CardDescription>
@@ -119,7 +122,7 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription className="flex items-center gap-2">
+						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconTrendingUp size={20} />
 							Current Returns
 						</CardDescription>
@@ -151,7 +154,7 @@ export function SectionCards({
 			) : (
 				<Card className="@container/card">
 					<CardHeader>
-						<CardDescription className="flex items-center gap-2">
+						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconDropletBolt size={20} />
 							YLDs (Shares)
 						</CardDescription>

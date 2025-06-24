@@ -6,7 +6,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,12 +15,9 @@ import { Skeleton } from "./ui/skeleton";
 import { formatUnits } from "viem";
 import contractAddresses from "@/contract-deployments/deployments.json";
 import yldABI from "@/contract-deployments/abis/YLDToken.json";
-import stakingABI from "@/contract-deployments/abis/Staking.json";
-import { useReadContract, useSimulateContract } from "wagmi";
-import { toast } from "sonner";
-import { writeContract } from "@wagmi/core";
-import { config } from "@/lib/wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { useSearchParams } from "next/navigation";
+import { useClaim } from "@/hooks/useClaim";
 
 const WithdrawModal = ({
 	showWithdrawModal,
@@ -29,16 +26,15 @@ const WithdrawModal = ({
 	showWithdrawModal: boolean;
 	setShowWithDrawModal: Dispatch<SetStateAction<boolean>>;
 }) => {
-	const yldAddress = contractAddresses.yldToken as `0x${string}`;
-	const stakingAddress = contractAddresses.staking as `0x${string}`;
-	const stakingAbi = stakingABI.abi;
-	const [isPending, setIsPending] = useState(false);
+	const yldTokenAddress = contractAddresses.yldToken as `0x${string}`;
+
 	const searchParams = useSearchParams();
 	const tokenId = searchParams.get("tokenId");
+	const { address } = useAccount();
 	const queryClient = useQueryClient();
 
 	const { data: activePosition, isPending: isPositionPending } = useQuery({
-		queryKey: ["active-position", tokenId],
+		queryKey: ["active-investments", tokenId],
 		queryFn: async () => {
 			const response = await supabase
 				.from("staked_events")
@@ -50,7 +46,7 @@ const WithdrawModal = ({
 	});
 
 	const { data: currentReturns, isPending: isRedeemPending } = useReadContract({
-		address: yldAddress,
+		address: yldTokenAddress,
 		abi: yldABI.abi,
 		functionName: "previewRedeem",
 		args: [activePosition?.[0]?.shares ?? 0],
@@ -60,79 +56,23 @@ const WithdrawModal = ({
 		},
 	});
 
-	const { data, error } = useSimulateContract({
-		abi: stakingAbi,
-		address: stakingAddress,
-		functionName: "unStake",
-		args: [tokenId, activePosition?.[0]?.shares],
-		query: {
-			enabled: !!activePosition?.[0]?.shares,
+	const { claim, isClaiming, isApproving } = useClaim({
+		address,
+		position: activePosition?.[0],
+		tokenId,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["active-investments"] });
+			window?.history.pushState({}, "", `/`);
+			setShowWithDrawModal(false);
 		},
 	});
-
-	useEffect(() => {
-		if (error) {
-			console.log(error);
-			toast.error("Something went wrong");
-		}
-	}, [error]);
-
-	const handleWithdraw = async () => {
-		try {
-			if (!data?.request) return;
-
-			setIsPending(true);
-
-			const hash = await writeContract(config, data.request);
-			toast.success("Rewards has been successfully claimed", {
-				description: `transaction hash: ${hash}`,
-			});
-
-			const { error } = await supabase
-				.from("staked_events")
-				.delete()
-				.eq("token_id", tokenId);
-
-			if (error) {
-				console.error("Supabase delete error:", error);
-				return; // Stop if delete fails
-			}
-
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			queryClient.setQueryData(["active-position"], (oldData: any) => {
-				if (!oldData) return oldData;
-				const newData = oldData.filter(
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(item: any) => Number(item.token_id) !== Number(tokenId)
-				);
-				return newData;
-			});
-
-			setShowWithDrawModal(false);
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		} catch (error: any) {
-			if (error.message.includes("User rejected the request")) {
-				toast.error("User rejected the request", {
-					description: "Transaction has been rejected.",
-				});
-				return;
-			}
-
-			console.error("Withdraw error:", error);
-			toast.error("Could not claim rewards", {
-				description: "Please try again later.",
-			});
-		} finally {
-			setIsPending(false);
-		}
-	};
 
 	return (
 		<Dialog
 			modal={true}
 			open={showWithdrawModal}
 			onOpenChange={(state) => (
-				window.history.pushState({}, "", `/`), setShowWithDrawModal(state)
+				window?.history.pushState({}, "", `/`), setShowWithDrawModal(state)
 			)}
 		>
 			<DialogContent className="m-2 rounded-xl border bg-card dark:bg-card overflow-y-auto h-full md:h-fit">
@@ -200,16 +140,22 @@ const WithdrawModal = ({
 					</div>
 				)}
 				<Button
-					disabled={isPositionPending || isRedeemPending || isPending}
-					onClick={handleWithdraw}
+					disabled={
+						isPositionPending || isRedeemPending || isApproving || isClaiming
+					}
+					onClick={claim}
 					type="button"
 					variant={"default"}
 				>
 					<>
-						{isPending && (
+						{(isApproving || isClaiming) && (
 							<div className="size-4 rounded-full animate-[spin_0.5s_linear_infinite] border-b-transparent border-[3px] border-white" />
 						)}
-						{isPending ? "Please wait..." : "Claim Position"}
+						{isApproving
+							? "Approving transaction..."
+							: isClaiming
+							? "Processing claim..."
+							: "Claim Position"}
 					</>
 				</Button>
 			</DialogContent>
