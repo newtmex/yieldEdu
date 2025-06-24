@@ -24,7 +24,11 @@ export default function RootLayout({
 	const telegramCommunityUrl = process.env.NEXT_PUBLIC_TWITTER_URL;
 	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 	const anonkeyUrl = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+	const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_MAIL;
 
+	if (!supportEmail) {
+		throw new Error("Environment variable for support email is not set.");
+	}
 	if (!websiteUrl) {
 		throw new Error("Environment variable for website URL is not set.");
 	}
