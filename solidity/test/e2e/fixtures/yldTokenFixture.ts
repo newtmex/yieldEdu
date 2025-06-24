@@ -1,11 +1,15 @@
 import { ethers, upgrades } from "hardhat";
 
-export default async function deployYLDTokenFixture() {
+export default async function deployYLDTokenFixture({
+    dEDUAddress,
+}: { dEDUAddress?: string } = {}) {
     const [owner] = await ethers.getSigners();
 
     const MockDEDUFactory = await ethers.getContractFactory("MockDEDU");
-    const mockAsset = await MockDEDUFactory.deploy();
-    await mockAsset.waitForDeployment();
+    const mockAsset = dEDUAddress
+        ? MockDEDUFactory.attach(dEDUAddress)
+        : await MockDEDUFactory.deploy();
+    !dEDUAddress && (await mockAsset.waitForDeployment());
 
     // Deploy the YLDToken contract as an upgradeable proxy
     const YLDTokenFactory = await ethers.getContractFactory("YLDToken");
