@@ -2,7 +2,6 @@
 // import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
 import { SectionCards } from "@/components/section-cards";
-import InvestmentCard from "@/components/invest";
 import {
 	Card,
 	CardDescription,
@@ -10,17 +9,25 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { useAccount, useBalance, useReadContract } from "wagmi";
-import contractAddresses from "@/contract-deployments/deployments.json";
+import {
+	yieldTokenAbi,
+	sTokenAbi,
+	contractAddresses,
+} from "@/helpers/deployments";
+
 import { Abi, formatUnits } from "viem";
 import { useEffect, useState } from "react";
-import sTokenAbi from "@/contract-deployments/abis/SToken.json";
 import { readContract } from "@wagmi/core";
 import { config } from "@/lib/wagmi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
-import yldABI from "@/contract-deployments/abis/YLDToken.json";
 import { IconFingerprint } from "@tabler/icons-react";
+import dynamic from "next/dynamic";
+
+const InvestmentCard = dynamic(() => import("@/components/invest"), {
+	loading: () => <InvestCardSkeleton />,
+});
 
 export default function Page() {
 	const sTokenAddress = contractAddresses.sToken as `0x${string}`;
@@ -47,7 +54,7 @@ export default function Page() {
 				rawData.map(async (transaction) => {
 					const preview = (await readContract(config, {
 						address: yldAddress,
-						abi: yldABI.abi,
+						abi: yieldTokenAbi.abi,
 						functionName: "previewRedeem",
 						args: [transaction.shares.toString()],
 					})) as bigint;
@@ -63,7 +70,7 @@ export default function Page() {
 						timeStamp: transaction.timestamp,
 						tokenId: transaction.token_id,
 						tokenType: transaction.token_type,
-						type: "staked" as const,
+						type: transaction.type,
 						sTokenStatus: transaction.sTokenStatus,
 					};
 				})
@@ -174,10 +181,8 @@ export default function Page() {
 						}}
 					/>
 				</div>
-				<div
-					className="grid grid-cols-2 gap-5 h-fit	*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs
-				"
-				>
+
+				<div className="grid grid-cols-2 gap-5 h-fit	*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
 					{noncesLoading ? (
 						<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-[218px] *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
 							<Skeleton className="h-[23px] bg-gray-500/20 w-[150px]" />
@@ -224,6 +229,29 @@ export default function Page() {
 					setShowWithDrawModal={setShowWithDrawModal}
 				/>
 			</div>
+		</div>
+	);
+}
+
+function InvestCardSkeleton() {
+	return (
+		<div className="w-full h-[399px] rounded-xl border p-6 space-y-4">
+			<div className="flex items-center space-x-3">
+				<Skeleton className="h-6 w-6 rounded-full" />
+				<Skeleton className="h-5 w-[150px]" />
+			</div>
+			<Skeleton className="h-4 w-3/4" />
+			<Skeleton className="h-4 w-2/3" />
+			<div className="space-y-2 pt-4">
+				<Skeleton className="h-4 w-[80px]" />
+				<Skeleton className="h-10 w-full rounded-md" />
+			</div>
+			<div className="space-y-2">
+				<Skeleton className="h-4 w-[60px]" />
+				<Skeleton className="h-10 w-full rounded-md" />
+			</div>
+			<Skeleton className="h-4 w-[120px]" />
+			<Skeleton className="h-10 w-full rounded-md" />
 		</div>
 	);
 }

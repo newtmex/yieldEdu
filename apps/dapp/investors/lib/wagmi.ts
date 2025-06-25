@@ -3,31 +3,34 @@ import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { defineChain } from "@reown/appkit/networks";
 // Get projectId from https://cloud.reown.com
 export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID;
+const devmode = process.env.NEXT_PUBLIC_DEVMODE === "contract";
+
 if (!projectId) {
 	throw new Error("PROJECT_ID environment variable is not defined");
 }
 
-export const eduTestnet = defineChain({
-	id: 656476,
-	name: "EDU Chain Testnet",
+export const educhain = defineChain({
+	id: 41923,
+	name: "EDU Chain",
 	chainNamespace: "eip155",
-	caipNetworkId: "eip155:656476",
+	caipNetworkId: "eip155:41923",
 	nativeCurrency: {
-		name: "EDU Chain Testnet",
+		name: "EDU",
 		symbol: "EDU",
 		decimals: 18,
 	},
 
-	testnet: true,
+	testnet: false,
 	rpcUrls: {
 		default: {
-			http: ["https://rpc.open-campus-codex.gelato.digital"],
+			http: ["https://rpc.edu-chain.raas.gelato.cloud"],
+			webSocket: ["wss://ws.edu-chain.raas.gelato.cloud"],
 		},
 	},
 	blockExplorers: {
 		default: {
-			name: "EDU Explorer",
-			url: "https://edu-chain-testnet.blockscout.com",
+			name: "EDUChain Explorer",
+			url: "https://educhain.blockscout.com",
 		},
 	},
 });
@@ -50,7 +53,7 @@ export const localhost = defineChain({
 	},
 });
 
-export const networks = [localhost];
+export const networks = devmode ? [educhain, localhost] : [educhain];
 
 //Set up the Wagmi Adapter (Config)
 export const wagmiAdapter = new WagmiAdapter({

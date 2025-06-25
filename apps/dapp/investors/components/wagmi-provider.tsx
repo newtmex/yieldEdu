@@ -1,6 +1,6 @@
 "use client";
 
-import { wagmiAdapter, eduTestnet, localhost } from "@/lib/wagmi";
+import { wagmiAdapter, educhain, localhost } from "@/lib/wagmi";
 import { createAppKit } from "@reown/appkit/react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
 // import { arbitrum } from "@reown/appkit/networks";
@@ -9,21 +9,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 const projectId = process.env.NEXT_PUBLIC_PROJECT_ID;
+const devmode = process.env.NEXT_PUBLIC_DEVMODE === "contract";
 
 if (!projectId) {
 	throw new Error("Project ID is not defined");
 }
 
 const clientFromReactQuery = new QueryClient({
-	// defaultOptions: {
-	// queries: {
-	// 	refetchOnReconnect: true, // refetch when network reconnects
-	// 	refetchOnWindowFocus: true, // refetch when user switches back to tab
-	// 	refetchOnMount: true, // refetch when component mounts
-	// 	staleTime: 5000, // data considered fresh for 5 seconds after fetching
-	// 	retry: 1,
-	// },
-	// },
+	defaultOptions: {
+		queries: {
+			refetchOnReconnect: true, // refetch when network reconnects
+			refetchOnWindowFocus: true, // refetch when user switches back to tab
+			refetchOnMount: true, // refetch when component mounts
+			retry: 3, // retry failed queries 3 times
+			staleTime: 1000 * 60 * 5, // data is fresh for 5 minutes
+			gcTime: 1000 * 60 * 10, // garbage collect data
+		},
+	},
 });
 
 const metadata = {
@@ -38,15 +40,16 @@ const metadata = {
 createAppKit({
 	adapters: [wagmiAdapter],
 	projectId,
-	networks: [eduTestnet, localhost],
-	defaultNetwork: eduTestnet,
+	networks: devmode ? [educhain, localhost] : [educhain],
+	defaultNetwork: educhain,
 	metadata,
 	features: {
-		analytics: true, // Optional - defaults to Cloud configuration
+		analytics: false, // Optional - defaults to Cloud configuration
 		socials: ["google", "x", "discord"],
 		swaps: false,
 		onramp: true,
 		receive: true,
+		connectMethodsOrder: ["social", "wallet"],
 	},
 
 	themeMode: "dark",

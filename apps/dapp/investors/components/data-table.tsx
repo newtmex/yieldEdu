@@ -385,12 +385,12 @@ export function DataTable({
 								</TableRow>
 							))}
 						</TableHeader>
-						<TableBody className="**:data-[slot=table-cell]:first:w-8  dark:bg-lime-400/20">
+						<TableBody className="**:data-[slot=table-cell]:first:w-8">
 							{table.getRowModel().rows?.length ? (
 								table.getRowModel().rows.map((row) => (
 									<TableRow
 										onDoubleClick={() => {
-											if (row.original.type === "staked") {
+											if (row.original.type === "staked" && showOptions) {
 												const searchParams = new URLSearchParams(
 													window.location.search
 												);
@@ -410,10 +410,13 @@ export function DataTable({
 										}}
 										key={row.id}
 										title={row.original.type === "unstaked" ? "Withdrawn" : ""}
-										className={cn("relative z-0 dark:hover:bg-green-400/10", {
-											"bg-red-500/20 hover:bg-red-500/25 dark:hover:bg-red-500/25 dark:bg-red-500/20 opacity-80":
-												row.original.type === "unstaked",
-										})}
+										className={cn(
+											"relative z-0 bg-green-50 hover:bg-green-100 dark:bg-lime-300/10 dark:hover:bg-lime-300/20",
+											{
+												"bg-red-100 hover:bg-red-200 dark:bg-red-400/10 dark:hover:bg-red-400/20":
+													row.original.type === "unstaked",
+											}
+										)}
 									>
 										{row.getVisibleCells().map((cell) => (
 											<TableCell key={cell.id}>
