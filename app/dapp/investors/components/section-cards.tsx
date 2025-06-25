@@ -7,8 +7,8 @@ import {
 import { Skeleton } from "./ui/skeleton";
 import { formatUnits } from "viem";
 import { useReadContract } from "wagmi";
-import contractAddresses from "@/contract-deployments/deployments.json";
-import yldABI from "@/contract-deployments/abis/YLDToken.json";
+import contractAddresses from "@/mainnet-deployments/deployments.json";
+import yldABI from "@/mainnet-deployments/abis/YLDToken.json";
 import {
 	IconActivity,
 	IconCurrencyDollar,

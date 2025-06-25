@@ -25,7 +25,7 @@ import { useStake } from "@/hooks/useStake";
 import { toast } from "sonner";
 import { useAccount, useBalance } from "wagmi";
 import { Skeleton } from "./ui/skeleton";
-import contractAddresses from "@/contract-deployments/deployments.json";
+import contractAddresses from "@/mainnet-deployments/deployments.json";
 import { formatUnits } from "viem";
 import WithdrawModal from "./Modal";
 import { useQueryClient } from "@tanstack/react-query";

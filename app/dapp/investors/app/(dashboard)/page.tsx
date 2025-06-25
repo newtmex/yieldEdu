@@ -10,16 +10,16 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { useAccount, useBalance, useReadContract } from "wagmi";
-import contractAddresses from "@/contract-deployments/deployments.json";
+import contractAddresses from "@/mainnet-deployments/deployments.json";
 import { Abi, formatUnits } from "viem";
 import { useEffect, useState } from "react";
-import sTokenAbi from "@/contract-deployments/abis/SToken.json";
+import sTokenAbi from "@/mainnet-deployments/abis/SToken.json";
 import { readContract } from "@wagmi/core";
 import { config } from "@/lib/wagmi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
-import yldABI from "@/contract-deployments/abis/YLDToken.json";
+import yldABI from "@/mainnet-deployments/abis/YLDToken.json";
 import { IconFingerprint } from "@tabler/icons-react";
 
 export default function Page() {

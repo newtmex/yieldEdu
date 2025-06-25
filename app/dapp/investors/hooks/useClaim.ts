@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useWriteContract, useReadContract, useSimulateContract } from "wagmi";
 import { toast } from "sonner";
-import contractAddresses from "@/contract-deployments/deployments.json";
+import contractAddresses from "@/mainnet-deployments/deployments.json";
 import { erc20Abi } from "viem";
 import { supabase } from "@/lib/supabaseClient";
 import { handleTxError } from "./useStake";

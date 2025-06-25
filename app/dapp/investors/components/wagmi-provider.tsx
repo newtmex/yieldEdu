@@ -1,6 +1,6 @@
 "use client";
 
-import { wagmiAdapter, eduTestnet, localhost } from "@/lib/wagmi";
+import { wagmiAdapter, educhain } from "@/lib/wagmi";
 import { createAppKit } from "@reown/appkit/react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
 // import { arbitrum } from "@reown/appkit/networks";
@@ -38,8 +38,8 @@ const metadata = {
 createAppKit({
 	adapters: [wagmiAdapter],
 	projectId,
-	networks: [eduTestnet, localhost],
-	defaultNetwork: eduTestnet,
+	networks: [educhain],
+	defaultNetwork: educhain,
 	metadata,
 	features: {
 		analytics: true, // Optional - defaults to Cloud configuration

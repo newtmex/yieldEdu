@@ -9,10 +9,10 @@ import {
 } from "wagmi";
 import { Abi, parseEther } from "viem";
 import { toast } from "sonner";
-import contractAddresses from "@/contract-deployments/deployments.json";
-import yldTokenAbi from "@/contract-deployments/abis/YLDToken.json";
-import weduTokenAbi from "@/contract-deployments/abis/WEDU.json";
-import deduTokenAbi from "@/contract-deployments/abis/MockDEDU.json";
+import contractAddresses from "@/mainnet-deployments/deployments.json";
+import yldTokenAbi from "@/mainnet-deployments/abis/YLDToken.json";
+import weduTokenAbi from "@/mainnet-deployments/abis/WEDU.json";
+import deduTokenAbi from "@/mainnet-deployments/abis/MockDEDU.json";
 import { getStakingConfig } from "@/lib/wagmi-helpers";
 import { STokenType } from "@/components/invest";
 
