@@ -45,9 +45,9 @@ export function SectionCards({
 	});
 
 	return (
-		<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-2 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-4 @5xl/main:grid-cols-4">
+		<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @2xl/main:grid-cols-4">
 			{investmentsPending ? (
-				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-[218px] *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
+				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-full *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
 					<Skeleton className="h-[23px] bg-gray-500/20 w-[150px]" />
 					<Skeleton className="h-[15px] bg-gray-500/20 w-[100px]" />
 				</Skeleton>
@@ -83,7 +83,7 @@ export function SectionCards({
 				</Card>
 			)}
 			{investmentsPending ? (
-				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-[218px] *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
+				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-full *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
 					<Skeleton className="h-[23px] bg-gray-500/20 w-[150px]" />
 					<Skeleton className="h-[15px] bg-gray-500/20 w-[100px]" />
 				</Skeleton>
@@ -115,7 +115,7 @@ export function SectionCards({
 				</Card>
 			)}
 			{isRedeemPending ? (
-				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-[218px] *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
+				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-full *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
 					<Skeleton className="h-[23px] bg-gray-500/20 w-[150px]" />
 					<Skeleton className="h-[15px] bg-gray-500/20 w-[100px]" />
 				</Skeleton>
@@ -147,7 +147,7 @@ export function SectionCards({
 				</Card>
 			)}
 			{isUserYldsPending ? (
-				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-[218px] *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
+				<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-full *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
 					<Skeleton className="h-[23px] bg-gray-500/20 w-[150px]" />
 					<Skeleton className="h-[15px] bg-gray-500/20 w-[100px]" />
 				</Skeleton>
