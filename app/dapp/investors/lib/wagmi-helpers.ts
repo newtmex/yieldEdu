@@ -1,10 +1,9 @@
-import contractAddresses from "@/mainnet-deployments/deployments.json";
-import stakingAbi from "@/mainnet-deployments/abis/Staking.json";
+import { contractAddresses, stakingAbi } from "@/helpers/deployments";
+
 import { Abi } from "viem";
 import { STokenType } from "@/components/invest";
 
 const stakingConfig = stakingAbi.abi;
-
 export const stakingContractAddress =
 	contractAddresses.staking as `0x${string}`;
 

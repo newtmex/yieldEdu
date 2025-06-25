@@ -13,8 +13,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Skeleton } from "./ui/skeleton";
 import { formatUnits } from "viem";
-import contractAddresses from "@/mainnet-deployments/deployments.json";
-import yldABI from "@/mainnet-deployments/abis/YLDToken.json";
+import { contractAddresses, yieldTokenAbi } from "@/helpers/deployments";
+
 import { useAccount, useReadContract } from "wagmi";
 import { useSearchParams } from "next/navigation";
 import { useClaim } from "@/hooks/useClaim";
@@ -47,7 +47,7 @@ const WithdrawModal = ({
 
 	const { data: currentReturns, isPending: isRedeemPending } = useReadContract({
 		address: yldTokenAddress,
-		abi: yldABI.abi,
+		abi: yieldTokenAbi.abi,
 		functionName: "previewRedeem",
 		args: [activePosition?.[0]?.shares ?? 0],
 		query: {

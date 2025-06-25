@@ -7,8 +7,8 @@ import {
 import { Skeleton } from "./ui/skeleton";
 import { formatUnits } from "viem";
 import { useReadContract } from "wagmi";
-import contractAddresses from "@/mainnet-deployments/deployments.json";
-import yldABI from "@/mainnet-deployments/abis/YLDToken.json";
+import { contractAddresses, yieldTokenAbi } from "@/helpers/deployments";
+
 import {
 	IconActivity,
 	IconCurrencyDollar,
@@ -23,7 +23,12 @@ export function SectionCards({
 	investmentsPending,
 }: {
 	isUserYldsPending?: boolean;
-	userYLDs?: { value: string; decimals: number };
+	userYLDs?:
+		| {
+				value: string;
+				decimals: number;
+		  }
+		| undefined;
 	totalInvestment?: bigint;
 	activeInvestments?: number;
 	investmentsPending?: boolean;
@@ -32,9 +37,9 @@ export function SectionCards({
 
 	const { data: currentReturns, isPending: isRedeemPending } = useReadContract({
 		address: yldAddress,
-		abi: yldABI.abi,
+		abi: yieldTokenAbi.abi,
 		functionName: "previewRedeem",
-		args: [userYLDs?.value],
+		args: [userYLDs?.value ?? "0"],
 		query: {
 			enabled: !!userYLDs?.value,
 			select: (data: unknown) => (data as bigint).toString(),

@@ -3,6 +3,8 @@ import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { defineChain } from "@reown/appkit/networks";
 // Get projectId from https://cloud.reown.com
 export const projectId = process.env.NEXT_PUBLIC_PROJECT_ID;
+const devmode = process.env.NEXT_PUBLIC_DEVMODE === "contract";
+
 if (!projectId) {
 	throw new Error("PROJECT_ID environment variable is not defined");
 }
@@ -51,7 +53,7 @@ export const localhost = defineChain({
 	},
 });
 
-export const networks = [educhain];
+export const networks = devmode ? [educhain, localhost] : [educhain];
 
 //Set up the Wagmi Adapter (Config)
 export const wagmiAdapter = new WagmiAdapter({
