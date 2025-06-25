@@ -233,7 +233,7 @@ export default function Page() {
 	);
 }
 
-export function InvestCardSkeleton() {
+function InvestCardSkeleton() {
 	return (
 		<div className="w-full h-[399px] rounded-xl border p-6 space-y-4">
 			<div className="flex items-center space-x-3">
