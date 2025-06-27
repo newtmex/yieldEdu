@@ -190,7 +190,7 @@ export const useStake = ({
 		);
 	};
 
-	const { data: tokenBalance } = useBalance({
+	const { refetch: refetchBalance } = useBalance({
 		address: address as unknown as `0x${string}`,
 		token:
 			selectedToken == "stakeEDU"
@@ -210,21 +210,41 @@ export const useStake = ({
 		},
 	});
 
+	const formatBalance = (balance: string, decimals: number) => {
+		return Number(balance) / Math.pow(10, decimals);
+	};
+
 	const handleStake = async () => {
 		if (!address) {
 			toast.error("Please connect your wallet");
 			return;
 		}
 
-		if (
-			tokenBalance?.value &&
-			BigInt(tokenBalance.value) < parseEther(amount)
-		) {
-			toast.error("Insufficient balance for this investment.");
+		// Await the fresh balance fetch
+		const freshBalanceResult = await refetchBalance();
+		const freshBalance = freshBalanceResult.data;
+
+		if (!freshBalance || !freshBalance.value) {
+			toast.error("Failed to fetch token balance. Please try again.");
 			return;
 		}
 
 		const amountInWei = parseEther(amount);
+		const balanceInWei = BigInt(freshBalance.value);
+
+		if (balanceInWei < amountInWei) {
+			const balanceFormatted = formatBalance(
+				freshBalance.value,
+				freshBalance.decimals
+			);
+			toast.error("Insufficient balance", {
+				description: `You need ${amount} tokens but only have ${balanceFormatted.toFixed(
+					6
+				)} available.`,
+			});
+			return;
+		}
+
 		const needsApproval =
 			!allowance || BigInt(allowance?.toString()) < amountInWei;
 
