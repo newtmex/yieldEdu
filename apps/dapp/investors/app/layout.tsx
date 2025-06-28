@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
-import { Toaster } from "sonner";
 import NextTopLoader from "nextjs-toploader";
 import { yieldEduMetadata } from "@/metadata";
+import ToastNotification from "@/components/ToastNotification";
 
 const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
@@ -48,7 +48,7 @@ export default function RootLayout({
 					disableTransitionOnChange
 				>
 					{children}
-					<Toaster richColors />
+					<ToastNotification />
 				</ThemeProvider>
 			</body>
 		</html>

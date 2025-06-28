@@ -29,6 +29,7 @@ import { contractAddresses } from "@/helpers/deployments";
 import { formatUnits } from "viem";
 import WithdrawModal from "./Modal";
 import { useQueryClient } from "@tanstack/react-query";
+import { useGasEstimation } from "@/hooks/useGasEstimation";
 
 export enum STokenType {
 	LEARNER,
@@ -53,10 +54,10 @@ const InvestmentCard = ({
 	>("stakeEDU");
 
 	const { address } = useAccount();
-	const eduTokenAddress = contractAddresses.yldToken as `0x${string}`;
 	const deduTokenAddress = contractAddresses.dEDUToken as `0x${string}`;
 	const weduTokenAddress = contractAddresses.wedu as `0x${string}`;
 	const queryClient = useQueryClient();
+
 	const {
 		data: tokenBalance,
 		refetch: refetchTokenBalance,
@@ -67,7 +68,7 @@ const InvestmentCard = ({
 		address: address as unknown as `0x${string}`,
 		token:
 			selectedToken == "stakeEDU"
-				? eduTokenAddress
+				? undefined // falls back to native token
 				: selectedToken === "stakeDEDU"
 				? deduTokenAddress
 				: weduTokenAddress,
@@ -81,6 +82,13 @@ const InvestmentCard = ({
 			staleTime: 5 * 60 * 1000,
 			refetchOnWindowFocus: false,
 		},
+	});
+
+	// Use the gas estimation hook
+	const { estimateMaxAmount } = useGasEstimation({
+		selectedToken,
+		tokenBalance: tokenBalance?.value ?? null,
+		STokenType: STokenType.INVESTOR,
 	});
 
 	const waitForStake = async (prevCount: number) => {
@@ -109,9 +117,11 @@ const InvestmentCard = ({
 				(queryClient.getQueryData(["active-investments"]) as []) || [];
 			const prevCount = prevInvestments.length;
 
-			toast.success("Transaction submitted!", {
-				description: "Waiting for confirmation...",
-			});
+			if (selectedToken !== "stakeEDU") {
+				toast.success("Transaction submitted!", {
+					description: "Waiting for confirmation...",
+				});
+			}
 
 			await waitForStake(prevCount); // Wait until data appears in DB
 
@@ -121,10 +131,29 @@ const InvestmentCard = ({
 	});
 
 	// Validate input
-	const validateInput = () => {
+	const validateInput = async () => {
 		if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
 			toast.error("Invalid amount", {
 				description: "Please enter a valid amount greater than 0",
+			});
+			return false;
+		}
+
+		// estimate gas
+		try {
+			const maxAmount = await estimateMaxAmount();
+			if (maxAmount !== null && Number(amount) > Number(maxAmount)) {
+				toast.error("Insufficient balance", {
+					description: `Maximum allowed after gas fee is ${Number(
+						maxAmount
+					).toFixed(4)}`,
+				});
+				return false;
+			}
+		} catch (error) {
+			console.warn("Gas estimation failed during validation:", error);
+			toast.warning("Gas estimation unavailable", {
+				description: "Ensure you have enough EDU to cover gas fees",
 			});
 			return false;
 		}
@@ -138,9 +167,34 @@ const InvestmentCard = ({
 		}
 	}, [isTokenError, tokenBalanceError]);
 
+	const handleMaxClick = async () => {
+		if (!tokenBalance?.value) return;
+
+		try {
+			const maxAmount = await estimateMaxAmount();
+
+			if (maxAmount === "0") {
+				setAmount("0");
+				return;
+			}
+
+			if (maxAmount !== null) {
+				setAmount(Number(maxAmount).toFixed(6)); // readable max
+			} else {
+				// fallback if estimate failed
+				const fallback = formatUnits(BigInt(tokenBalance.value), 18);
+				setAmount(Number(fallback).toFixed(6));
+			}
+		} catch (error) {
+			console.error("Max estimation error:", error);
+			const fallback = formatUnits(BigInt(tokenBalance.value), 18);
+			setAmount(Number(fallback).toFixed(6));
+		}
+	};
+
 	const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		if (!validateInput()) return;
+		if (!(await validateInput())) return;
 		handleStake();
 	};
 
@@ -189,15 +243,7 @@ const InvestmentCard = ({
 									variant="outline"
 									className="px-3 py-1 text-xs"
 									disabled={isApproving || isStaking || !tokenBalance?.value}
-									onClick={() => {
-										if (tokenBalance?.value) {
-											const formatted = formatUnits(
-												BigInt(tokenBalance.value),
-												18
-											);
-											setAmount(formatted);
-										}
-									}}
+									onClick={handleMaxClick}
 								>
 									Max
 								</Button>
@@ -241,12 +287,12 @@ const InvestmentCard = ({
 											  ).toFixed(4)
 											: "0.0000"}{" "}
 										{selectedToken === "stakeEDU"
-											? "YLD"
+											? "EDU"
 											: selectedToken === "stakeWEDU"
 											? "WEDU"
 											: selectedToken === "stakeDEDU"
 											? "DEDU"
-											: "YLD"}
+											: "EDU"}
 									</span>
 								</p>
 							)}

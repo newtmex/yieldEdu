@@ -58,12 +58,12 @@ async function main() {
 
 	const deploymentsPath = path.join(
 		__dirname,
-		"../../app/dapp/investors/contract-deployments/deployments.json"
+		"../../apps/dapp/investors/contract-deployments/deployments.json"
 	);
 
 	const deploymentsPath2 = path.join(
 		__dirname,
-		"../../app/ponder/contract-deployments/deployments.json"
+		"../../apps/ponder/contract-deployments/deployments.json"
 	);
 	fs.mkdirSync(path.dirname(deploymentsPath), { recursive: true });
 	fs.writeFileSync(deploymentsPath, JSON.stringify(addresses, null, 2));
@@ -74,11 +74,11 @@ async function main() {
 	// export ABIs for frontend
 	const abiDir = path.join(
 		__dirname,
-		"../../app/dapp/investors/contract-deployments/abis"
+		"../../apps/dapp/investors/contract-deployments/abis"
 	);
 	const abiDir2 = path.join(
 		__dirname,
-		"../../app/ponder/contract-deployments/abis"
+		"../../apps/ponder/contract-deployments/abis"
 	);
 	fs.mkdirSync(abiDir, { recursive: true });
 	fs.mkdirSync(abiDir2, { recursive: true });

@@ -5,7 +5,7 @@ import ogImage from "@/public/opengraph.png";
 export const yieldEduMetadata: Metadata = {
 	title: "YieldEdu - Investor",
 	description:
-		"Invest in education and earn returns while supporting a smarter future. Your investment powers learning and rewards your impact.",
+		"Invest in education and receive sTokens—The assets that unlock access, prove impact, and track your contribution in the EDU-ecosystem. Earn returns while fueling a smarter future.",
 	applicationName: "YieldEdu",
 	icons: [icon.src],
 
@@ -37,7 +37,7 @@ export const yieldEduMetadata: Metadata = {
 		emails: ["kamasahdickson@gmail.com"],
 		siteName: "YieldEdu",
 		description:
-			"Invest in education and earn returns while supporting a smarter future. Your investment powers learning and rewards your impact.",
+			"Invest in education and receive sTokens—The assets that unlock access, prove impact, and track your contribution in the EDU-ecosystem. Earn returns while fueling a smarter future.",
 		images: [
 			{
 				url: ogImage.src,
@@ -51,7 +51,7 @@ export const yieldEduMetadata: Metadata = {
 		card: "summary_large_image",
 		title: "YieldEdu",
 		description:
-			"Invest in education and earn returns while supporting a smarter future. Your investment powers learning and rewards your impact.",
+			"Invest in education and receive sTokens—The assets that unlock access, prove impact, and track your contribution in the EDU-ecosystem. Earn returns while fueling a smarter future.",
 		images: ["/opengraph.png"],
 		creator: "@bruh_codes",
 	},
