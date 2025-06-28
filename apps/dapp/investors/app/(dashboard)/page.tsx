@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { IconFingerprint } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
+import { TooltipInfo } from "@/components/tooltip-info";
 
 const InvestmentCard = dynamic(() => import("@/components/invest"), {
 	loading: () => <InvestCardSkeleton />,
@@ -194,6 +195,10 @@ export default function Page() {
 								<CardDescription className="flex text-lime-400 items-center gap-2">
 									<IconFingerprint />
 									Granted sTokens
+									<TooltipInfo
+										className="text-muted-foreground"
+										content="sTokens are ERC-1155 tokens issued when you invest. They unlock access to gated content, credentials, and on-chain rewards — and become available to you once unbound"
+									/>
 								</CardDescription>
 								<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 									{totalStaked

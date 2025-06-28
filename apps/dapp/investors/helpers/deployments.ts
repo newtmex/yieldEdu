@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const network = process.env.PUBLIC_DEVMODE || "mainnet";
+const network = process.env.NEXT_PUBLIC_DEVMODE || "mainnet";
 export const contractAddresses = require(`../${network}-deployments/deployments.json`);
 export const yieldTokenAbi = require(`../${network}-deployments/abis/YLDToken.json`);
 export const sTokenAbi = require(`../${network}-deployments/abis/SToken.json`);

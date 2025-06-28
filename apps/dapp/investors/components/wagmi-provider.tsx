@@ -40,7 +40,7 @@ const metadata = {
 createAppKit({
 	adapters: [wagmiAdapter],
 	projectId,
-	networks: devmode ? [educhain, localhost] : [educhain],
+	networks: devmode ? [localhost] : [educhain],
 	defaultNetwork: educhain,
 	metadata,
 	features: {

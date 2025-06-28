@@ -9,7 +9,6 @@ export const yieldEduMetadata: Metadata = {
 	applicationName: "YieldEdu",
 	icons: [icon.src],
 
-	authors: [{ name: "Kamasah Dickson", url: "https://github.com/Bruh-Codes" }],
 	keywords: [
 		"Web3 Education",
 		"DeFi Learning",

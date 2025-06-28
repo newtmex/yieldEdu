@@ -325,6 +325,7 @@ export const useStake = ({
 					});
 
 					refetchAllowance();
+					refetchBalance();
 					onStakeSuccess?.();
 					setIsStaking(false);
 				},

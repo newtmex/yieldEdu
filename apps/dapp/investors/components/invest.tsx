@@ -191,9 +191,10 @@ const InvestmentCard = ({
 									disabled={isApproving || isStaking || !tokenBalance?.value}
 									onClick={() => {
 										if (tokenBalance?.value) {
-											const formatted = parseFloat(
-												formatUnits(BigInt(tokenBalance.value), 18)
-											).toString();
+											const formatted = formatUnits(
+												BigInt(tokenBalance.value),
+												18
+											);
 											setAmount(formatted);
 										}
 									}}
@@ -240,12 +241,12 @@ const InvestmentCard = ({
 											  ).toFixed(4)
 											: "0.0000"}{" "}
 										{selectedToken === "stakeEDU"
-											? "EDU"
+											? "YLD"
 											: selectedToken === "stakeWEDU"
 											? "WEDU"
 											: selectedToken === "stakeDEDU"
 											? "DEDU"
-											: "EDU"}
+											: "YLD"}
 									</span>
 								</p>
 							)}
