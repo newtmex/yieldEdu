@@ -145,8 +145,6 @@ export const useGasEstimation = ({
 
 					if (nativeBalance < estimatedGasFee) {
 						toast.warning("May not have enough EDU for gas fees");
-					} else {
-						toast.info("Token approval will be required before staking");
 					}
 
 					// Return full token balance since that's the max they could stake

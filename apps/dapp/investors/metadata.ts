@@ -19,6 +19,7 @@ export const yieldEduMetadata: Metadata = {
 		"Earn While You Learn",
 		"EduChain",
 		"Staking Rewards",
+		"Crypto Investment",
 		"Crypto Education",
 		"Learn and Earn",
 		"Education dApp",
