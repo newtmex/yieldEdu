@@ -6,7 +6,6 @@ import { Hero } from "@/components/hero";
 import Navigation from "@/components/navbar";
 import { TextRotate } from "@/components/text-rotate";
 import { Button } from "@/components/ui/button";
-import { IconBrandTelegram, IconBrandX } from "@tabler/icons-react";
 import { LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import React from "react";
