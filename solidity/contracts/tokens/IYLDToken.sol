@@ -11,4 +11,6 @@ interface IYLDToken is IERC4626, IAccessControl {
     /// @notice Role identifier for minters.
     /// @dev Only addresses with this role can call the `mint` function.
     function MINTER_ROLE() external view returns (bytes32);
+
+    function collectYields(address to) external returns (uint256 amount);
 }

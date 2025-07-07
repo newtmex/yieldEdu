@@ -102,4 +102,45 @@ contract YLDTokenTest is YLDTokenFixture {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
         yld.initialize("YieldEDU Token", "YLD", owner, dedu);
     }
+
+    function testOnlyClaimerCanCallCollectYields() public {
+        address claimer = makeAddr("claimer");
+        address nonClaimer = makeAddr("nonClaimer");
+
+        uint256 yield = 1 ether;
+        dedu.setRewardsAvailable(yield);
+
+        // Give CLAIMER_ROLE to `claimer`
+        vm.startPrank(owner);
+        yld.grantRole(yld.CLAIMER_ROLE(), claimer);
+        vm.stopPrank();
+
+        // 1. Unauthorized user should revert
+        vm.startPrank(nonClaimer);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                nonClaimer,
+                yld.CLAIMER_ROLE()
+            )
+        );
+        yld.collectYields(nonClaimer); // even recipient can't bypass role
+        vm.stopPrank();
+
+        // 2. Authorized claimer should succeed
+        vm.startPrank(claimer);
+        uint256 claimed = yld.collectYields(claimer);
+        vm.stopPrank();
+
+        assertEq(
+            claimed,
+            yield,
+            "Should have claimed the correct yield amount"
+        );
+        assertEq(
+            dedu.balanceOf(claimer),
+            yield,
+            "Claimer should receive yield"
+        );
+    }
 }
