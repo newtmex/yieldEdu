@@ -9,6 +9,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IYLDToken} from "./IYLDToken.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {RewardClaimer} from "../aggregator/RewardClaimer.sol";
 
 /**
  * @title YLDToken
@@ -29,10 +30,13 @@ contract YLDToken is
     AccessControlUpgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable,
-    IYLDToken
+    IYLDToken,
+    RewardClaimer
 {
     /// @notice Role identifier for accounts allowed to mint tokens.
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    /// @notice Role identifier for accounts allowed to claim rewards.
+    bytes32 public constant CLAIMER_ROLE = keccak256("CLAIMER_ROLE");
 
     /**
      * @dev Disables initializers in the implementation contract.
@@ -95,6 +99,31 @@ contract YLDToken is
         uint256 shares
     ) internal override onlyRole(MINTER_ROLE) {
         super._withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    /**
+     * @notice Collects yield rewards from the dEDU contract (`asset()`).
+     * @dev Only callable by addresses with the CLAIMER_ROLE.
+     *
+     * This function internally calls `_claimRewardsFrom`, which:
+     * - Retrieves the reward token by calling `asset()` on the dEDU contract.
+     * - Calls `mintGainz()` on the reward token, if implemented.
+     * - Calls `claimRewards()` on the dEDU contract to trigger reward distribution.
+     * - Transfers the claimed rewards to the specified recipient (`to`), if provided.
+     * - Emits a {RewardClaimed} event.
+     *
+     * Requirements:
+     * - Caller must have the CLAIMER_ROLE.
+     * - The dEDU contract must implement `asset()` and `claimRewards()`.
+     * - The reward token must optionally implement `mintGainz()` and `transfer()`.
+     *
+     * @param to The address to receive the claimed rewards. If the zero address, rewards remain in this contract.
+     * @return amount The amount of rewards successfully claimed.
+     */
+    function collectYields(
+        address to
+    ) external onlyRole(CLAIMER_ROLE) returns (uint256 amount) {
+        amount = _claimRewardsFrom(asset(), to);
     }
 
     /**
