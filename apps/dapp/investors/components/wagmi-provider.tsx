@@ -32,7 +32,7 @@ const metadata = {
 	name: "YieldEdu",
 	description:
 		"A decentralized education and a fixed-yield protocol that earns users guaranteed yields on their EDU tokens.",
-	url: "https://edu-chain-hackathon.vercel.app/",
+	url: process.env.NEXT_PUBLIC_WEBSITE_URL!,
 	icons: ["https://avatars.githubusercontent.com/u/179229932"],
 };
 
