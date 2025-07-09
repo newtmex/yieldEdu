@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import deployStakingContractFixture from "./fixtures/stakingContractFixture";
-import deploySTokenFixture from "./fixtures/sTokenFixture";
-import deployYLDTokenFixture from "./fixtures/yldTokenFixture";
+import deployStakingContract from "../../utils/stakingContract";
+import deploySToken from "../../utils/sToken";
+import deployYLDToken from "../../utils/yldToken";
 import { ethers } from "hardhat";
 import { parseEther } from "ethers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
@@ -10,15 +10,15 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 describe("Yield Farming E2E Tests", () => {
     async function loadFixtures() {
         const { yldToken, mockAsset: dEDUToken } = await loadFixture(
-            deployYLDTokenFixture
+            deployYLDToken
         );
-        const { sToken } = await loadFixture(deploySTokenFixture);
+        const { sToken } = await loadFixture(deploySToken);
 
         const yldAddress = await yldToken.getAddress();
         const sTokenAddress = await sToken.getAddress();
         const { staking, wedu } = await loadFixture(
             function stakingFixtureWithArgs() {
-                return deployStakingContractFixture({
+                return deployStakingContract({
                     yldAddress,
                     sTokenAddress,
                 });

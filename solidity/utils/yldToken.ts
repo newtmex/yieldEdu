@@ -1,6 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 
-export default async function deployYLDTokenFixture({
+export default async function deployYLDToken({
     dEDUAddress,
 }: { dEDUAddress?: string } = {}) {
     const [owner] = await ethers.getSigners();

@@ -1,6 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 
-export default async function deployStakingContractFixture({
+export default async function deployStakingContract({
     yldAddress,
     sTokenAddress,
     weduAddress,

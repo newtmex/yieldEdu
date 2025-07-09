@@ -1,18 +1,18 @@
 import { ethers, artifacts, network } from "hardhat";
 import fs from "fs";
 import path from "path";
-import deployYLDTokenFixture from "../test/e2e/fixtures/yldTokenFixture";
-import deploySTokenFixture from "../test/e2e/fixtures/sTokenFixture";
-import deployStakingContractFixture from "../test/e2e/fixtures/stakingContractFixture";
+import deployYLDToken from "../utils/yldToken";
+import deploySToken from "../utils/sToken";
+import deployStakingContract from "../utils/stakingContract";
 
 async function main() {
 	const [deployer] = await ethers.getSigners();
 	console.log("Deploying with:", deployer.address);
 
-	const { yldToken, mockAsset: dEDUToken } = await deployYLDTokenFixture();
+	const { yldToken, mockAsset: dEDUToken } = await deployYLDToken();
 
-	const { sToken } = await deploySTokenFixture();
-	const { staking, wedu } = await deployStakingContractFixture({
+	const { sToken } = await deploySToken();
+	const { staking, wedu } = await deployStakingContract({
 		yldAddress: await yldToken.getAddress(),
 		sTokenAddress: await sToken.getAddress(),
 	});

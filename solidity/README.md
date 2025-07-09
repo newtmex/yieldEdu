@@ -31,19 +31,19 @@ Ensure you have **Hardhat**, **ethers**, and **@openzeppelin/hardhat-upgrades** 
 #### 1. Deploy `YLDToken` and `MockDEDU`
 
 ```ts
-const { yldToken, mockAsset: dEDUToken } = await deployYLDTokenFixture();
+const { yldToken, mockAsset: dEDUToken } = await deployYLDToken();
 ```
 
 #### 2. Deploy `sToken`
 
 ```ts
-const { sToken } = await deploySTokenFixture();
+const { sToken } = await deploySToken();
 ```
 
 #### 3. Deploy `WEDU` and `Staking` with constructor dependencies
 
 ```ts
-const { staking, wedu } = await deployStakingContractFixture({
+const { staking, wedu } = await deployStakingContract({
 	yldAddress: yldToken.getAddress(),
 	sTokenAddress: sToken.getAddress(),
 });
