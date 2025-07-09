@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { IconBrandX } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import opencampusImage from "@/public/Mark.svg";
 import Image from "next/image";
 import { signIn } from "@/lib/auth-client";
 import yieldeduIcon from "@/public/yieldedu.png";
@@ -43,17 +42,6 @@ export interface Testimonial {
 	text: string;
 }
 
-interface SignInPageProps {
-	title?: React.ReactNode;
-	description?: React.ReactNode;
-	heroImageSrc?: string;
-	testimonials?: Testimonial[];
-	onSignIn?: (event: React.FormEvent<HTMLFormElement>) => void;
-	onGoogleSignIn?: () => void;
-	onResetPassword?: () => void;
-	onCreateAccount?: () => void;
-}
-
 // --- SUB-COMPONENTS ---
 
 const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -65,7 +53,10 @@ const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
 // --- MAIN COMPONENT ---
 
 const Page = () => {
-	const [loading, setLoading] = useState(false);
+	const [magicLinkLoading, setMagicLinkLoading] = useState(false);
+	const [googleLoading, setGoogleLoading] = useState(false);
+	const [twitterLoading, setTwitterLoading] = useState(false);
+	const [ocidLoading, setOCIDLoading] = useState(false);
 
 	const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -76,15 +67,19 @@ const Page = () => {
 		};
 
 		try {
+			if (!email) {
+				toast.error("email is required");
+				return;
+			}
 			await signIn.magicLink(
 				{
 					email: data.email,
-					callbackURL: "/dashboard",
+					callbackURL: "/",
 				},
 				{
 					onRequest: () => {
 						toast.loading("Magic link being created...");
-						setLoading(true);
+						setMagicLinkLoading(true);
 					},
 					onResponse: (ctx) => {
 						if (!ctx.response.ok) {
@@ -93,6 +88,7 @@ const Page = () => {
 						if (ctx.response.ok) {
 							toast.dismiss();
 							toast.success("Magic link has been sent");
+							setMagicLinkLoading(false);
 						}
 					},
 				}
@@ -100,18 +96,15 @@ const Page = () => {
 		} catch (error: any) {
 			console.log(error);
 			toast.dismiss();
-			setLoading(false);
+			setMagicLinkLoading(false);
 			toast.error("Error signin in. Please try again", {
 				description: error.message,
 			});
 		}
 	};
 
-	const handleGoogleSignIn = () => {
-		console.log("Continue with Google clicked");
-		alert("Continue with Google clicked");
-	};
-
+	const disabled =
+		magicLinkLoading || googleLoading || twitterLoading || ocidLoading;
 	return (
 		<>
 			<div className="bg-background text-foreground">
@@ -137,10 +130,11 @@ const Page = () => {
 									Enter your email below to login to your account
 								</p>
 
-								<form className="space-y-5" onSubmit={handleSignIn}>
+								<form className="space-y-4" onSubmit={handleSignIn}>
 									<div className="animate-element animate-delay-300">
 										<GlassInputWrapper>
 											<input
+												disabled={disabled}
 												name="email"
 												type="email"
 												placeholder="m@example.com"
@@ -150,10 +144,12 @@ const Page = () => {
 									</div>
 
 									<Button
+										disabled={disabled}
+										loading={magicLinkLoading}
 										type="submit"
-										className="animate-element animate-delay-600 w-full rounded-2xl bg-primary h-14 font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+										className="animate-element disabled:bg-primary/80 animate-delay-600 w-full rounded-2xl bg-primary h-14 font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
 									>
-										Log-in / Sign-in with Magic Link
+										{!magicLinkLoading && "Log-in / Sign-in with Magic Link"}
 									</Button>
 								</form>
 
@@ -163,21 +159,31 @@ const Page = () => {
 										Or continue with
 									</span>
 								</div>
-								<div className="flex flex-wrap items-center gap-5">
+								<div className="flex flex-wrap items-center gap-4">
 									<Button
+										loading={googleLoading}
+										disabled={disabled}
 										variant={"ghost"}
 										onClick={async () => {
+											setGoogleLoading(true);
+											setTwitterLoading(false);
+											setMagicLinkLoading(false);
+											setOCIDLoading(false);
 											await signIn.social(
 												{
 													provider: "google",
-													callbackURL: "/dashboard",
+													callbackURL: "/",
 												},
 												{
-													onRequest: (ctx) => {
-														// setLoading(true);
+													onRequest: () => {
+														toast.loading("Authenticating with google");
 													},
 													onResponse: (ctx) => {
-														// setLoading(false);
+														setGoogleLoading(false);
+														toast.dismiss();
+														if (!ctx.response.ok) {
+															toast.error("Google Authentication failed");
+														}
 													},
 												}
 											);
@@ -185,22 +191,31 @@ const Page = () => {
 										className="animate-element animate-delay-800 flex-1 basis-0 min-w-[120px] max-w-full items-center justify-center gap-3 border border-border rounded-2xl h-14 hover:bg-gray-400/20 bg-secondary transition-colors"
 										style={{ flexShrink: 0 }}
 									>
-										<GoogleIcon />
+										{!googleLoading && <GoogleIcon />}
 									</Button>
 									<Button
-										variant="ghost"
+										disabled={disabled}
 										onClick={async () => {
+											setTwitterLoading(true);
+											setGoogleLoading(false);
+											setMagicLinkLoading(false);
+											setOCIDLoading(false);
+
 											await signIn.social(
 												{
 													provider: "twitter",
-													callbackURL: "/dashboard",
+													callbackURL: "/",
 												},
 												{
-													onRequest: (ctx) => {
-														// setLoading(true);
+													onRequest: () => {
+														toast.loading("Authenticating with X");
 													},
 													onResponse: (ctx) => {
-														// setLoading(false);
+														setTwitterLoading(false);
+														toast.dismiss();
+														if (!ctx.response.ok) {
+															toast.error("X Authentication failed");
+														}
 													},
 												}
 											);
@@ -208,27 +223,9 @@ const Page = () => {
 										className="animate-element aspect-square animate-delay-800 flex-1 basis-0 min-w-[56px] max-w-full items-center justify-center gap-3 border border-border rounded-2xl h-14 hover:bg-gray-400/20 bg-secondary  transition-colors"
 										style={{ flexShrink: 0 }}
 									>
-										<IconBrandX className="size-6" />
-									</Button>
-									<Button
-										variant="ghost"
-										onClick={handleGoogleSignIn}
-										className="animate-element animate-delay-800 flex-1 basis-0 min-w-[120px] max-w-full items-center justify-center gap-3 border border-border rounded-2xl h-14 hover:bg-gray-400/20 bg-secondary  transition-colors"
-										style={{ flexShrink: 0 }}
-									>
-										<Image
-											alt="Open Campus ID"
-											className="size-6"
-											src={opencampusImage}
-										/>
-									</Button>
-									<Button
-										variant="ghost"
-										onClick={handleGoogleSignIn}
-										className="animate-element animate-delay-800 flex-1 basis-0 min-w-[120px] max-w-full items-center justify-center gap-3 border border-border rounded-2xl h-14 hover:bg-gray-400/20 bg-secondary  transition-colors"
-										style={{ flexShrink: 0 }}
-									>
-										Connect wallet
+										{!twitterLoading && (
+											<IconBrandX className="size-6 text-black" />
+										)}
 									</Button>
 								</div>
 							</div>

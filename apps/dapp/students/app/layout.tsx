@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import OCConnectWrapper from "@/components/oc-connect-wrapper";
+import NextTopLoader from "nextjs-toploader";
+import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -23,12 +26,41 @@ export default function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const opts = {
+		clientId: process.env.NEXT_PUBLIC_OCID_CLIENT_ID!,
+		redirectUri:
+			process.env.NEXT_PUBLIC_OCID_REDIRECT_URI! ||
+			"http://localhost:3000/redirect",
+		referralCode: "PARTNER6",
+	};
+
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				{children}
+				<NextTopLoader
+					showSpinner={false}
+					color="#84cc16"
+					initialPosition={0.04}
+					crawlSpeed={300}
+					height={2}
+					crawl={true}
+					easing="ease"
+					speed={350}
+					shadow="0 0 10px #84cc16,0 0 5px #84cc16"
+					zIndex={9999}
+				/>
+				<OCConnectWrapper opts={opts} sandboxMode={true}>
+					<ThemeProvider
+						attribute="class"
+						defaultTheme="system"
+						enableSystem
+						disableTransitionOnChange
+					>
+						{children}
+					</ThemeProvider>
+				</OCConnectWrapper>
 				<Toaster richColors closeButton />
 			</body>
 		</html>

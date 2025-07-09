@@ -1,5 +1,5 @@
 import EmailTemplate from "@/components/email-template";
-import { betterAuth } from "better-auth";
+import { betterAuth, string } from "better-auth";
 import { admin } from "better-auth/plugins/admin";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { Pool } from "pg";
@@ -8,33 +8,66 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const auth = betterAuth({
+	user: {
+		additionalFields: {
+			OCId: {
+				type: "string",
+			},
+			ethAddress: {
+				type: "string",
+			},
+		},
+	},
+
+	session: {
+		additionalFields: {
+			OCId: {
+				type: "string",
+			},
+			ethAddress: {
+				type: "string",
+			},
+		},
+	},
+	account: {
+		accountLinking: {
+			enabled: true,
+			trustedProviders: ["google", "twitter"],
+		},
+	},
 	rateLimit: {
 		enabled: true,
 		window: 60, // 1 minute
 		max: 3, // Max 3 requests per minute
+		storage: "database",
 		customRules: {
 			"/sign-in/magic-link": {
-				window: 5,
-				max: 1,
+				window: 60,
+				max: 3,
 			},
 		},
-		storage: "memory",
-		modelName: "rateLimit",
 	},
 	trustedOrigins: ["http://localhost:3000"],
 	socialProviders: {
-		// google: {
-		// 	clientId: process.env.GOOGLE_CLIENT_ID!,
-		// 	clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-		// },
-		// twitter: {
-		// 	clientId: process.env.TWITTER_CLIENT_ID!,
-		// 	clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-		// },
+		google: {
+			clientId: process.env.GOOGLE_CLIENT_ID!,
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+		},
+		twitter: {
+			clientId: process.env.TWITTER_CLIENT_ID!,
+			clientSecret: process.env.TWITTER_CLIENT_SECRET!,
+		},
+	},
+	advanced: {
+		ipAddress: {
+			ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
+			disableIpTracking: false,
+		},
 	},
 	plugins: [
 		magicLink({
 			async sendMagicLink({ email, url }) {
+				console.log(url);
 				// const { error } = await resend.emails.send({
 				// 	from: "YieldEdu <onboarding@support.yieldedu.xyz>",
 				// 	to: [email],
