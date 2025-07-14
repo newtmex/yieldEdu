@@ -27,3 +27,4 @@ export default async function deployYLDToken({
 
     return { yldToken, mockAsset };
 }
+
