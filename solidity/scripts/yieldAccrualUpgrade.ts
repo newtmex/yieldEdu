@@ -10,12 +10,8 @@ task(
         const { ethers, upgrades, artifacts } = hre;
         const [owner] = await ethers.getSigners();
 
-        const yldTokenAddr = await ethers
-            .getContract("YLDToken", owner)
-            .then((contract) => contract.getAddress());
-
-        const gainzSwapRouterAddr =
-            "0xd35C85FbA82587c15D2fa255180146A046B67237";
+        const yldTokenAddr = "0x145D410f1c831F185B5815fe4fD76308c76240f9";
+        const gainzRouterAddr = "0xd35C85FbA82587c15D2fa255180146A046B67237";
 
         console.log("Upgrading YLDToken for yield accrual...");
         await upgrades.forceImport(
@@ -33,12 +29,13 @@ task(
         console.log("✅ YLDToken upgraded at:", await newYldToken.getAddress());
 
         const DEDUAggregatorFactory = await ethers.getContractFactory(
-            "DEDUAggregator"
+            "DEDUAggregator",
+            { signer: owner }
         );
 
         const dEDUAggregator = await upgrades.deployProxy(
             DEDUAggregatorFactory,
-            [gainzSwapRouterAddr, yldTokenAddr, owner.address],
+            [gainzRouterAddr, yldTokenAddr, owner.address],
             { kind: "uups" }
         );
         await dEDUAggregator.waitForDeployment();
