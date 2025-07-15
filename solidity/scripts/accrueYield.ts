@@ -13,19 +13,9 @@ task("accrueYield", "Claims GAINZ and swaps to dEDU via DEDUAggregator")
         const { ethers } = hre;
         const [executor] = await ethers.getSigners();
 
-        const yld = await ethers.getContractAt(
-            "YLDToken",
-            "0x145D410f1c831F185B5815fe4fD76308c76240f9"
-        );
-
-        await yld.grantRole(
-            await yld.CLAIMER_ROLE(),
-            "0x02f506f1b5f951541D60B8Ca742537b80b85E30B"
-        );
-
         const aggregator = await ethers.getContractAt(
             "DEDUAggregator",
-            args.aggregator || "0x02f506f1b5f951541D60B8Ca742537b80b85E30B"
+            args.aggregator || "0xe2e1E9fd9149Fa801A344504f454b1a552b0668C"
         );
 
         const path: string[] = args?.path?.split(",") || [

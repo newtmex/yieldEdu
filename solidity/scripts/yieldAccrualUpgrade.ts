@@ -7,11 +7,15 @@ task(
     "yieldAccrualUpgrade",
     "Deploys DEDUAggregator and upgrades YLDToken for yield accrual",
     async (_, hre) => {
+        await hre.run("compile");
+
         const { ethers, upgrades, artifacts } = hre;
         const [owner] = await ethers.getSigners();
 
         const yldTokenAddr = "0x145D410f1c831F185B5815fe4fD76308c76240f9";
         const gainzRouterAddr = "0xd35C85FbA82587c15D2fa255180146A046B67237";
+
+        const yld = await ethers.getContractAt("YLDToken", yldTokenAddr);
 
         console.log("Upgrading YLDToken for yield accrual...");
         await upgrades.forceImport(
@@ -42,6 +46,8 @@ task(
 
         const dEDUAggregatorAddr = await dEDUAggregator.getAddress();
         console.log("✅ DEDUAggregator deployed at:", dEDUAggregatorAddr);
+
+        await yld.grantRole(await yld.CLAIMER_ROLE(), dEDUAggregatorAddr);
 
         // ---- Save deployment addresses ----
         const addresses = {
