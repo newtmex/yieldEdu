@@ -9,10 +9,13 @@ import {
 } from "wagmi";
 import { Abi, parseEther } from "viem";
 import { toast } from "sonner";
-import contractAddresses from "@/contract-deployments/deployments.json";
-import yldTokenAbi from "@/contract-deployments/abis/YLDToken.json";
-import weduTokenAbi from "@/contract-deployments/abis/WEDU.json";
-import deduTokenAbi from "@/contract-deployments/abis/MockDEDU.json";
+import {
+	contractAddresses,
+	yieldTokenAbi,
+	weduTokenAbi,
+	deduTokenAbi,
+} from "@/helpers/deployments";
+
 import { getStakingConfig } from "@/lib/wagmi-helpers";
 import { STokenType } from "@/components/invest";
 
@@ -75,7 +78,7 @@ export const useStake = ({
 			case "stakeEDU":
 				return {
 					address: yldTokenAddress,
-					abi: yldTokenAbi.abi as Abi,
+					abi: yieldTokenAbi.abi as Abi,
 				};
 				break;
 			case "stakeWEDU":
@@ -92,7 +95,7 @@ export const useStake = ({
 			default:
 				return {
 					address: yldTokenAddress,
-					abi: yldTokenAbi.abi as Abi,
+					abi: yieldTokenAbi.abi as Abi,
 				};
 		}
 	};

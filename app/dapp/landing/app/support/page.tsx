@@ -8,6 +8,7 @@ import Footer from "@/components/footer";
 import { IconBubbleText, IconMail, IconTestPipe } from "@tabler/icons-react";
 import { PlasticButton } from "@/components/plastic-button";
 import { toast } from "sonner";
+import Link from "next/link";
 
 const features = [
 	{
@@ -269,6 +270,16 @@ const Page = () => {
 		}
 	}, []);
 
+	const handleSendEmail = (
+		email: string = "support@yieldedu.xyz",
+		subject?: string
+	) => {
+		const gmailURL = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${
+			subject ? encodeURIComponent(subject) : ""
+		}`;
+		window.open(gmailURL, "_blank");
+	};
+
 	return (
 		<div className="bg-linear-to-br from-[#000] to-[#1A2428] text-white">
 			<Navigation />
@@ -291,13 +302,33 @@ const Page = () => {
 									{feature.description}
 								</p>
 								{feature.id === "email-support" && (
-									<PlasticButton className="mt-auto" text="Contact Us" />
+									<PlasticButton
+										onClick={() =>
+											handleSendEmail(process.env.NEXT_PUBLIC_SUPPORT_MAIL!)
+										}
+										className="mt-auto"
+										text="Contact Us"
+									/>
 								)}
 								{feature.id === "live-chat" && (
-									<PlasticButton className="mt-auto" text="Chat Now" />
+									<Link
+										href={process.env.NEXT_PUBLIC_TELEGRAM_URL!}
+										target="_blank"
+									>
+										<PlasticButton className="mt-auto" text="Chat Now" />
+									</Link>
 								)}
 								{feature.id === "feature-request" && (
-									<PlasticButton className="mt-auto" text="Request Feature" />
+									<PlasticButton
+										onClick={() =>
+											handleSendEmail(
+												process.env.NEXT_PUBLIC_SUPPORT_MAIL!,
+												"feature-request"
+											)
+										}
+										className="mt-auto"
+										text="Request Feature"
+									/>
 								)}
 							</div>
 						))}

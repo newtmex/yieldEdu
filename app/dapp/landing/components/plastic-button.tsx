@@ -4,9 +4,11 @@ import { ClassValue } from "clsx";
 export function PlasticButton({
 	text,
 	className,
+	onClick,
 }: {
 	text: string;
 	className?: ClassValue;
+	onClick?: React.MouseEventHandler<HTMLButtonElement>;
 }) {
 	return (
 		<button
@@ -20,6 +22,7 @@ export function PlasticButton({
 				background: `linear-gradient(to bottom, rgb(59, 130, 246), rgb(37, 99, 235))`,
 				boxShadow: `0 2px 8px 0 rgba(37, 99, 235, 0.35), 0 1.5px 0 0 rgba(255,255,255,0.25) inset, 0 -2px 8px 0 rgba(37, 99, 235, 0.5) inset`,
 			}}
+			onClick={onClick}
 		>
 			<span className="relative z-10">{text}</span>
 			<span
