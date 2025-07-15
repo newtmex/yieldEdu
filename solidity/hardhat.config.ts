@@ -8,6 +8,7 @@ import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 
 import "./scripts/yieldAccrualUpgrade";
+import "./scripts/accrueYield";
 
 // import "@nomicfoundation/hardhat-foundry"; remove for now, as it causes issues with hardhat compile command
 
