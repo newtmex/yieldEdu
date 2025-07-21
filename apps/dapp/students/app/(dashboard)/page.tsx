@@ -307,8 +307,8 @@ export default function Page() {
 				</Swiper>
 				<SwiperNavButtons swiper={swiperInstance} />
 			</div>
-			<div className="px-5 pb-5">
-				<div className="flex items-center justify-between">
+			<div className="px-4 pb-5">
+				<div className="flex items-center w-full justify-between">
 					<h2 className="font-semibold">Featured Courses</h2>
 					<Button variant={"secondary"}>Explore More</Button>
 				</div>
@@ -363,18 +363,15 @@ export default function Page() {
 						<CardTitle>Continue Learning</CardTitle>
 						<CardDescription>Pick up where you left off</CardDescription>
 					</CardHeader>
-					<div className="px-5 flex flex-wrap gap-4 *:data-[slot=card]:from-lime-400/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card  *:data-[slot=card]:bg-gradient-to-t">
+					<div className="px-5 grid gap-4 grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(400px,1fr))] *:data-[slot=card]:from-lime-400/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card  *:data-[slot=card]:bg-gradient-to-t">
 						{courseInProgress.map(
 							({ lesson, lessonsLeft, progress, title, description }) => {
 								return (
-									<Card
-										key={lesson}
-										className="w-full flex-1 min-w-[400px] bg-sidebar"
-									>
+									<Card key={lesson} className="w-full flex-1 bg-sidebar">
 										<CardContent>
 											<div className="space-y-4">
-												<div className="flex items-center justify-between">
-													<div className="flex-[2.5]">
+												<div className="flex flex-col gap-4 sm:flex-row justify-between">
+													<div className="">
 														<h3 className="font-semibold">{title}</h3>
 														<p className="text-sm text-black/50 dark:text-white/50">
 															{lesson}
@@ -383,7 +380,7 @@ export default function Page() {
 															{description.slice(0, 70)}
 														</p>
 													</div>
-													<div className="text-right flex-1">
+													<div className="text-right">
 														<div className="text-sm font-semibold text-lime-600">
 															{progress}
 														</div>
@@ -393,7 +390,7 @@ export default function Page() {
 													</div>
 												</div>
 												<Progress value={75} className="h-2" />
-												<Button className="w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400">
+												<Button className=" w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400">
 													Continue
 												</Button>
 											</div>

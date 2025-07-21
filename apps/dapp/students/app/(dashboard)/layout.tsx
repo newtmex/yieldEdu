@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import WagmiContextProvider from "@/components/wagmi-provider";
 import { headers } from "next/headers";
 import DashboardHeader from "@/components/dashboard-header";
+import { CourseSidebarProvider } from "@/hooks/use-course-sidebar";
 // import { yieldEduMetadata } from "@/metadata";
 
 const geistMono = Geist_Mono({
@@ -38,15 +39,15 @@ export default async function Layout({
 				}
 			>
 				<WagmiContextProvider cookies={cookies}>
-					<AppSidebar variant="inset" />
-					<SidebarInset>
-						<DashboardHeader />
-						<div className="flex flex-1 flex-col overflow-x-clip">
-							<main className="@container/main flex flex-1 flex-col gap-2 w-full max-w-7xl mx-auto">
+					<CourseSidebarProvider>
+						<AppSidebar variant="inset" />
+						<SidebarInset>
+							<DashboardHeader />
+							<main className="@container/main w-full md:max-w-7xl md:mx-auto">
 								{children}
 							</main>
-						</div>
-					</SidebarInset>
+						</SidebarInset>
+					</CourseSidebarProvider>
 				</WagmiContextProvider>
 			</SidebarProvider>
 		</div>

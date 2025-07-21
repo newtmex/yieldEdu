@@ -4,6 +4,8 @@ import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import featuredCourseImage from "@/public/featured-course.svg";
 import CourseCard from "@/components/course-card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const page = () => {
 	const courses = [
@@ -48,7 +50,7 @@ const page = () => {
 	return (
 		<div className="space-y-4 p-5">
 			<div className="flex flex-col md:flex-row max-w-4xl mx-auto justify-center items-center gap-4 ">
-				<div className="flex-[1.5] w-full">
+				<div className="flex-[1.5] w-full space-y-3">
 					<h1 className="text-xl md:text-3xl lg:text-5xl mb-2 font-bold">
 						Learn and Earn at Your Own Pace
 					</h1>
@@ -57,6 +59,14 @@ const page = () => {
 						momentum. As you complete activities, you’ll earn YUZU points, grow
 						your learning streak, and unlock new opportunities on your journey.
 					</p>
+					<div className="flex gap-4">
+						<Link href={"/courses/create-course"}>
+							<Button>Create Course</Button>
+						</Link>
+						<Link href={"/courses/manage-course"}>
+							<Button variant={"outline"}>Manage Course</Button>
+						</Link>
+					</div>
 				</div>
 				<div className="flex-1 hidden md:flex w-full">
 					<Image
@@ -67,7 +77,7 @@ const page = () => {
 				</div>
 			</div>
 			<Separator />
-			<div className="grid grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-4">
 				{courses.map((course) => (
 					<CourseCard key={course.id} {...course} />
 				))}

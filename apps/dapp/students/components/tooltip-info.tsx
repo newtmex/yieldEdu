@@ -25,11 +25,20 @@ function useIsTouchDevice() {
 export function TooltipInfo({
 	content,
 	className,
+	disabled,
 }: {
 	content: string;
 	className?: ClassValue;
+	disabled?: boolean;
 }) {
 	const isTouch = useIsTouchDevice();
+
+	if (disabled)
+		return (
+			<span className={cn("cursor-help text-muted-foreground", className)}>
+				<HelpCircle className="size-3 text-inherit" />
+			</span>
+		);
 
 	if (isTouch) {
 		return (

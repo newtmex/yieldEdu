@@ -11,6 +11,7 @@ import {
 	IconFileDescription,
 	IconFileWord,
 	IconFolder,
+	IconGymnastics,
 	IconHelp,
 	IconInnerShadowTop,
 	IconLayersSelected,
@@ -70,15 +71,21 @@ const data = {
 			locked: false,
 		},
 		{
-			title: "Campaigns",
-			url: "/campaigns",
-			icon: IconSpeakerphone,
+			title: "Performance",
+			url: "/performance",
+			icon: IconGymnastics,
 			locked: true,
 		},
 		{
 			title: "Leaderboards",
 			url: "/leaderboards",
 			icon: IconChartBar,
+			locked: true,
+		},
+		{
+			title: "Campaigns",
+			url: "/campaigns",
+			icon: IconSpeakerphone,
 			locked: true,
 		},
 		{

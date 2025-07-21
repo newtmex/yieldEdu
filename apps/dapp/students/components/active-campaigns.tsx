@@ -29,7 +29,7 @@ const ActiveCampaign: React.FC<PromoCardProps> = ({
 	return (
 		<Card style={{ backgroundColor, color: textColor }} className="h-full">
 			<CardContent>
-				<div className="grid h-[140px] grid-cols-2">
+				<div className="grid h-[140px] grid-cols-1 [@media(min-width:425px)]:grid-cols-2">
 					<div>
 						{tag && (
 							<p className="text-[10px] font-medium mb-1 opacity-80">{tag}</p>
@@ -38,7 +38,13 @@ const ActiveCampaign: React.FC<PromoCardProps> = ({
 						<h2 className="text-sm font-semibold mb-2">{title}</h2>
 						<p className="text-xs mb-2  opacity-90">{description}</p>
 					</div>
-					{image && <Image className="h-auto w-full" src={image} alt={title} />}
+					{image && (
+						<Image
+							className="hidden [@media(min-width:425px)]:grid h-auto w-full"
+							src={image}
+							alt={title}
+						/>
+					)}
 				</div>
 				<Button
 					variant={"secondary"}

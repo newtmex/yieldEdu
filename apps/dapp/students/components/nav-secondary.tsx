@@ -46,8 +46,8 @@ export function NavSecondary({
 								</SidebarMenuButton>
 							</SidebarMenuItem>
 						) : (
-							<Link href={item.url}>
-								<SidebarMenuItem key={item.title}>
+							<Link href={item.url} key={item.title}>
+								<SidebarMenuItem>
 									<SidebarMenuButton
 										tooltip={item.title}
 										className={cn({

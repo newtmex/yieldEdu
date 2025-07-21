@@ -9,27 +9,34 @@ import {
 	useAppKitTheme,
 } from "@reown/appkit/react";
 import { useTheme } from "next-themes";
-import { SidebarTrigger } from "./ui/sidebar";
+import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import { NavUser } from "./nav-user";
 import { Separator } from "./ui/separator";
-import { usePathname } from "next/navigation";
 import {
 	IconBrandTelegram,
 	IconBrandX,
 	IconFlameFilled,
+	IconWallet,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import AppKitButton from "./appkit-button";
 import Image from "next/image";
 import yuzuIcon from "@/public/yuzu.png";
 import { TooltipInfo } from "./tooltip-info";
+import { useCourseSidebar } from "@/hooks/use-course-sidebar";
+import { Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 const DashboardHeader = () => {
 	const { open } = useAppKit();
 	const { theme } = useTheme();
 	const { setThemeMode } = useAppKitTheme();
 	const { isConnected } = useAppKitAccount();
+	const { isMobile } = useSidebar();
+	const { toggleCourseSidebar } = useCourseSidebar();
 	const pathname = usePathname();
+
+	const isLearningPage = pathname?.match(/^\/courses\/[^/]+\/learning$/);
 
 	useEffect(() => {
 		setThemeMode(theme as ThemeMode);
@@ -43,10 +50,17 @@ const DashboardHeader = () => {
 					orientation="vertical"
 					className="mx-2 data-[orientation=vertical]:h-4"
 				/>
+				{isLearningPage && (
+					<Button
+						variant="outline"
+						size="icon"
+						className="lg:hidden"
+						onClick={toggleCourseSidebar}
+					>
+						<Menu className="size-5" />
+					</Button>
+				)}
 
-				<h1 className="text-base font-medium capitalize hidden md:flex">
-					{pathname === "/" ? "Hub" : pathname.split("/")[1]}
-				</h1>
 				<div className="flex w-full items-center justify-end gap-1 lg:gap-3">
 					{/* <FaucetButton userAddress={address} /> */}
 
@@ -61,10 +75,12 @@ const DashboardHeader = () => {
 					<div className="pr-5 flex gap-5">
 						<div className="text-center">
 							<div className="flex items-center justify-center gap-2">
-								<IconFlameFilled className="w-5 h-5 text-orange-500" />
-								<span className="text-sm font-bold">28 streaks</span>
+								<IconFlameFilled className="size-3 md:size-5 text-orange-500" />
+								<span className="text-xs md:text-sm font-bold">
+									28 {isMobile ? "" : ""}
+								</span>
 								<TooltipInfo
-									className="text-muted-foreground"
+									className="text-muted-foreground hidden md:flex"
 									content="You earn a streak for each day you complete a course or activity. Keep your streak alive to boost your rewards and stay consistent in your learning!"
 								/>
 							</div>
@@ -75,12 +91,15 @@ const DashboardHeader = () => {
 								<Image
 									alt="yuzu points"
 									src={yuzuIcon}
-									className="w-5 h-auto"
+									className="w-3 md:w-5 h-auto"
 								/>
 
-								<span className="text-sm font-bold">2,840 Yuzu</span>
+								<span className="text-xs md:text-sm font-bold">
+									2,840
+									{isMobile ? "" : " "}
+								</span>
 								<TooltipInfo
-									className="text-muted-foreground"
+									className="hidden md:flex text-muted-foreground"
 									content="YUZU is your learning reward currency. Earn YUZU by completing lessons, challenges, and maintaining streaks. Use them to unlock premium content, get rewards, or redeem exclusive perks."
 								/>
 							</div>
@@ -94,12 +113,11 @@ const DashboardHeader = () => {
 							type="button"
 							onClick={() => open({ view: "Connect" })}
 						>
-							Connect Wallet
+							{isMobile ? <IconWallet /> : "Connect wallet"}
 						</Button>
 					) : (
 						<AppKitButton />
 					)}
-					{/* <UserProfile showOCID={false} showTiggerIcon={false} /> */}
 					<NavUser className="w-fit" showInfo={false} />
 					<div className="hidden [@media(width>=25rem)]:flex gap-3">
 						<Link
