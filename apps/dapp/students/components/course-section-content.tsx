@@ -10,8 +10,8 @@ import {
 } from "./ui/form";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Separator } from "./ui/separator";
 import dynamic from "next/dynamic";
+import { useFieldArray } from "react-hook-form";
 
 const LessonEditor = dynamic(
 	() => import("@/components/lesson-editor").then((mod) => mod.LessonEditor),
@@ -21,10 +21,14 @@ const LessonEditor = dynamic(
 const SectionContent: React.FC<{
 	sectionIndex: number;
 	form: any;
-	onSubmit: any;
 	isPending: boolean;
-}> = ({ sectionIndex, form, onSubmit, isPending }) => {
+}> = ({ sectionIndex, form, isPending }) => {
 	const watchedSection = form.watch(`sections.${sectionIndex}`);
+
+	const quizArrays = useFieldArray({
+		control: form.control,
+		name: `sections.${sectionIndex}.quizzes`,
+	});
 
 	return (
 		<div className="space-y-6">
@@ -36,6 +40,17 @@ const SectionContent: React.FC<{
 						<p className="text-sm text-muted-foreground">
 							Create lessons with rich content
 						</p>
+						<>
+							{form.formState.errors.sections?.[sectionIndex]?.lessons?.root
+								?.message && (
+								<p className="text-sm text-destructive">
+									{
+										form.formState.errors.sections?.[sectionIndex]?.lessons
+											?.root?.message
+									}
+								</p>
+							)}
+						</>
 					</div>
 					<Button
 						type="button"
@@ -45,7 +60,11 @@ const SectionContent: React.FC<{
 							);
 							form.setValue(`sections.${sectionIndex}.lessons`, [
 								...currentLessons,
-								{ title: "", content: null, isPreview: false },
+								{
+									title: "",
+									content: null,
+									isPreview: false,
+								},
 							]);
 						}}
 						variant="outline"
@@ -128,10 +147,7 @@ const SectionContent: React.FC<{
 					</div>
 				))}
 			</div>
-
-			<Separator />
-
-			{/* Quiz */}
+			{/* Quizzes */}
 			<div className="space-y-4">
 				<div className="flex items-center justify-between">
 					<div>
@@ -139,17 +155,24 @@ const SectionContent: React.FC<{
 						<p className="text-sm text-muted-foreground">
 							Add quiz questions to test understanding
 						</p>
+						{form.formState.errors.sections?.[sectionIndex]?.quizzes?.root
+							?.message && (
+							<p className="text-sm text-destructive">
+								{
+									form.formState.errors.sections?.[sectionIndex]?.quizzes?.root
+										?.message
+								}
+							</p>
+						)}
 					</div>
 					<Button
 						type="button"
 						onClick={() => {
-							const currentQuiz = form.getValues(
-								`sections.${sectionIndex}.quiz`
-							);
-							form.setValue(`sections.${sectionIndex}.quiz`, [
-								...currentQuiz,
-								{ question: "", options: ["", "", "", ""], correctAnswer: 0 },
-							]);
+							quizArrays.append({
+								question: "",
+								options: ["", "", "", ""],
+								correctAnswer: 0,
+							});
 						}}
 						variant="outline"
 						size="sm"
@@ -161,24 +184,50 @@ const SectionContent: React.FC<{
 					</Button>
 				</div>
 
-				{watchedSection?.quiz?.map((question: any, questionIndex: number) => (
+				{quizArrays.fields.map((question: any, questionIndex: number) => (
 					<div
 						key={questionIndex}
 						className="p-4 bg-muted/30 rounded-lg space-y-4"
 					>
+						{form.formState.errors.sections?.[sectionIndex]?.quizzes?.[
+							questionIndex
+						]?.options?.root?.message && (
+							<p className="text-sm text-destructive">
+								{
+									form.formState.errors.sections?.[sectionIndex]?.quizzes?.[
+										questionIndex
+									]?.options?.root?.message
+								}
+							</p>
+						)}
+
+						{form.formState.errors.sections?.[sectionIndex]?.lessons?.[
+							questionIndex
+						]?.quiz?.message && (
+							<p className="text-sm text-destructive font-medium">
+								{
+									form.formState.errors.sections[sectionIndex].lessons[
+										questionIndex
+									].quiz.message
+								}
+							</p>
+						)}
 						<div className="flex items-center justify-between">
 							<Label>Question {questionIndex + 1}</Label>
-							{watchedSection.quiz.length > 1 && (
+							{quizArrays.fields.length > 1 && (
 								<Button
 									type="button"
 									onClick={() => {
-										const currentQuiz = form.getValues(
-											`sections.${sectionIndex}.quiz`
+										const currentQuizzes = form.getValues(
+											`sections.${sectionIndex}.quizzes`
 										);
-										const newQuiz = currentQuiz.filter(
+										const newQuizzes = currentQuizzes.filter(
 											(_: any, i: number) => i !== questionIndex
 										);
-										form.setValue(`sections.${sectionIndex}.quiz`, newQuiz);
+										form.setValue(
+											`sections.${sectionIndex}.quizzes`,
+											newQuizzes
+										);
 									}}
 									variant="ghost"
 									size="sm"
@@ -190,13 +239,17 @@ const SectionContent: React.FC<{
 							)}
 						</div>
 
-												<FormField
+						<FormField
 							control={form.control}
-							name={`sections.${sectionIndex}.quiz.${questionIndex}.question`}
+							name={`sections.${sectionIndex}.quizzes.${questionIndex}.question`}
 							render={({ field }) => (
 								<FormItem>
 									<FormControl>
-										<Input placeholder="Enter your question" {...field} disabled={isPending} />
+										<Input
+											placeholder="Enter your question"
+											{...field}
+											disabled={isPending}
+										/>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
@@ -216,24 +269,25 @@ const SectionContent: React.FC<{
 											checked={question.correctAnswer === optionIndex}
 											onChange={() =>
 												form.setValue(
-													`sections.${sectionIndex}.quiz.${questionIndex}.correctAnswer`,
+													`sections.${sectionIndex}.quizzes.${questionIndex}.correctAnswer`,
 													optionIndex
 												)
 											}
 											className="size-3"
 											disabled={isPending}
 										/>
+
 										<FormField
 											control={form.control}
-											name={`sections.${sectionIndex}.quiz.${questionIndex}.options.${optionIndex}`}
+											name={`sections.${sectionIndex}.quizzes.${questionIndex}.options.${optionIndex}`}
 											render={({ field }) => (
 												<FormItem className="flex-1">
 													<FormControl>
-																												<Input
-											placeholder={`Option ${optionIndex + 1}`}
-											{...field}
-											disabled={isPending}
-										/>
+														<Input
+															placeholder={`Option ${optionIndex + 1}`}
+															{...field}
+															disabled={isPending}
+														/>
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -241,6 +295,17 @@ const SectionContent: React.FC<{
 										/>
 									</div>
 								))}
+								{form.formState.errors.sections?.[sectionIndex]?.quizzes?.[
+									questionIndex
+								]?.options?.message && (
+									<p className="text-sm text-destructive">
+										{
+											form.formState.errors.sections[sectionIndex]?.quizzes?.[
+												questionIndex
+											]?.options?.message
+										}
+									</p>
+								)}
 							</div>
 							<div className="text-sm text-muted-foreground">
 								Select the radio button next to the correct answer
@@ -249,7 +314,6 @@ const SectionContent: React.FC<{
 					</div>
 				))}
 			</div>
-			
 		</div>
 	);
 };

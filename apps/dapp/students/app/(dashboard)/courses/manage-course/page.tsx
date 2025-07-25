@@ -164,6 +164,7 @@ export default function ManageCourses() {
 			toast.error("Unexpected error", {
 				description: err.message || "Something went wrong.",
 			});
+		} finally {
 			setIsDeleting(false); // Re-enable on error
 		}
 	};

@@ -35,7 +35,7 @@ import { TooltipInfo } from "@/components/tooltip-info";
 import { authClient } from "@/lib/auth-client";
 import featuredCourseImage from "@/public/featured-course.svg";
 import SectionContent from "@/components/course-section-content";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { supabase } from "@/lib/supabase";
 import {
 	Dialog,
@@ -76,8 +76,20 @@ const CourseCreation = () => {
 				{
 					title: "",
 					chapters: 1,
-					lessons: [{ title: "", content: null, isPreview: false }],
-					quiz: [{ question: "", options: ["", "", "", ""], correctAnswer: 0 }],
+					lessons: [
+						{
+							title: "",
+							content: null,
+							isPreview: false,
+						},
+					],
+					quizzes: [
+						{
+							question: "",
+							options: ["", "", "", ""],
+							correctAnswer: 0,
+						},
+					],
 				},
 			],
 		},
@@ -86,24 +98,34 @@ const CourseCreation = () => {
 	useEffect(() => {
 		const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
 
-		if (!isEditMode && savedDraft) {
-			try {
-				const parsed = JSON.parse(savedDraft);
-				const isMeaningful =
-					parsed.title?.trim() ||
-					parsed.description?.trim() ||
-					parsed.longDescription?.trim() ||
-					(parsed.sections?.length > 0 && parsed.sections[0].title?.trim()) ||
-					(parsed.whatYouWillLearn?.length > 0 &&
-						parsed.whatYouWillLearn.some((item: string) => item.trim() !== ""));
+		if (!isEditMode) {
+			const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
+			if (savedDraft) {
+				try {
+					const parsed = JSON.parse(savedDraft);
+					const isMeaningful =
+						parsed.title?.trim() ||
+						parsed.description?.trim() ||
+						parsed.longDescription?.trim() ||
+						(parsed.sections?.length > 0 && parsed.sections[0].title?.trim()) ||
+						(parsed.whatYouWillLearn?.length > 0 &&
+							parsed.whatYouWillLearn.some((item: string) => item.trim() !== ""));
 
-				if (!isMeaningful) return;
-
-				setDraftData(parsed);
-				setShowDraftModal(true);
-			} catch (err) {
-				console.error("Failed to parse saved draft", err);
-				toast.error("Failed to parse saved draft");
+					if (isMeaningful) {
+						setDraftData(parsed);
+						setShowDraftModal(true);
+					} else {
+						// If draft is empty, initialize with default values
+						setInitialData(form.getValues());
+					}
+				} catch (err) {
+					console.error("Failed to parse saved draft", err);
+					toast.error("Failed to parse saved draft");
+					setInitialData(form.getValues()); // Initialize with default values on error
+				}
+			} else {
+				// No saved draft, initialize with default values
+				setInitialData(form.getValues());
 			}
 		}
 
@@ -116,7 +138,7 @@ const CourseCreation = () => {
 					.maybeSingle();
 
 				if (data) {
-					const normalizedDbData = {
+					const normalizedDbData: CourseFormData = {
 						title: data.title || "",
 						description: data.description || "",
 						longDescription: data.long_description || "",
@@ -143,7 +165,7 @@ const CourseCreation = () => {
 										isPreview: lesson.is_preview,
 									})
 								),
-								quiz: (section.quizzes || []).map(
+								quizzes: (section.quizzes || []).map(
 									(q: {
 										question: string;
 										options: string[];
@@ -172,7 +194,6 @@ const CourseCreation = () => {
 								setInitialData(normalizedDbData); // Set initialData to DB data
 								setIsFromDraft(true);
 								setShowDraftModal(true); // trigger modal
-								return;
 							}
 						} catch (e) {
 							console.error("Invalid draft in edit mode, ignoring.", e);
@@ -214,6 +235,9 @@ const CourseCreation = () => {
 				sections: data.sections.map((section) => ({
 					...section,
 					chapters: section.lessons.length,
+					lessons: section.lessons.map((lesson) => ({
+						...lesson,
+					})),
 				})),
 				instructor: {
 					name: session?.user.name,
@@ -224,27 +248,40 @@ const CourseCreation = () => {
 			try {
 				if (isEditMode) {
 					// Update existing course
-					const { data: course, error: courseError } = await supabase
-						.from("courses")
-						.update({
-							title: processedData.title,
-							description: processedData.description,
-							long_description: processedData.longDescription,
-							category: processedData.category,
-							difficulty: processedData.difficulty,
-							image_url: processedData.imageUrl.src,
-							instructor_name: processedData.instructor.name,
-							instructor_avatar: processedData.instructor.avatar,
-							learning_outcomes: processedData.whatYouWillLearn,
-						})
-						.eq("id", courseId)
-						.select()
-						.single();
+					const { data: courseUpdate, error: courseUpdateError } =
+						await supabase
+							.from("courses")
+							.update({
+								title: processedData.title,
+								description: processedData.description,
+								long_description: processedData.longDescription,
+								category: processedData.category,
+								difficulty: processedData.difficulty,
+								image_url: processedData.imageUrl.src,
+								instructor_name: processedData.instructor.name,
+								instructor_avatar: processedData.instructor.avatar,
+								learning_outcomes: processedData.whatYouWillLearn,
+							})
+							.eq("id", courseId)
+							.select()
+							.single();
 
-					if (courseError) throw courseError;
+					if (courseUpdateError) throw courseUpdateError;
 
 					// Delete old sections, lessons, and quizzes
-					await supabase.from("sections").delete().eq("course_id", course.id);
+					await supabase
+						.from("quizzes")
+						.delete()
+						.eq("course_id", courseUpdate.id);
+					await supabase
+						.from("lessons")
+						.delete()
+						.eq("course_id", courseUpdate.id);
+
+					await supabase
+						.from("sections")
+						.delete()
+						.eq("course_id", courseUpdate.id);
 
 					// Insert updated sections, lessons, and quizzes
 					for (const section of processedData.sections) {
@@ -252,7 +289,7 @@ const CourseCreation = () => {
 							.from("sections")
 							.insert([
 								{
-									course_id: course.id,
+									course_id: courseUpdate.id,
 									title: section.title,
 									chapter_number: section.chapters,
 								},
@@ -263,30 +300,39 @@ const CourseCreation = () => {
 						if (sectionError) throw sectionError;
 
 						for (const lesson of section.lessons) {
-							await supabase.from("lessons").insert([
-								{
-									section_id: newSection.id,
-									title: lesson.title,
-									is_preview: lesson.isPreview,
-									content: lesson.content,
-									type: "lesson",
-								},
-							]);
+							const { error: lessonError } = await supabase
+								.from("lessons")
+								.insert([
+									{
+										section_id: newSection.id,
+										title: lesson.title,
+										is_preview: lesson.isPreview,
+										content: lesson.content,
+										type: "lesson",
+									},
+								])
+								.select()
+								.single();
+
+							if (lessonError) throw lessonError;
 						}
 
-						for (const quiz of section.quiz) {
-							await supabase.from("quizzes").insert([
-								{
-									section_id: newSection.id,
-									question: quiz.question,
-									options: quiz.options,
-									correct_answer: quiz.correctAnswer,
-								},
-							]);
+						for (const quiz of section.quizzes) {
+							const { error: quizError } = await supabase
+								.from("quizzes")
+								.insert([
+									{
+										section_id: newSection.id,
+										question: quiz.question,
+										options: quiz.options,
+										correct_answer: quiz.correctAnswer,
+									},
+								]);
+							if (quizError) throw quizError;
 						}
 					}
-					localStorage.removeItem(LOCAL_STORAGE_KEY);
 					toast.success("Course updated successfully!");
+					localStorage.removeItem(LOCAL_STORAGE_KEY);
 					router.push(`/courses/manage-course`);
 				} else {
 					// Create new course
@@ -299,7 +345,8 @@ const CourseCreation = () => {
 
 					if (existingCourse) {
 						toast.error("You've already created a course with this title.");
-						return;
+						localStorage.removeItem(LOCAL_STORAGE_KEY);
+						return; // Stop execution if course exists
 					}
 
 					const { data: course, error: courseError } = await supabase
@@ -322,6 +369,7 @@ const CourseCreation = () => {
 
 					if (courseError) throw courseError;
 
+					// Now that course is created, insert sections, lessons, and quizzes
 					for (const section of processedData.sections) {
 						const { data: newSection, error: sectionError } = await supabase
 							.from("sections")
@@ -338,32 +386,42 @@ const CourseCreation = () => {
 						if (sectionError) throw sectionError;
 
 						for (const lesson of section.lessons) {
-							await supabase.from("lessons").insert([
-								{
-									section_id: newSection.id,
-									title: lesson.title,
-									is_preview: lesson.isPreview,
-									content: lesson.content,
-									type: "lesson",
-								},
-							]);
+							const { error: lessonError } = await supabase
+								.from("lessons")
+								.insert([
+									{
+										section_id: newSection.id,
+										title: lesson.title,
+										is_preview: lesson.isPreview,
+										content: lesson.content,
+										type: "lesson",
+									},
+								])
+								.select()
+								.single();
+
+							if (lessonError) throw lessonError;
 						}
 
-						for (const quiz of section.quiz) {
-							await supabase.from("quizzes").insert([
-								{
-									section_id: newSection.id,
-									question: quiz.question,
-									options: quiz.options,
-									correct_answer: quiz.correctAnswer,
-								},
-							]);
+						// Insert quizzes for the section
+						for (const quiz of section.quizzes) {
+							const { error: quizError } = await supabase
+								.from("quizzes")
+								.insert([
+									{
+										section_id: newSection.id,
+										question: quiz.question,
+										options: quiz.options,
+										correct_answer: quiz.correctAnswer,
+									},
+								]);
+							if (quizError) throw quizError;
 						}
 					}
 					form.reset();
 					localStorage.removeItem(LOCAL_STORAGE_KEY);
 					toast.success("Course created successfully!", {
-						description: `your course has been created with id ${course.id}`,
+						description: `Your course has been created with id ${course.id}`,
 					});
 					router.push(`/courses/manage-course`);
 				}
@@ -374,14 +432,15 @@ const CourseCreation = () => {
 		});
 	};
 
-	// Always auto-save to localStorage
 	useEffect(() => {
-		if (!isFromDraft && isEditMode) return;
 		const subscription = form.watch((current) => {
-			localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(current));
+			// Only save if there are actual changes and we are not in edit mode loading from DB
+			if (hasChanges) {
+				localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(current));
+			}
 		});
 		return () => subscription.unsubscribe();
-	}, [form, LOCAL_STORAGE_KEY]);
+	}, [form, LOCAL_STORAGE_KEY, isFromDraft, isEditMode, hasChanges]);
 
 	// Only compare to initialData for "unsaved changes" detection
 	useEffect(() => {
@@ -394,6 +453,14 @@ const CourseCreation = () => {
 
 		return () => subscription.unsubscribe();
 	}, [form, initialData]);
+
+	const { errors } = form.formState;
+
+	useEffect(() => {
+		if (form.formState.isSubmitted && errors) {
+			console.log(errors);
+		}
+	}, []);
 
 	return (
 		<div className="min-h-screen bg-background">
@@ -628,6 +695,15 @@ const CourseCreation = () => {
 														Add Item
 													</Button>
 												</div>
+												{form.formState.errors.whatYouWillLearn?.root
+													?.message && (
+													<p className="text-sm text-destructive font-medium">
+														{
+															form.formState.errors.whatYouWillLearn.root
+																.message
+														}
+													</p>
+												)}
 												{watchedData.whatYouWillLearn.map((_, index) => (
 													<div key={index} className="flex gap-2">
 														<FormField
@@ -672,6 +748,13 @@ const CourseCreation = () => {
 								</div>
 
 								{/* Course Sections */}
+
+								{/* <div className="text-xs text-destructive">
+									<p>
+										Form errors:{" "}
+										{JSON.stringify(form.formState.errors, null, 2)}
+									</p>
+								</div> */}
 								<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
 									<Card>
 										<CardHeader>
@@ -682,17 +765,26 @@ const CourseCreation = () => {
 														Organize your course into sections with lessons and
 														quizzes
 													</p>
+													{form.formState.errors.sections?.root?.message && (
+														<p className="text-sm text-destructive">
+															{form.formState.errors.sections.root.message}
+														</p>
+													)}
 												</div>
 												<Button
 													type="button"
 													onClick={() =>
 														sectionArrays.append({
 															title: "",
-															lessons: [
-																{ title: "", content: null, isPreview: false },
-															],
 															chapters: 1,
-															quiz: [
+															lessons: [
+																{
+																	title: "",
+																	content: null,
+																	isPreview: false,
+																},
+															],
+															quizzes: [
 																{
 																	question: "",
 																	options: ["", "", "", ""],
@@ -760,7 +852,6 @@ const CourseCreation = () => {
 													<SectionContent
 														sectionIndex={sectionIndex}
 														form={form}
-														onSubmit={onSubmit}
 														isPending={isPending}
 													/>
 												</div>
@@ -806,11 +897,18 @@ const CourseCreation = () => {
 							<Button
 								variant="outline"
 								onClick={() => {
+									localStorage.removeItem(LOCAL_STORAGE_KEY); // Remove first
 									if (initialData) {
 										form.reset(initialData); // Revert to original DB data
+										setInitialData(initialData); // Ensure initialData is consistent
+									} else {
+										// If no initialData (new course), reset to default empty values
+										form.reset();
+										setInitialData(form.getValues()); // Set initialData to current form values (which are now defaults)
 									}
-									localStorage.removeItem(LOCAL_STORAGE_KEY);
+									setIsFromDraft(false); // Explicitly set to false
 									setShowDraftModal(false);
+									toast.success("Draft discarded successfully!");
 								}}
 							>
 								Discard Draft

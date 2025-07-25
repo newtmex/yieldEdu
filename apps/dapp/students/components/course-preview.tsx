@@ -145,11 +145,10 @@ const CoursePreview: React.FC<{ courseData: extendedCourseData }> = ({
 							</CardHeader>
 							<CardContent>
 								<div className="space-y-4 text-sm">
-									<p>
+									<p className="inline break-words">
 										{visibleText}
 										{!isExpanded && shouldTruncate && "..."}
-									</p>
-
+									</p>{" "}
 									{shouldTruncate && (
 										<Button
 											variant="ghost"
@@ -215,63 +214,74 @@ const CoursePreview: React.FC<{ courseData: extendedCourseData }> = ({
 								className="border rounded-lg p-4 space-y-4"
 							>
 								{/* Quiz */}
-								{section.quiz.length > 0 && (
-									<div className="border rounded-md">
-										<Button
-											variant="ghost"
-											className="w-full justify-between p-4 h-auto"
-											onClick={() => toggleQuiz(sectionIndex)}
-										>
-											<div className="flex items-center gap-3">
-												<HelpCircle className="h-4 w-4" />
-												<span className="font-medium">Quiz</span>
-												<Badge variant="outline" className="ml-2">
-													{section.quiz.length} questions
-												</Badge>
-											</div>
-										</Button>
-
-										{expandedQuizzes.has(`quiz-${sectionIndex}`) && (
-											<div className="p-4 border-t bg-muted/30 space-y-4">
-												{section.quiz.map((question, questionIndex) => (
-													<div key={questionIndex} className="space-y-3">
-														<h5 className="font-medium">
-															{questionIndex + 1}.{" "}
-															{question.question ||
-																"Question text will appear here..."}
-														</h5>
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-															{question.options.map((option, optionIndex) => (
-																<div
-																	key={optionIndex}
-																	className={`p-2 rounded border text-sm ${
-																		question.correctAnswer === optionIndex
-																			? "bg-green-50 border-green-200 text-green-800"
-																			: "bg-background"
-																	}`}
-																>
-																	<div className="flex items-center gap-2">
-																		<span className="font-medium">
-																			{String.fromCharCode(65 + optionIndex)}.
-																		</span>
-																		<span>
-																			{option || `Option ${optionIndex + 1}`}
-																		</span>
-																		{question.correctAnswer === optionIndex && (
-																			<span className="ml-auto text-green-600 text-xs">
-																				✓ Correct
-																			</span>
-																		)}
-																	</div>
-																</div>
-															))}
-														</div>
+								{section.lessons.map((lesson, lessonIndex) => (
+									<div key={lessonIndex}>
+										{section?.quizzes?.length > 0 && (
+											<div className="border rounded-md">
+												<Button
+													variant="ghost"
+													className="w-full justify-between p-4 h-auto"
+													onClick={() => toggleQuiz(sectionIndex)}
+												>
+													<div className="flex items-center gap-3">
+														<HelpCircle className="h-4 w-4" />
+														<span className="font-medium">Quiz</span>
+														<Badge variant="outline" className="ml-2">
+															{section?.quizzes.length} questions
+														</Badge>
 													</div>
-												))}
+												</Button>
+
+												{expandedQuizzes.has(`quiz-${sectionIndex}`) && (
+													<div className="p-4 border-t bg-muted/30 space-y-4">
+														{section?.quizzes.map((question, questionIndex) => (
+															<div key={questionIndex} className="space-y-3">
+																<h5 className="font-medium">
+																	{questionIndex + 1}.{" "}
+																	{question.question ||
+																		"Question text will appear here..."}
+																</h5>
+																<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+																	{question.options.map(
+																		(option, optionIndex) => (
+																			<div
+																				key={optionIndex}
+																				className={`p-2 rounded border text-sm ${
+																					question.correctAnswer === optionIndex
+																						? "bg-green-50 border-green-200 text-green-800"
+																						: "bg-background"
+																				}`}
+																			>
+																				<div className="flex items-center gap-2">
+																					<span className="font-medium">
+																						{String.fromCharCode(
+																							65 + optionIndex
+																						)}
+																						.
+																					</span>
+																					<span>
+																						{option ||
+																							`Option ${optionIndex + 1}`}
+																					</span>
+																					{question.correctAnswer ===
+																						optionIndex && (
+																						<span className="ml-auto text-green-600 text-xs">
+																							✓ Correct
+																						</span>
+																					)}
+																				</div>
+																			</div>
+																		)
+																	)}
+																</div>
+															</div>
+														))}
+													</div>
+												)}
 											</div>
 										)}
 									</div>
-								)}
+								))}
 							</div>
 						))}
 					</CardContent>
