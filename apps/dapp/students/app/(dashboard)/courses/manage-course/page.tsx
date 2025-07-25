@@ -282,7 +282,14 @@ export default function ManageCourses() {
 
 									<div className="flex gap-2">
 										{course.id && course.status !== "published" ? (
-											<Link className="flex-1" href={`/courses/create-course`}>
+											<Link
+												className="flex-1"
+												href={
+													course.id === "unsaved"
+														? "/courses/create-course"
+														: `/courses/create-course?id=${course.id}`
+												}
+											>
 												<Button variant="outline" className="w-full">
 													<Edit className="w-4 h-4 mr-2" />
 													Resume draft

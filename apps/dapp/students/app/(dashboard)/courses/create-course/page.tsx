@@ -58,7 +58,6 @@ const CourseCreation = () => {
 		: "course_draft";
 
 	const [showDraftModal, setShowDraftModal] = useState(false);
-	const [pendingCourseData, setPendingCourseData] = useState<any | null>(null);
 	const [draftData, setDraftData] = useState<any | null>(null);
 	const [hasChanges, setHasChanges] = useState(false);
 	const [initialData, setInitialData] = useState<CourseFormData | null>(null);
@@ -100,9 +99,8 @@ const CourseCreation = () => {
 
 				if (!isMeaningful) return;
 
-				form.reset(parsed);
-				setIsFromDraft(true);
-				setInitialData(parsed);
+				setDraftData(parsed);
+				setShowDraftModal(true);
 			} catch (err) {
 				console.error("Failed to parse saved draft", err);
 				toast.error("Failed to parse saved draft");
@@ -118,30 +116,7 @@ const CourseCreation = () => {
 					.maybeSingle();
 
 				if (data) {
-					const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
-					if (savedDraft) {
-						try {
-							const parsedDraft = JSON.parse(savedDraft);
-							// A simple check to see if the draft has any meaningful data
-							const isMeaningful =
-								parsedDraft.title?.trim() ||
-								parsedDraft.description?.trim() ||
-								parsedDraft.longDescription?.trim();
-
-							if (isMeaningful) {
-								setPendingCourseData(data);
-								setDraftData(parsedDraft);
-								setInitialData(parsedDraft);
-								setShowDraftModal(true); // trigger modal
-								return;
-							}
-						} catch (e) {
-							console.error("Invalid draft in edit mode, ignoring.", e);
-						}
-					}
-
-					// No draft, or invalid draft, so load from DB
-					const normalized = {
+					const normalizedDbData = {
 						title: data.title || "",
 						description: data.description || "",
 						longDescription: data.long_description || "",
@@ -182,8 +157,31 @@ const CourseCreation = () => {
 							})
 						),
 					};
-					form.reset(normalized);
-					setInitialData(normalized);
+
+					const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
+					if (savedDraft) {
+						try {
+							const parsedDraft = JSON.parse(savedDraft);
+							const isMeaningful =
+								parsedDraft.title?.trim() ||
+								parsedDraft.description?.trim() ||
+								parsedDraft.longDescription?.trim();
+
+							if (isMeaningful) {
+								setDraftData(parsedDraft);
+								setInitialData(normalizedDbData); // Set initialData to DB data
+								setIsFromDraft(true);
+								setShowDraftModal(true); // trigger modal
+								return;
+							}
+						} catch (e) {
+							console.error("Invalid draft in edit mode, ignoring.", e);
+						}
+					}
+
+					// No draft, or invalid draft, so load from DB
+					form.reset(normalizedDbData);
+					setInitialData(normalizedDbData);
 					setIsFromDraft(false); //  from DB
 				}
 			};
@@ -808,51 +806,9 @@ const CourseCreation = () => {
 							<Button
 								variant="outline"
 								onClick={() => {
-									const normalized = {
-										title: pendingCourseData.title || "",
-										description: pendingCourseData.description || "",
-										longDescription: pendingCourseData.long_description || "",
-										category: pendingCourseData.category || "",
-										difficulty: pendingCourseData.difficulty || "Beginner",
-										whatYouWillLearn: pendingCourseData.learning_outcomes || [
-											"",
-										],
-										sections: (pendingCourseData.sections || []).map(
-											(section: {
-												title: string;
-												chapter_number: number;
-												lessons: any[];
-												quizzes: any[];
-											}) => ({
-												title: section.title,
-												chapters: section.chapter_number,
-												lessons: (section.lessons || []).map(
-													(lesson: {
-														title: string;
-														content: any;
-														is_preview: boolean;
-													}) => ({
-														title: lesson.title,
-														content: lesson.content,
-														isPreview: lesson.is_preview,
-													})
-												),
-												quiz: (section.quizzes || []).map(
-													(q: {
-														question: string;
-														options: string[];
-														correct_answer: number;
-													}) => ({
-														question: q.question,
-														options: q.options,
-														correctAnswer: q.correct_answer,
-													})
-												),
-											})
-										),
-									};
-
-									form.reset(normalized);
+									if (initialData) {
+										form.reset(initialData); // Revert to original DB data
+									}
 									localStorage.removeItem(LOCAL_STORAGE_KEY);
 									setShowDraftModal(false);
 								}}
@@ -861,7 +817,13 @@ const CourseCreation = () => {
 							</Button>
 							<Button
 								onClick={() => {
-									form.reset(draftData);
+									if (isEditMode) {
+										form.reset(draftData); // Load draft data into the form
+									} else {
+										form.reset(draftData);
+										setInitialData(draftData);
+										setIsFromDraft(true);
+									}
 									setShowDraftModal(false);
 								}}
 							>
