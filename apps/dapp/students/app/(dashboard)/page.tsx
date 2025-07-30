@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import type { Swiper as SwiperType } from "swiper";
 import ActiveCampaign from "@/components/active-campaigns";
 import chestImage from "@/public/chest.svg";
+import exploreImage from "@/public/explore.svg";
 import masteryImage from "@/public/masteryImage.svg";
 import { Navigation, A11y, Autoplay } from "swiper/modules";
 import { IconChevronRight, IconChevronLeft } from "@tabler/icons-react";
-import featuredCourseImage from "@/public/featured-course.svg";
 // import { useOCAuth } from "@opencampus/ocid-connect-js";
 // Import Swiper styles
 import "swiper/css";
@@ -24,13 +24,13 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import ProgressCourse from "@/components/ProgressCourse";
 
 const SwiperNavButtons = ({ swiper }: { swiper: SwiperType | null }) => {
 	const [isBeginning, setIsBeginning] = useState(true);
@@ -213,46 +213,38 @@ export default function Page() {
 		{
 			title: "Unlock Your Learning Potential",
 			description:
-				"Discover Web3-powered lessons and track your learning streaks. Use YUZU points to boost your growth and unlock rewards.",
+				"Discover Web3-powered lessons. Use YUZU points and streaks to unlock perks and rewards.",
 			buttonLabel: "Start Learning",
 			backgroundColor: "#C4FF00",
 			textColor: "#000",
 			image: chestImage, // replace with actual icon component
 			isDark: false,
+			link: "/courses",
 		},
 		{
-			tag: "Upcoming Events",
-			title: "Weekly Challenge: Smart Contract Mastery",
+			tag: "🔥Quest",
+			title: "Beta Study Sprint",
 			description:
-				"Earn YUZU points by completing this week's timed coding challenge.",
-			timeInfo: "Live: Thursday, 4:00PM GMT",
-			buttonLabel: "View Details",
+				"Join our beta challenges and earn exclusive YUZU rewards for being an early learner!",
+			buttonLabel: "Start Learning",
 			backgroundColor: "#000000",
 			textColor: "#ffffff",
 			image: masteryImage, // replace with actual icon component
 			isDark: true,
+			link: "/courses",
 		},
+
 		{
-			title: "Unlock Your Learning Potential",
+			tag: "🚀 Early Access",
+			title: "Beta Explorer",
 			description:
-				"Discover Web3-powered lessons and track your learning streaks. Use YUZU points to boost your growth and unlock rewards.",
-			buttonLabel: "Start Learning",
-			backgroundColor: "#C4FF00",
-			textColor: "#000",
-			image: chestImage, // replace with actual icon component
+				"Be among the first to explore on-chain learning. Complete challenges and earn exclusive YUZU rewards.",
+			buttonLabel: "Start Exploring",
+			backgroundColor: "#3B0764", // slate-800
+			textColor: "#E0E0FF ", // sky-400
+			image: exploreImage,
+			link: "/courses",
 			isDark: false,
-		},
-		{
-			tag: "Upcoming Events",
-			title: "Weekly Challenge: Smart Contract Mastery",
-			description:
-				"Earn YUZU points by completing this week's timed coding challenge.",
-			timeInfo: "Live: Thursday, 4:00PM GMT",
-			buttonLabel: "Start Learning",
-			backgroundColor: "#000000",
-			textColor: "#ffffff",
-			image: masteryImage, // replace with actual icon component
-			isDark: true,
 		},
 	];
 
@@ -294,33 +286,13 @@ export default function Page() {
 						},
 					}}
 				>
-					{campaigns.map(
-						({
-							tag,
-							title,
-							description,
-							buttonLabel,
-							backgroundColor,
-							textColor,
-							isDark,
-							image,
-						}) => {
-							return (
-								<SwiperSlide key={title}>
-									<ActiveCampaign
-										tag={tag}
-										title={title}
-										description={description}
-										buttonLabel={buttonLabel}
-										backgroundColor={backgroundColor}
-										textColor={textColor}
-										image={image}
-										isDark={isDark}
-									/>
-								</SwiperSlide>
-							);
-						}
-					)}
+					{campaigns.map((campaign) => {
+						return (
+							<SwiperSlide key={campaign.title}>
+								<ActiveCampaign {...campaign} />
+							</SwiperSlide>
+						);
+					})}
 				</Swiper>
 				<SwiperNavButtons swiper={swiperInstance} />
 			</div>
@@ -442,59 +414,9 @@ export default function Page() {
 									</Link>
 								</div>
 							) : (
-								courseInProgress?.map(
-									({
-										lesson,
-										lessonsLeft,
-										progress,
-										title,
-										description,
-										id,
-									}) => {
-										return (
-											<Card key={id} className="w-full flex-1 bg-sidebar">
-												<CardContent>
-													<div className="space-y-4">
-														<div className="flex flex-col gap-4 sm:flex-row justify-between">
-															<div className="">
-																<h3 className="font-semibold">{title}</h3>
-																<p className="text-sm text-black/50 dark:text-white/50">
-																	{lesson}
-																</p>
-																<p className="text-sm mt-2 ">
-																	{description.slice(0, 70)}
-																</p>
-															</div>
-															<div className="text-right">
-																<div className="text-sm whitespace-nowrap font-semibold text-lime-600">
-																	{progress}% Complete
-																</div>
-																<div className="text-xs text-yellow-500">
-																	{lessonsLeft} lessons left
-																</div>
-															</div>
-														</div>
-														<Progress value={progress} className="h-2" />
-														{progress >= 100 ? (
-															<Button
-																disabled
-																className=" w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400"
-															>
-																Course Completed
-															</Button>
-														) : (
-															<Link href={`/courses/${id}/learning`}>
-																<Button className=" w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400">
-																	Continue
-																</Button>
-															</Link>
-														)}
-													</div>
-												</CardContent>
-											</Card>
-										);
-									}
-								)
+								courseInProgress?.map((progress) => {
+									return <ProgressCourse {...progress} />;
+								})
 							)}
 						</div>
 					</Card>

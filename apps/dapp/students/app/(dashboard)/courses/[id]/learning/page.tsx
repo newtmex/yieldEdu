@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth-client";
 import LessonContent from "@/components/LessonContent";
+import useCourseInfo from "@/hooks/course";
 
 function transformCourseData(fetchedData: any) {
 	if (!fetchedData) return null;
@@ -63,7 +64,6 @@ const Page = () => {
 	const router = useRouter();
 	const courseId = Array.isArray(id) ? id[0] : id;
 	const { data: session } = useSession();
-
 	const [currentSection, setCurrentSection] = useState(0);
 	const [currentLesson, setCurrentLesson] = useState(0);
 	const [selectedAnswer, setSelectedAnswer] = useState("");
@@ -72,6 +72,7 @@ const Page = () => {
 	);
 	const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
 	const [isQuizActive, setIsQuizActive] = useState(false);
+	const { course_completed } = useCourseInfo(id as string);
 	const [quizSubmissionStatus, setQuizSubmissionStatus] = useState<
 		"correct" | "incorrect" | null
 	>(null);
@@ -96,6 +97,7 @@ const Page = () => {
 	const { data: existingProgress, isPending: existingProgressPending } =
 		useQuery({
 			queryKey: ["user_progress", session?.user.id, courseId],
+
 			queryFn: async () => {
 				if (!session?.user.id || !courseId) return null;
 				const { data, error } = await supabase
@@ -110,6 +112,8 @@ const Page = () => {
 				}
 				return data;
 			},
+			gcTime: 0,
+			staleTime: 0,
 			enabled: !!session?.user.id && !!courseId,
 		});
 
@@ -131,6 +135,13 @@ const Page = () => {
 			});
 		}
 	};
+
+	useEffect(() => {
+		if (course_completed) {
+			toast.error("You cannot enroll in a completed course");
+			router.push("/courses");
+		}
+	}, [course_completed]);
 
 	useEffect(() => {
 		const handleProgress = async () => {
@@ -166,6 +177,10 @@ const Page = () => {
 					]);
 
 				if (insertError) {
+					console.log(insertError);
+					if (parseFloat(insertError.code) === 23505) {
+						return;
+					}
 					toast.error("Failed to create progress", {
 						description: insertError.message,
 					});
@@ -322,9 +337,9 @@ const Page = () => {
 			nextLesson = 0;
 		}
 
-		if (nextSection >= courseData.sections.length) {
-			router.push(`/courses/${id}/performance`);
-		}
+		// if (nextSection >= courseData.sections.length) {
+		// 	router.push(`/courses/${id}/performance`);
+		// }
 
 		setCurrentSection(nextSection);
 		setCurrentLesson(nextLesson);
@@ -555,7 +570,7 @@ const Page = () => {
 												const isSubmitted = quizSubmissionStatus !== null;
 
 												return (
-													<div key={option}>
+													<div key={option.text}>
 														<Button
 															variant={"outline"}
 															key={index}

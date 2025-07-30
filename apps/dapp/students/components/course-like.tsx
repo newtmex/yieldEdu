@@ -67,6 +67,7 @@ const CourseLike = ({ courseId }: { courseId?: ParamValue }) => {
 		onError: (_err, _vars, ctx) => {
 			queryClient.setQueryData(["likes", courseId], ctx?.previousData);
 			toast.error("Failed to update like.");
+			console.log(_err);
 		},
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["likes", courseId] });

@@ -2,6 +2,7 @@ import React from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
 import Image, { StaticImageData } from "next/image";
+import Link from "next/link";
 
 type PromoCardProps = {
 	title: string;
@@ -13,6 +14,7 @@ type PromoCardProps = {
 	image?: string | StaticImageData;
 	isDark?: boolean;
 	tag?: string;
+	link: string;
 };
 
 const ActiveCampaign: React.FC<PromoCardProps> = ({
@@ -25,6 +27,7 @@ const ActiveCampaign: React.FC<PromoCardProps> = ({
 	image,
 	isDark = false,
 	tag,
+	link,
 }) => {
 	return (
 		<Card style={{ backgroundColor, color: textColor }} className="h-full">
@@ -46,17 +49,33 @@ const ActiveCampaign: React.FC<PromoCardProps> = ({
 						/>
 					)}
 				</div>
-				<Button
-					variant={"secondary"}
-					onClick={onClick}
-					className={` cursor-pointer rounded-md text-sm font-medium ${
-						isDark
-							? "bg-yellow-400 hover:bg-yellow-500 text-black"
-							: "!bg-white text-black"
-					}`}
-				>
-					{buttonLabel}
-				</Button>
+				{onClick ? (
+					<Button
+						variant={"secondary"}
+						onClick={onClick}
+						className={` cursor-pointer rounded-md text-sm font-medium ${
+							isDark
+								? "bg-yellow-400 hover:bg-yellow-500 text-black"
+								: "!bg-white text-black"
+						}`}
+					>
+						{buttonLabel}
+					</Button>
+				) : (
+					<Link href={link}>
+						<Button
+							variant={"secondary"}
+							onClick={onClick}
+							className={` cursor-pointer rounded-md text-sm font-medium ${
+								isDark
+									? "bg-yellow-400 hover:bg-yellow-500 text-black"
+									: "!bg-white text-black"
+							}`}
+						>
+							{buttonLabel}
+						</Button>
+					</Link>
+				)}
 			</CardContent>
 		</Card>
 	);

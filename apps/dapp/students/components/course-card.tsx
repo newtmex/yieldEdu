@@ -1,10 +1,12 @@
 import Image from "next/image";
-import { Card, CardContent, CardFooter } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { IconStarFilled } from "@tabler/icons-react";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import featuredCourseImage from "@/public/featured-course.svg";
 import { Badge } from "./ui/badge";
+import { LoaderCircle } from "lucide-react";
+import useCourseInfo from "@/hooks/course";
 
 type CourseCardProps = {
 	title: string;
@@ -23,6 +25,8 @@ export default function CourseCard({
 	difficulty,
 	Category,
 }: CourseCardProps) {
+	const { isPending, course_completed } = useCourseInfo(id as string);
+
 	return (
 		<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
 			<Card className="relative bg-card rounded-xl shadow-md flex items-center justify-between gap-4 w-full">
@@ -38,11 +42,24 @@ export default function CourseCard({
 							{/* {description.slice(0, 70)} */}
 						</p>
 
-						<Link href={`/courses/${id}`}>
-							<Button className="mt-4 text-sm px-4 py-2 rounded">
-								Enroll Now
+						{isPending ? (
+							<Button disabled className="mt-4 text-sm px-4 py-2 rounded">
+								Please wait...
+								{isPending && (
+									<LoaderCircle className="animate-spin" size={16} />
+								)}
 							</Button>
-						</Link>
+						) : course_completed ? (
+							<Button disabled className="mt-4 text-sm px-4 py-2 rounded">
+								Course Completed
+							</Button>
+						) : (
+							<Link href={`/courses/${id}`}>
+								<Button className="mt-4 text-sm px-4 py-2 rounded">
+									Enroll Now
+								</Button>
+							</Link>
+						)}
 					</div>
 					<Image
 						src={image_url}

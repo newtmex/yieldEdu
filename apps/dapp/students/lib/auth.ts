@@ -7,6 +7,10 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+if (!process.env.RESEND_API_KEY) {
+	throw new Error("RESEND_API_KEY is not set");
+}
+
 export const auth = betterAuth({
 	user: {
 		additionalFields: {
@@ -47,7 +51,7 @@ export const auth = betterAuth({
 			},
 		},
 	},
-	trustedOrigins: ["http://localhost:3000"],
+	trustedOrigins: ["http://localhost:3000", "https://students.yieldedu.xyz"],
 	socialProviders: {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -67,14 +71,13 @@ export const auth = betterAuth({
 	plugins: [
 		magicLink({
 			async sendMagicLink({ email, url }) {
-				console.log(url);
-				// const { error } = await resend.emails.send({
-				// 	from: "YieldEdu <onboarding@support.yieldedu.xyz>",
-				// 	to: [email],
-				// 	subject: "Your Magic Sign-In Link for YieldEdu",
-				// 	react: EmailTemplate({ link: url }),
-				// });
-				// if (error) console.log(error);
+				const { error } = await resend.emails.send({
+					from: "YieldEdu <onboarding@support.yieldedu.xyz>",
+					to: [email],
+					subject: "Your Magic Sign-In Link for YieldEdu",
+					react: EmailTemplate({ link: url }),
+				});
+				if (error) console.log(error);
 			},
 		}),
 

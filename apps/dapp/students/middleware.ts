@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionCookie } from "better-auth/cookies";
+import { auth } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
-	const sessionCookie = getSessionCookie(request);
+	const session = await auth.api.getSession({
+		query: {
+			disableCookieCache: true,
+		},
+		headers: request.headers,
+	});
 
-	// Set x-real-ip header for local development if not present
-	if (
-		process.env.NODE_ENV === "development" &&
-		!request.headers.has("x-real-ip")
-	) {
-		request.headers.set("x-real-ip", "127.0.0.1");
-	}
-
-	if (!sessionCookie) {
+	if (!session) {
 		return NextResponse.redirect(new URL("/signin", request.url));
 	}
 
@@ -38,7 +35,6 @@ export const config = {
 		"/leaderboard",
 		"/achievements/:path*",
 		"/settings",
-		//
 		"/performance",
 		"/leaderboards",
 		"/campaigns",

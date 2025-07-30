@@ -69,7 +69,7 @@ const Page = () => {
 		try {
 			setIsUpdatingProfile(true);
 
-			const { error } = await supabase.from("investors").upsert(
+			const { error } = await supabase.from("students").upsert(
 				{
 					...data,
 					address,
@@ -108,7 +108,7 @@ const Page = () => {
 		queryKey: ["profile-details"],
 		queryFn: async () => {
 			const response = await supabase
-				.from("investors")
+				.from("students")
 				.select("*")
 				.eq("address", address)
 				.single();

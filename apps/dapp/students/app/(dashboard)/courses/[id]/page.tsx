@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import useCourseInfo from "@/hooks/course";
 
 const Page = () => {
 	const { id } = useParams();
@@ -22,6 +23,9 @@ const Page = () => {
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [enrollmentLoading, setEnrollmentLoading] = useState(false);
 	const { data: session } = useSession();
+	const { isPending: isCoursePending, course_completed } = useCourseInfo(
+		id as string
+	);
 
 	const {
 		data: courseData,
@@ -431,18 +435,47 @@ const Page = () => {
 
 								{/* Action Buttons */}
 								<div className="space-y-3 my-6 flex flex-wrap gap-4">
-									<Button
-										disabled={enrollmentLoading}
-										onClick={() => handleStartCourse(courseData.id)}
-										variant="outline"
-										className="flex-1"
-									>
-										{enrollmentLoading && (
-											<LoaderCircle className="animate-spin" size={16} />
-										)}
-										{enrollmentLoading ? "Please wait..." : "Start Course"}
-									</Button>
-									<CourseLike courseId={id} />
+									{isCoursePending ? (
+										<>
+											<Button
+												variant="outline"
+												disabled
+												className="text-sm px-4 py-2 rounded"
+											>
+												Loading...
+												{isCoursePending && (
+													<LoaderCircle className="animate-spin" size={16} />
+												)}
+											</Button>
+											<CourseLike courseId={id} />
+										</>
+									) : course_completed ? (
+										<>
+											<Button
+												disabled
+												className=" w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400"
+											>
+												Course Completed
+											</Button>
+											<CourseLike courseId={id} />
+										</>
+									) : (
+										<>
+											<Button
+												disabled={enrollmentLoading}
+												onClick={() => handleStartCourse(courseData.id)}
+												variant="outline"
+												className="flex-1"
+											>
+												{enrollmentLoading && (
+													<LoaderCircle className="animate-spin" size={16} />
+												)}
+												{enrollmentLoading ? "Please wait..." : "Start Course"}
+											</Button>
+											<CourseLike courseId={id} />
+										</>
+									)}
+
 									{/* <div className="flex gap-2">
 										<CourseRating />
 									</div> */}
