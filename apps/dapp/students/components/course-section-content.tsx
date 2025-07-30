@@ -11,7 +11,7 @@ import {
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import dynamic from "next/dynamic";
-import { useFieldArray } from "react-hook-form";
+import { useFieldArray, Controller } from "react-hook-form";
 
 const LessonEditor = dynamic(
 	() => import("@/components/lesson-editor").then((mod) => mod.LessonEditor),
@@ -117,7 +117,7 @@ const SectionContent: React.FC<{
 									<FormLabel>Lesson Title</FormLabel>
 									<FormControl>
 										<Input
-											placeholder="e.g., Introduction to DeFi"
+											placeholder="e.g., What is DeFi?"
 											{...field}
 											disabled={isPending}
 										/>
@@ -264,17 +264,18 @@ const SectionContent: React.FC<{
 										key={optionIndex}
 										className="flex items-center space-x-2"
 									>
-										<Input
-											type="radio"
-											checked={question.correctAnswer === optionIndex}
-											onChange={() =>
-												form.setValue(
-													`sections.${sectionIndex}.quizzes.${questionIndex}.correctAnswer`,
-													optionIndex
-												)
-											}
-											className="size-3"
-											disabled={isPending}
+										<Controller
+											control={form.control}
+											name={`sections.${sectionIndex}.quizzes.${questionIndex}.correctAnswer`}
+											render={({ field }) => (
+												<Input
+													type="radio"
+													checked={field.value === optionIndex}
+													onChange={() => field.onChange(optionIndex)}
+													className="size-3"
+													disabled={isPending}
+												/>
+											)}
 										/>
 
 										<FormField

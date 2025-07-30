@@ -224,7 +224,7 @@ const Page = () => {
 										style={{ flexShrink: 0 }}
 									>
 										{!twitterLoading && (
-											<IconBrandX className="size-6 text-black" />
+											<IconBrandX className="size-6 text-black dark:text-white" />
 										)}
 									</Button>
 								</div>

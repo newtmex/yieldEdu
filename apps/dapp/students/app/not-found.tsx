@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const NotFound = () => {
@@ -27,13 +28,14 @@ const NotFound = () => {
 								The page you are looking for is not available!
 							</p>
 
-							<Button
-								variant="default"
-								onClick={() => router.push("/")}
-								className="my-5 bg-green-500 hover:bg-green-600"
-							>
-								Go to Home
-							</Button>
+							<Link href={"/"}>
+								<Button
+									variant="default"
+									className="my-5 bg-green-500 hover:bg-green-600"
+								>
+									Go to Home
+								</Button>
+							</Link>
 						</div>
 					</div>
 				</div>

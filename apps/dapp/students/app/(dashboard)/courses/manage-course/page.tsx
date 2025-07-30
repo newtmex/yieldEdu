@@ -88,8 +88,8 @@ export default function ManageCourses() {
 	const {
 		data: courses,
 		error,
-		isLoading,
 		isError,
+		isLoading: isPending,
 	} = useQuery({
 		queryKey: ["manage-courses"],
 		enabled: !!session?.user.name,
@@ -111,7 +111,6 @@ export default function ManageCourses() {
 				.eq("instructor_name", session?.user.name);
 
 			if (error) throw new Error(error.message);
-
 			return data.map((course) => {
 				const chapters = course.sections?.length || 0;
 				const lessons = course.sections?.reduce(
@@ -206,19 +205,30 @@ export default function ManageCourses() {
 					</Link>
 				</div>
 
-				{isLoading ? (
-					<p className="text-center text-muted-foreground">
-						Loading courses...
-					</p>
-				) : isError ? (
-					<p className="text-center text-destructive">
-						Failed to load courses.
-					</p>
-				) : !courses ? (
-					<div className="text-center py-12">
-						<p className="text-muted-foreground">
-							Unable to load courses. Check your internet connection.
-						</p>
+				{isPending ? (
+					<div className="grid gap-4 grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(400px,1fr))] *:data-[slot=card]:from-lime-400/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card  *:data-[slot=card]:bg-gradient-to-t">
+						{Array.from({ length: 5 }).map((_, idx) => (
+							<Card key={idx} className="rounded-xl p-5 animate-pulse bg-white">
+								<div>
+									<div className="flex items-center justify-between gap-5">
+										<div className="h-4 w-[250px] bg-primary/5 rounded" />
+										<div className="h-4 w-[80px] bg-primary/5 rounded" />
+									</div>
+									<div className="pt-4 flex flex-col gap-2">
+										<div className="h-3 w-full bg-primary/5 rounded" />
+										<div className="h-2 w-[180px] bg-primary/5 rounded" />
+									</div>
+								</div>
+								<div className="space-y-2 pt-7 flex gap-5 justify-around">
+									<div className="h-8 w-[100px] bg-primary/5 rounded" />
+									<div className="h-8 w-[110px] bg-primary/5 rounded" />
+								</div>
+								<div className="space-y-2 pt-2 flex gap-5 justify-between">
+									<div className="h-8 w-full bg-primary/5 rounded" />
+									<div className="h-8 w-[110px] bg-primary/5 rounded" />
+								</div>
+							</Card>
+						))}
 					</div>
 				) : allCourses?.length === 0 ? (
 					<Card>
@@ -240,117 +250,130 @@ export default function ManageCourses() {
 					</Card>
 				) : (
 					<div className="grid gap-4 grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(400px,1fr))] *:data-[slot=card]:from-lime-400/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card  *:data-[slot=card]:bg-gradient-to-t">
-						{allCourses?.map((course) => (
-							<Card
-								key={course.id}
-								className="hover:shadow-lg transition-shadow"
-							>
-								<CardHeader className="pb-3">
-									<div className="flex justify-between items-center gap-4">
-										<CardTitle className="text-lg line-clamp-2 mb-2">
-											{course.title}
-										</CardTitle>
-										{getStatusBadge(course?.status)}
-									</div>
-									<CardDescription className="block truncate line-clamp-2 min-h-[2.5rem]">
-										{course.description}
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="pt-0">
-									<div className="grid grid-cols-2 gap-4 mb-4">
-										<div className="text-center">
-											<div className="text-2xl font-bold text-primary">
-												{course?.chapters}
+						{!navigator.onLine ? (
+							<div className="col-span-full flex flex-col items-center justify-center py-12">
+								<p className="text-lg font-semibold text-red-500">
+									No internet connection
+								</p>
+								<p className="text-muted-foreground text-sm mt-2">
+									Please check your network and try again.
+								</p>
+							</div>
+						) : allCourses && allCourses.length > 0 ? (
+							allCourses?.map((course) => (
+								<Card
+									key={course.id}
+									className="hover:shadow-lg transition-shadow"
+								>
+									<CardHeader className="pb-3">
+										<div className="flex justify-between items-center gap-4">
+											<CardTitle className="text-lg line-clamp-2 mb-2">
+												{course.title}
+											</CardTitle>
+											{getStatusBadge(course?.status)}
+										</div>
+										<CardDescription className="block truncate line-clamp-2 min-h-[2.5rem]">
+											{course.description}
+										</CardDescription>
+									</CardHeader>
+									<CardContent className="pt-0">
+										<div className="grid grid-cols-2 gap-4 mb-4">
+											<div className="text-center">
+												<div className="text-2xl font-bold text-primary">
+													{course?.chapters}
+												</div>
+												<div className="text-xs text-muted-foreground">
+													Chapters
+												</div>
 											</div>
-											<div className="text-xs text-muted-foreground">
-												Chapters
+											<div className="text-center">
+												<div className="text-2xl font-bold text-primary">
+													{course?.lessons}
+												</div>
+												<div className="text-xs text-muted-foreground">
+													Lessons
+												</div>
 											</div>
 										</div>
-										<div className="text-center">
-											<div className="text-2xl font-bold text-primary">
-												{course?.lessons}
-											</div>
-											<div className="text-xs text-muted-foreground">
-												Lessons
-											</div>
+
+										<div className="text-xs dark:text-lime-400 text-yellow-400 mb-4">
+											Last updated:{" "}
+											{new Date(course?.updatedAt).toLocaleDateString()}
 										</div>
-									</div>
 
-									<div className="text-xs dark:text-lime-400 text-yellow-400 mb-4">
-										Last updated:{" "}
-										{new Date(course?.updatedAt).toLocaleDateString()}
-									</div>
-
-									<div className="flex gap-2">
-										{course.id && course.status !== "published" ? (
-											<Link
-												className="flex-1"
-												href={
-													course.id === "unsaved"
-														? "/courses/create-course"
-														: `/courses/create-course?id=${course.id}`
-												}
-											>
-												<Button variant="outline" className="w-full">
-													<Edit className="w-4 h-4 mr-2" />
-													Resume draft
-												</Button>
-											</Link>
-										) : (
-											<Link
-												href={`/courses/create-course?id=${course.id}`}
-												className="flex-1"
-											>
-												<Button variant="outline" className="w-full">
-													<Edit className="w-4 h-4 mr-2" />
-													Edit
-												</Button>
-											</Link>
-										)}
-
-										<Dialog>
-											<DialogTrigger asChild>
-												<Button variant="outline" size="default">
-													<Trash2 className="w-4 h-4" />
-												</Button>
-											</DialogTrigger>
-											<DialogContent>
-												<DialogHeader>
-													<DialogTitle>Delete Course</DialogTitle>
-													<DialogDescription>
-														Are you sure you want to delete "{course.title}"?
-														This action cannot be undone.
-													</DialogDescription>
-												</DialogHeader>
-												<DialogFooter>
-													<DialogClose asChild>
-														<Button variant="outline">Cancel</Button>
-													</DialogClose>
-													<Button
-														disabled={isDeleting}
-														onClick={() =>
-															course.status === "draft"
-																? handleDeleteDraft(course.id)
-																: handleDeleteCourse(course.id)
-														}
-														className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-													>
-														{isDeleting ? (
-															<>
-																<LoaderCircle className="w-4 h-4 animate-spin" />{" "}
-																Deleting...
-															</>
-														) : (
-															"Delete Course"
-														)}
+										<div className="flex gap-2">
+											{course.id && course.status !== "published" ? (
+												<Link
+													className="flex-1"
+													href={
+														course.id === "unsaved"
+															? "/courses/create-course"
+															: `/courses/create-course?id=${course.id}`
+													}
+												>
+													<Button variant="outline" className="w-full">
+														<Edit className="w-4 h-4 mr-2" />
+														Resume draft
 													</Button>
-												</DialogFooter>
-											</DialogContent>
-										</Dialog>
-									</div>
-								</CardContent>
-							</Card>
-						))}
+												</Link>
+											) : (
+												<Link
+													href={`/courses/create-course?id=${course.id}`}
+													className="flex-1"
+												>
+													<Button variant="outline" className="w-full">
+														<Edit className="w-4 h-4 mr-2" />
+														Edit
+													</Button>
+												</Link>
+											)}
+
+											<Dialog>
+												<DialogTrigger asChild>
+													<Button variant="outline" size="default">
+														<Trash2 className="w-4 h-4" />
+													</Button>
+												</DialogTrigger>
+												<DialogContent>
+													<DialogHeader>
+														<DialogTitle>Delete Course</DialogTitle>
+														<DialogDescription>
+															Are you sure you want to delete "{course.title}"?
+															This action cannot be undone.
+														</DialogDescription>
+													</DialogHeader>
+													<DialogFooter>
+														<DialogClose asChild>
+															<Button variant="outline">Cancel</Button>
+														</DialogClose>
+														<Button
+															disabled={isDeleting}
+															onClick={() =>
+																course.status === "draft"
+																	? handleDeleteDraft(course.id)
+																	: handleDeleteCourse(course.id)
+															}
+															className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+														>
+															{isDeleting ? (
+																<>
+																	<LoaderCircle className="w-4 h-4 animate-spin" />{" "}
+																	Deleting...
+																</>
+															) : (
+																"Delete Course"
+															)}
+														</Button>
+													</DialogFooter>
+												</DialogContent>
+											</Dialog>
+										</div>
+									</CardContent>
+								</Card>
+							))
+						) : (
+							<></>
+						)}
 					</div>
 				)}
 			</div>

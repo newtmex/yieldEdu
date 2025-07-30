@@ -35,7 +35,7 @@ import { TooltipInfo } from "@/components/tooltip-info";
 import { authClient } from "@/lib/auth-client";
 import featuredCourseImage from "@/public/featured-course.svg";
 import SectionContent from "@/components/course-section-content";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { supabase } from "@/lib/supabase";
 import {
 	Dialog,
@@ -43,6 +43,8 @@ import {
 	DialogDescription,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAppKitAccount } from "@reown/appkit/react";
 
 export type CourseFormData = z.infer<typeof courseSchema>;
 
@@ -62,6 +64,8 @@ const CourseCreation = () => {
 	const [hasChanges, setHasChanges] = useState(false);
 	const [initialData, setInitialData] = useState<CourseFormData | null>(null);
 	const [isFromDraft, setIsFromDraft] = useState(false);
+	const queryClient = useQueryClient();
+	const { address } = useAppKitAccount();
 
 	const form = useForm<CourseFormData>({
 		resolver: zodResolver(courseSchema) as any,
@@ -96,8 +100,6 @@ const CourseCreation = () => {
 	});
 
 	useEffect(() => {
-		const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
-
 		if (!isEditMode) {
 			const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
 			if (savedDraft) {
@@ -109,7 +111,9 @@ const CourseCreation = () => {
 						parsed.longDescription?.trim() ||
 						(parsed.sections?.length > 0 && parsed.sections[0].title?.trim()) ||
 						(parsed.whatYouWillLearn?.length > 0 &&
-							parsed.whatYouWillLearn.some((item: string) => item.trim() !== ""));
+							parsed.whatYouWillLearn.some(
+								(item: string) => item.trim() !== ""
+							));
 
 					if (isMeaningful) {
 						setDraftData(parsed);
@@ -245,6 +249,18 @@ const CourseCreation = () => {
 				},
 			};
 
+			if (!processedData.instructor) {
+				toast.error("You are not authenticated");
+				return;
+			}
+
+			if (!address) {
+				toast.error("Connect your wallet", {
+					description: "We need your address to create a course",
+				});
+				return;
+			}
+
 			try {
 				if (isEditMode) {
 					// Update existing course
@@ -333,6 +349,7 @@ const CourseCreation = () => {
 					}
 					toast.success("Course updated successfully!");
 					localStorage.removeItem(LOCAL_STORAGE_KEY);
+					queryClient.invalidateQueries({ queryKey: ["manage-courses"] });
 					router.push(`/courses/manage-course`);
 				} else {
 					// Create new course
@@ -423,6 +440,7 @@ const CourseCreation = () => {
 					toast.success("Course created successfully!", {
 						description: `Your course has been created with id ${course.id}`,
 					});
+					queryClient.invalidateQueries({ queryKey: ["manage-courses"] });
 					router.push(`/courses/manage-course`);
 				}
 			} catch (error: any) {
@@ -473,6 +491,7 @@ const CourseCreation = () => {
 					>
 						<ArrowLeft className="size-5" />
 					</Button>
+					{session?.user.name}
 					<div className="flex gap-4 flex-wrap items-center justify-between w-full">
 						<div className="flex lg:mr-auto items-center gap-4">
 							<div className="mr-auto">
@@ -837,7 +856,7 @@ const CourseCreation = () => {
 																	<FormLabel>Section Title</FormLabel>
 																	<FormControl>
 																		<Input
-																			placeholder="e.g., What is DeFi?"
+																			placeholder="e.g., Introduction to DeFi"
 																			{...field}
 																			disabled={isPending}
 																		/>

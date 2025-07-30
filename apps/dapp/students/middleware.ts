@@ -13,18 +13,35 @@ export async function middleware(request: NextRequest) {
 	}
 
 	if (!sessionCookie) {
-		// return NextResponse.redirect(new URL("/signin", request.url));
+		return NextResponse.redirect(new URL("/signin", request.url));
+	}
+
+	const lockedRoutes = [
+		"/performance",
+		"/leaderboards",
+		"/campaigns",
+		"/achievements",
+	];
+	if (
+		lockedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
+	) {
+		return NextResponse.redirect(new URL("/", request.url));
 	}
 
 	return NextResponse.next();
 }
 
 export const config = {
-	// matcher: [
-	// 	"/",
-	// 	"/courses/:path*",
-	// 	"/leaderboard",
-	// 	"/achievements/:path*",
-	// 	"/settings",
-	// ],
+	matcher: [
+		"/",
+		"/courses/:path*",
+		"/leaderboard",
+		"/achievements/:path*",
+		"/settings",
+		//
+		"/performance",
+		"/leaderboards",
+		"/campaigns",
+		"/achievements",
+	],
 };

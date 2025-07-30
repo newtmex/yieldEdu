@@ -1,51 +1,31 @@
+"use client";
 import React from "react";
 import VIPHuman from "@/public/being-vip.svg";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
-import featuredCourseImage from "@/public/featured-course.svg";
 import CourseCard from "@/components/course-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 
 const page = () => {
-	const courses = [
-		{
-			title: "Tokenomics By Gainzswaps",
-			reward: "200 YUZU",
-			description:
-				"Learn the basics of decentralized finance and how it's revolutionizing traditional banking.",
-			imageUrl: featuredCourseImage, // Place in /public
-			id: "dkjsfk",
+	const { data: courses, isPending } = useQuery({
+		queryKey: ["courses"],
+		queryFn: async () => {
+			const response = await supabase
+				.from("courses")
+				.select("title,reward,description,id,image_url");
+
+			if (response.error) {
+				throw new Error(response.error.message);
+			}
+
+			return response.data;
 		},
-		{
-			title: "Intro to DAOs",
-			reward: "150 YUZU",
-			description: "Understand how decentralized organizations operate.",
-			imageUrl: featuredCourseImage,
-			id: "dkjsfk",
-		},
-		{
-			title: "Intro to DAOs",
-			reward: "150 YUZU",
-			description: "Understand how decentralized organizations operate.",
-			imageUrl: featuredCourseImage,
-			id: "dkjsfk",
-		},
-		{
-			title: "Intro to DAOs",
-			reward: "150 YUZU",
-			description: "Understand how decentralized organizations operate.",
-			imageUrl: featuredCourseImage,
-			id: "dkjsfk",
-		},
-		{
-			title: "Intro to DAOs",
-			reward: "150 YUZU",
-			description: "Understand how decentralized organizations operate.",
-			imageUrl: featuredCourseImage,
-			id: "dkjsfk",
-		},
-	];
+	});
 
 	return (
 		<div className="space-y-4 p-5">
@@ -77,10 +57,48 @@ const page = () => {
 				</div>
 			</div>
 			<Separator />
-			<div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-4">
-				{courses.map((course) => (
-					<CourseCard key={course.id} {...course} />
-				))}
+			<div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-4">
+				{isPending ? (
+					Array.from({ length: 5 }).map((_, idx) => (
+						<Card
+							key={idx}
+							className="grid grid-cols-2 gap-5 w-full rounded-xl p-5 animate-pulse"
+						>
+							<div>
+								<Skeleton className="h-4 w-full bg-primary/5 rounded" />
+								<div className="pt-4 flex flex-col gap-2">
+									<Skeleton className="h-2 w-[200px] bg-primary/5 rounded" />
+									<Skeleton className="h-2 w-[180px] bg-primary/5 rounded" />
+									<Skeleton className="h-2 w-[170px] bg-primary/5 rounded" />
+								</div>
+								<div className="space-y-2 pt-7">
+									<Skeleton className="h-8 w-[110px] bg-primary/5 rounded" />
+								</div>
+							</div>
+							<div className="w-full h-[170px] bg-primary/5 rounded" />
+						</Card>
+					))
+				) : courses && courses?.length > 0 ? (
+					courses?.map((course: any) => (
+						<CourseCard key={course.id} {...course} />
+					))
+				) : !navigator.onLine ? (
+					<div className="col-span-full flex flex-col items-center justify-center py-12">
+						<p className="text-lg font-semibold text-red-500">
+							No internet connection
+						</p>
+						<p className="text-muted-foreground text-sm mt-2">
+							Please check your network and try again.
+						</p>
+					</div>
+				) : (
+					<div className="col-span-full flex flex-col items-center justify-center py-12">
+						<p className="text-lg font-semibold">No courses found</p>
+						<p className="text-muted-foreground text-sm mt-2">
+							Start by creating your first course!
+						</p>
+					</div>
+				)}
 			</div>
 		</div>
 	);

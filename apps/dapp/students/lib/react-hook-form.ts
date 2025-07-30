@@ -67,7 +67,7 @@ export const courseSchema = z.object({
 	longDescription: z
 		.string()
 		.min(50, "Long description must be at least 50 characters")
-		.max(300, "Long description too long"),
+		.max(2000, "Long description too long"),
 	category: z
 		.string()
 		.min(1, "Category is required")

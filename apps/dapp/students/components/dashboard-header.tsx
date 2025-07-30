@@ -77,7 +77,7 @@ const DashboardHeader = () => {
 							<div className="flex items-center justify-center gap-2">
 								<IconFlameFilled className="size-3 md:size-5 text-orange-500" />
 								<span className="text-xs md:text-sm font-bold">
-									28 {isMobile ? "" : ""}
+									0 {isMobile ? "" : ""}
 								</span>
 								<TooltipInfo
 									className="text-muted-foreground hidden md:flex"
@@ -95,8 +95,7 @@ const DashboardHeader = () => {
 								/>
 
 								<span className="text-xs md:text-sm font-bold">
-									2,840
-									{isMobile ? "" : " "}
+									0{isMobile ? "" : " "}
 								</span>
 								<TooltipInfo
 									className="hidden md:flex text-muted-foreground"

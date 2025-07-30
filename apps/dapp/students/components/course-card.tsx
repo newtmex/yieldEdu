@@ -1,4 +1,3 @@
-// components/CourseCard.tsx
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "./ui/card";
 import { IconStarFilled } from "@tabler/icons-react";
@@ -10,8 +9,8 @@ import { Badge } from "./ui/badge";
 type CourseCardProps = {
 	title: string;
 	description: string;
-	imageUrl?: string;
-	courseId?: string;
+	image_url?: string;
+	id?: string;
 	difficulty?: string;
 	Category?: string;
 };
@@ -19,8 +18,8 @@ type CourseCardProps = {
 export default function CourseCard({
 	title,
 	description,
-	imageUrl = featuredCourseImage, // replace with your default
-	courseId,
+	image_url = featuredCourseImage,
+	id,
 	difficulty,
 	Category,
 }: CourseCardProps) {
@@ -39,14 +38,14 @@ export default function CourseCard({
 							{/* {description.slice(0, 70)} */}
 						</p>
 
-						<Link href={`/courses/${courseId}`}>
+						<Link href={`/courses/${id}`}>
 							<Button className="mt-4 text-sm px-4 py-2 rounded">
 								Enroll Now
 							</Button>
 						</Link>
 					</div>
 					<Image
-						src={imageUrl}
+						src={image_url}
 						alt={title}
 						width={150}
 						height={150}

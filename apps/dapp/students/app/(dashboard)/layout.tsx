@@ -6,7 +6,7 @@ import WagmiContextProvider from "@/components/wagmi-provider";
 import { headers } from "next/headers";
 import DashboardHeader from "@/components/dashboard-header";
 import { CourseSidebarProvider } from "@/hooks/use-course-sidebar";
-// import { yieldEduMetadata } from "@/metadata";
+import { yieldEduMetadata } from "@/metadata";
 
 const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
@@ -18,7 +18,7 @@ const montserrat = Montserrat({
 	variable: "--font-montserrat",
 });
 
-// export const metadata: Metadata = yieldEduMetadata;
+export const metadata: Metadata = yieldEduMetadata;
 
 export default async function Layout({
 	children,

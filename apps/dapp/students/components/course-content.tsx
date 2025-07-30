@@ -19,97 +19,24 @@ interface courseContentProps {
 		)[];
 	}[];
 }
-const courseContent2 = [
-	{
-		title: "Introduction to Decentralized Finance",
-		chapters: 2,
-		lessons: [
-			{
-				title: "What is DeFi? Understanding the Basics",
-				duration: "15 min read",
-				isPreview: true,
-			},
-			{
-				title: "Traditional Finance vs DeFi",
-				duration: "12 min read",
-			},
-		],
-	},
-	{
-		title: "Blockchain Foundations for DeFi",
-		chapters: 3,
-		lessons: [
-			{
-				title: "Smart Contracts Explained",
-				duration: "18 min read",
-			},
-			{
-				title: "Ethereum and DeFi Infrastructure",
-				duration: "22 min read",
-			},
-			{
-				title: "Gas Fees and Transaction Costs",
-				duration: "10 min read",
-			},
-		],
-	},
-	{
-		title: "Core DeFi Protocols",
-		chapters: 3,
-		lessons: [
-			{
-				title: "Decentralized Exchanges (DEXs)",
-				duration: "20 min read",
-			},
-			{
-				title: "Lending and Borrowing Protocols",
-				duration: "25 min read",
-			},
-			{
-				title: "Automated Market Makers (AMMs)",
-				duration: "18 min read",
-			},
-		],
-	},
-	{
-		title: "Yield Farming and Liquidity Mining",
-		chapters: 2,
-		lessons: [
-			{
-				title: "Understanding Yield Farming",
-				duration: "16 min read",
-			},
-			{
-				title: "Liquidity Provision Strategies",
-				duration: "20 min read",
-			},
-		],
-	},
-	{
-		title: "DeFi Risks and Security",
-		chapters: 2,
-		lessons: [
-			{
-				title: "Smart Contract Risks",
-				duration: "14 min read",
-			},
-			{
-				title: "Impermanent Loss and Market Risks",
-				duration: "17 min read",
-			},
-		],
-	},
-];
 
-const CourseContent = ({
-	courseContent = courseContent2,
-}: courseContentProps) => {
-	const [expandedSections, setExpandedSections] = useState<number[]>([0]);
+const CourseContent = ({ courseContent = [] }: courseContentProps) => {
+	const [expandedSections, setExpandedSections] = useState<number[]>([]);
+	const [isAllExpanded, setIsAllExpanded] = useState(false);
 
 	const toggleSection = (index: number) => {
 		setExpandedSections((prev) =>
 			prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
 		);
+	};
+
+	const toggleExpandAll = () => {
+		if (isAllExpanded) {
+			setExpandedSections([]);
+		} else {
+			setExpandedSections(courseContent.map((_, index) => index));
+		}
+		setIsAllExpanded((prev) => !prev);
 	};
 
 	const totalchapters = courseContent.reduce(
@@ -124,8 +51,8 @@ const CourseContent = ({
 				<CardHeader>
 					<div className="flex items-center justify-between">
 						<CardTitle className="text-xl">Course content</CardTitle>
-						<Button variant="outline" size="sm">
-							Expand all
+						<Button variant="outline" size="sm" onClick={toggleExpandAll}>
+							{isAllExpanded ? "Collapse all" : "Expand all"}
 						</Button>
 					</div>
 					<p className="text-sm text-muted-foreground">

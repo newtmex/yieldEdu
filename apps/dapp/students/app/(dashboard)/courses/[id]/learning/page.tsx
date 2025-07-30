@@ -1,45 +1,69 @@
 "use client";
+
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, X, Check } from "lucide-react";
+import { ArrowLeft, X, Check, AlertCircle, WifiOff } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import CourseSidebar from "@/components/course-sidebar";
 import CourseMobileSidebar from "@/components/course-mobile-sidebar";
 import { cn, shuffleArray } from "@/lib/utils";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/lib/auth-client";
+import LessonContent from "@/components/LessonContent";
 
-// --- DATABASE INTEGRATION ---
-// 1. FETCH USER PROGRESS
-async function fetchUserProgress(courseId: string) {
-	// TODO: Implement your database logic to fetch user progress
-	console.log(`Fetching progress for course: ${courseId}`);
-	// Example return structure:
+function transformCourseData(fetchedData: any) {
+	if (!fetchedData) return null;
 	return {
-		current_lesson_id: "1-1",
-		completed_lessons: [],
-		quiz_answers: { "1-5": "Central Authority" },
+		id: fetchedData.id,
+		title: fetchedData?.title,
+		description: fetchedData.description,
+		sections: fetchedData?.sections?.map((section: any, i: number) => {
+			const lessons =
+				section.lessons?.map((lesson: any) => {
+					const contentText = lesson?.content?.blocks;
+					return {
+						id: lesson.id,
+						title: lesson?.title,
+						type: "content",
+						content: contentText || "",
+					};
+				}) || [];
+
+			const quizzes =
+				section.quizzes?.map((quiz: any, index: number) => ({
+					id: quiz.id,
+					title: `Quiz #${index}`,
+					type: "quiz",
+					question: quiz?.question || "",
+					options: quiz?.options?.map((option: string) => ({
+						text: option,
+					})),
+
+					correct_answer: quiz?.options[quiz?.correct_answer] || "",
+				})) || [];
+
+			return {
+				title: section?.title || `Section ${i + 1}`,
+				lessons: [...lessons, ...quizzes], // merge quizzes and lessons
+			};
+		}),
 	};
 }
 
-// 2. UPDATE USER PROGRESS
-async function updateUserProgress(courseId: string, progress: any) {
-	// TODO: Implement your database logic to save user progress
-	console.log(`Updating progress for course: ${courseId}`, progress);
-	// This function should handle upserting the data.
-}
-
-const CourseLearning = () => {
+const Page = () => {
 	const { id } = useParams();
 	const router = useRouter();
 	const courseId = Array.isArray(id) ? id[0] : id;
+	const { data: session } = useSession();
 
-	const [isLoading, setIsLoading] = useState(true);
 	const [currentSection, setCurrentSection] = useState(0);
 	const [currentLesson, setCurrentLesson] = useState(0);
 	const [selectedAnswer, setSelectedAnswer] = useState("");
@@ -52,84 +76,108 @@ const CourseLearning = () => {
 		"correct" | "incorrect" | null
 	>(null);
 
-	const courseData = {
-		id: "dkjsfkdjfla",
-		title: "Introduction to DeFi: Decentralized Finance Fundamentals",
-		description:
-			"Plan your DeFi journey, from understanding basics to finding your ideal investment strategy",
-		sections: [
-			{
-				title: "An Importance of Having a DeFi Foundation",
-				lessons: [
-					{
-						id: "1-1",
-						title: "What is DeFi?",
-						type: "content",
-						content:
-							"DeFi, or Decentralized Finance, represents a shift from traditional, centralized financial systems to peer-to-peer finance enabled by decentralized technologies built on blockchain networks...",
-					},
-					{
-						id: "1-2",
-						title: "What Are the Benefits of DeFi for Modern Finance?",
-						type: "content",
-						content:
-							"DeFi offers numerous advantages over traditional finance including 24/7 accessibility, global reach, transparency...",
-					},
-					{
-						id: "1-3",
-						title: "How to Apply DeFi Principles?",
-						type: "content",
-						content:
-							"Understanding how to practically implement DeFi principles in your financial strategy...",
-					},
-					{
-						id: "1-4",
-						title: "Examples of DeFi Protocols",
-						type: "content",
-						content:
-							"Real-world examples of successful DeFi protocols and their use cases...",
-					},
-					{
-						id: "1-5",
-						title: "Quiz #1",
-						type: "quiz",
-						question:
-							"Which elements are NOT typically found in DeFi protocols?",
-						options: [
-							{ text: "Smart Contracts" },
-							{ text: "Central Authority" },
-							{ text: "Blockchain Technology" },
-							{ text: "Cryptocurrency" },
-							{ text: "Decentralized Governance" },
-						],
-						correctAnswer: "Central Authority",
-					},
-				],
+	const { data, isPending } = useQuery({
+		queryKey: ["learn", id],
+		queryFn: async () => {
+			const response = await supabase
+				.from("courses")
+				.select("*, sections(lessons(*),quizzes(*))")
+				.eq("id", courseId)
+				.single();
+			if (response.error) {
+				throw new Error(response.error.message);
+			}
+			return response.data;
+		},
+	});
+
+	const courseData = useMemo(() => transformCourseData(data), [data]);
+
+	const { data: existingProgress, isPending: existingProgressPending } =
+		useQuery({
+			queryKey: ["user_progress", session?.user.id, courseId],
+			queryFn: async () => {
+				if (!session?.user.id || !courseId) return null;
+				const { data, error } = await supabase
+					.from("user_course_progress")
+					.select("*")
+					.eq("user_id", session?.user.id)
+					.eq("course_id", courseId)
+					.single();
+				if (error && error.code !== "PGRST116") {
+					// Ignore 'not found' error
+					throw new Error(error.message);
+				}
+				return data;
 			},
-		],
+			enabled: !!session?.user.id && !!courseId,
+		});
+
+	const updateUserProgress = async (progress: any) => {
+		if (!session?.user.id || !courseId) return;
+
+		const { error } = await supabase
+			.from("user_course_progress")
+			.update({
+				...progress,
+				updated_at: new Date().toISOString(),
+			})
+			.eq("user_id", session.user.id)
+			.eq("course_id", courseId);
+
+		if (error) {
+			toast.error("Failed to update progress", {
+				description: error.message,
+			});
+		}
 	};
 
-	const currentLessonData = useMemo(() => {
-		return courseData.sections[currentSection].lessons[currentLesson];
-	}, [currentSection, currentLesson]);
-
-	const [shuffledOptions, setShuffledOptions] = useState<any[]>([]);
-
 	useEffect(() => {
-		const loadProgress = async () => {
-			setIsLoading(true);
-			const progress = await fetchUserProgress("courseId");
-			if (progress) {
-				// Restore state from DB
-				setCompletedLessons(new Set(progress.completed_lessons || []));
-				setQuizAnswers(progress.quiz_answers || {});
+		const handleProgress = async () => {
+			if (
+				existingProgressPending ||
+				!session?.user.id ||
+				!courseId ||
+				!courseData
+			) {
+				return;
+			}
 
-				if (progress.current_lesson_id) {
+			if (!existingProgress) {
+				// Create new progress
+				const now = new Date().toISOString();
+				const firstLessonId = courseData.sections[0]?.lessons[0]?.id;
+
+				if (!firstLessonId) return;
+
+				const { error: insertError } = await supabase
+					.from("user_course_progress")
+					.insert([
+						{
+							user_id: session?.user.id,
+							course_id: courseId,
+							current_lesson: firstLessonId,
+							current_section: currentSection,
+							completed_lessons: [],
+							quiz_answers: quizAnswers,
+							started_at: now,
+							updated_at: now,
+						},
+					]);
+
+				if (insertError) {
+					toast.error("Failed to create progress", {
+						description: insertError.message,
+					});
+				}
+			} else {
+				// Load existing progress
+				if (existingProgress.current_lesson) {
 					let lessonFound = false;
 					for (let i = 0; i < courseData.sections.length; i++) {
 						const section = courseData.sections[i];
 						const lessonIndex = section.lessons.findIndex(
-							(l) => l.id === progress.current_lesson_id
+							(l: any) => l.id === existingProgress.current_lesson
 						);
 						if (lessonIndex !== -1) {
 							setCurrentSection(i);
@@ -143,58 +191,128 @@ const CourseLearning = () => {
 						setCurrentLesson(0);
 					}
 				}
+				setCompletedLessons(new Set(existingProgress.completed_lessons || []));
+				setQuizAnswers(existingProgress.quiz_answers || {});
 			}
-			setIsLoading(false);
 		};
+		handleProgress();
+	}, [
+		existingProgress,
+		existingProgressPending,
+		session?.user.id,
+		courseId,
+		courseData,
+	]);
 
-		loadProgress();
-	}, [courseId]);
+	const currentLessonData = useMemo(() => {
+		if (!courseData || !courseData.sections[currentSection]) return null;
+		return courseData.sections[currentSection].lessons[currentLesson];
+	}, [courseData, currentSection, currentLesson]);
+
+	const currentLessonData2 = useMemo(() => {
+		if (!courseData || !courseData.sections[currentSection]) return null;
+		return data?.sections[currentSection]?.lessons[currentLesson];
+	}, [courseData, currentSection, currentLesson]);
+
+	const [shuffledOptions, setShuffledOptions] = useState<any[]>([]);
 
 	useEffect(() => {
-		if (currentLessonData.type === "quiz" && currentLessonData.options) {
+		if (currentLessonData?.type === "quiz" && currentLessonData.options) {
 			setShuffledOptions(shuffleArray(currentLessonData.options));
+		}
+	}, [currentLessonData]);
+
+	useEffect(() => {
+		if (currentLessonData?.type === "quiz") {
+			const savedAnswer = quizAnswers[currentLessonData.id];
+			if (savedAnswer) {
+				setSelectedAnswer(savedAnswer);
+				const isCorrect =
+					savedAnswer.trim() ===
+					(currentLessonData.correct_answer ?? "").trim();
+				setQuizSubmissionStatus(isCorrect ? "correct" : "incorrect");
+			} else {
+				setQuizSubmissionStatus(null);
+				setSelectedAnswer("");
+			}
 			setIsQuizActive(true);
 		} else {
 			setIsQuizActive(false);
+			setQuizSubmissionStatus(null);
+			setSelectedAnswer("");
 		}
-		// Reset submission status when lesson changes
-		setQuizSubmissionStatus(null);
-		setSelectedAnswer("");
-	}, [currentLessonData]);
+	}, [currentLessonData, quizAnswers]);
 
-	const totalLessons = courseData.sections.reduce(
-		(sum, section) => sum + section.lessons.length,
+	const totalLessons = courseData?.sections.reduce(
+		(sum: number, section: (typeof courseData)["sections"]) =>
+			sum + section.lessons.length,
 		0
 	);
 	const completedCount = completedLessons.size;
-	const progressPercentage = (completedCount / totalLessons) * 100;
+	const progressPercentage =
+		totalLessons > 0 ? (completedCount / totalLessons) * 100 : 0;
 
-	const handleLessonComplete = async () => {
-		const lessonId = currentLessonData.id;
-		const newCompletedLessons = new Set([...completedLessons, lessonId]);
-		setCompletedLessons(newCompletedLessons);
+	const handleQuizSubmit = async () => {
+		const lessonId = currentLessonData?.id;
+		if (!lessonId || !selectedAnswer) return;
 
-		let newQuizAnswers = { ...quizAnswers };
+		const isCorrect =
+			selectedAnswer.trim() === (currentLessonData.correct_answer ?? "").trim();
+		setQuizSubmissionStatus(isCorrect ? "correct" : "incorrect");
 
-		if (currentLessonData.type === "quiz" && selectedAnswer) {
-			newQuizAnswers = { ...quizAnswers, [lessonId]: selectedAnswer };
-			setQuizAnswers(newQuizAnswers);
-			const isCorrect = selectedAnswer === currentLessonData.correctAnswer;
-			setQuizSubmissionStatus(isCorrect ? "correct" : "incorrect");
-		} else {
-			handleNext();
+		const newCompletedLessons = new Set(completedLessons);
+		if (!newCompletedLessons.has(lessonId)) {
+			newCompletedLessons.add(lessonId);
+			setCompletedLessons(newCompletedLessons);
 		}
 
-		// --- DATABASE INTEGRATION ---
-		await updateUserProgress("courseId", {
+		const newQuizAnswers = { ...quizAnswers, [lessonId]: selectedAnswer };
+		setQuizAnswers(newQuizAnswers);
+
+		await updateUserProgress({
 			completed_lessons: Array.from(newCompletedLessons),
 			quiz_answers: newQuizAnswers,
 		});
 	};
 
+	const handleLessonComplete = async () => {
+		const lessonId = currentLessonData?.id;
+		if (!lessonId) return;
+
+		if (currentLessonData?.type === "quiz") {
+			handleQuizSubmit();
+			return;
+		}
+
+		const newCompletedLessons = new Set(completedLessons);
+		if (!newCompletedLessons.has(lessonId)) {
+			newCompletedLessons.add(lessonId);
+			setCompletedLessons(newCompletedLessons);
+		}
+
+		await updateUserProgress({
+			completed_lessons: Array.from(newCompletedLessons),
+		});
+		handleNext();
+	};
+
+	const isLastLesson = useMemo(() => {
+		if (!courseData || courseData.sections.length === 0) {
+			return false;
+		}
+		const lastSectionIndex = courseData.sections.length - 1;
+		const lastLessonIndex =
+			courseData.sections[lastSectionIndex].lessons.length - 1;
+		return (
+			currentSection === lastSectionIndex && currentLesson === lastLessonIndex
+		);
+	}, [courseData, currentSection, currentLesson]);
+
 	const handleNext = async () => {
 		setQuizSubmissionStatus(null);
 		setSelectedAnswer("");
+
+		if (!courseData) return;
 
 		let nextSection = currentSection;
 		let nextLesson = currentLesson + 1;
@@ -205,8 +323,7 @@ const CourseLearning = () => {
 		}
 
 		if (nextSection >= courseData.sections.length) {
-			router.push(`/course/${id}/performance`);
-			return;
+			router.push(`/courses/${id}/performance`);
 		}
 
 		setCurrentSection(nextSection);
@@ -214,9 +331,8 @@ const CourseLearning = () => {
 
 		const nextLessonId =
 			courseData.sections[nextSection].lessons[nextLesson].id;
-		// --- DATABASE INTEGRATION ---
-		await updateUserProgress("courseId", {
-			current_lesson_id: nextLessonId,
+		await updateUserProgress({
+			current_lesson: nextLessonId,
 		});
 	};
 
@@ -227,6 +343,7 @@ const CourseLearning = () => {
 			);
 			return;
 		}
+		if (!courseData) return;
 
 		let prevSection = currentSection;
 		let prevLesson = currentLesson - 1;
@@ -245,9 +362,8 @@ const CourseLearning = () => {
 
 			const prevLessonId =
 				courseData.sections[prevSection].lessons[prevLesson].id;
-			// --- DATABASE INTEGRATION ---
-			await updateUserProgress("courseId", {
-				current_lesson_id: prevLessonId,
+			await updateUserProgress({
+				current_lesson: prevLessonId,
 			});
 		}
 	};
@@ -259,20 +375,101 @@ const CourseLearning = () => {
 			);
 			return;
 		}
+		if (!courseData) return;
+
 		setCurrentSection(sectionIndex);
 		setCurrentLesson(lessonIndex);
 		setSelectedAnswer("");
 
 		const newLessonId =
 			courseData.sections[sectionIndex].lessons[lessonIndex].id;
-		// --- DATABASE INTEGRATION ---
-		await updateUserProgress("courseId", {
-			current_lesson_id: newLessonId,
+		await updateUserProgress({
+			current_lesson: newLessonId,
 		});
 	};
 
-	if (isLoading) {
-		return <div>Loading...</div>; // Or a proper skeleton loader
+	const handleCourseCompletion = async () => {
+		// update course completion
+		try {
+			const { error } = await supabase
+				.from("enrollments")
+				.update({ completed: true })
+				.eq("course_id", courseId)
+				.eq("user_id", session?.user.id)
+				.select();
+
+			if (error?.message) {
+				throw new Error(error.message);
+			}
+			toast.success(`${courseData?.title} completed!`);
+			router.push(`/courses/${id}/performance`);
+			return;
+		} catch (error: any) {
+			console.log(error);
+			toast.error("Could not update course completion", {
+				description: error.message,
+			});
+		}
+	};
+
+	if (isPending || existingProgressPending) {
+		return (
+			<div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-6 p-6">
+				{/* Sidebar skeleton */}
+				<Skeleton className="space-y-4 h-screen p-5">
+					<Skeleton className="h-6 w-3/4 bg-primary/5" />
+					<div className="space-y-3">
+						{Array.from({ length: 4 })?.map((_, i) => (
+							<Skeleton key={i} className="h-4 w-full bg-primary/5" />
+						))}
+					</div>
+
+					<Skeleton className="h-6 w-3/4 mt-6 bg-primary/5" />
+					<div className="space-y-3">
+						{Array.from({ length: 3 })?.map((_, i) => (
+							<Skeleton key={i} className="h-4 w-full bg-primary/5" />
+						))}
+					</div>
+				</Skeleton>
+
+				{/* Main content skeleton */}
+				<Skeleton className="space-y-4 p-5">
+					<Skeleton className="h-8 w-2/3 bg-primary/5" />
+					<Skeleton className="h-6 w-1/3 bg-primary/5" />
+					{Array.from({ length: 5 })?.map((_, i) => (
+						<Skeleton key={i} className="h-4 w-full bg-primary/5" />
+					))}
+					<Skeleton className="h-4 w-5/6 bg-primary/5" />
+				</Skeleton>
+			</div>
+		);
+	}
+
+	if (!navigator.onLine) {
+		return (
+			<div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+				<WifiOff className="w-16 h-16 text-muted-foreground mb-4" />
+				<p className="text-lg font-medium">You're offline</p>
+				<p className="text-sm text-muted-foreground">
+					Check your connection and try again.
+				</p>
+			</div>
+		);
+	}
+
+	if (!isPending && (!courseData || !courseData.sections?.length)) {
+		return (
+			<div className="flex flex-col items-center justify-center h-80 text-center space-y-4">
+				<AlertCircle className="h-10 w-10 text-muted-foreground" />
+				<p className="text-lg font-medium">Course not found</p>
+				<p className="text-sm text-muted-foreground">
+					We couldn’t find the course you’re looking for.
+				</p>
+				<Link href={"/courses"}>
+					<Button>Back to courses</Button>
+				</Link>
+			</div>
+		);
 	}
 
 	return (
@@ -286,6 +483,7 @@ const CourseLearning = () => {
 				className="hidden lg:block lg:sticky lg:top-12"
 			/>
 			<CourseMobileSidebar
+				course={courseData}
 				currentSection={currentSection}
 				currentLesson={currentLesson}
 				completedLessons={completedLessons}
@@ -296,7 +494,7 @@ const CourseLearning = () => {
 				{/* Header */}
 				<div className="border-b px-6 py-4">
 					<div className="flex items-center justify-between mb-3">
-						<Link href={`/courses/${courseData.id}`}>
+						<Link href={`/courses/${courseData?.id}`}>
 							<Button
 								variant="ghost"
 								size="sm"
@@ -306,6 +504,7 @@ const CourseLearning = () => {
 								Back
 							</Button>
 						</Link>
+
 						<div className="flex items-center gap-4">
 							<div className="text-right">
 								<div className="text-sm font-medium">
@@ -317,9 +516,9 @@ const CourseLearning = () => {
 					</div>
 					<div className="flex items-center flex-wrap gap-4">
 						<div className="text-center flex-1">
-							<h1 className="font-semibold text-lg">{courseData.title}</h1>
+							<h1 className="font-semibold text-lg">{courseData?.title}</h1>
 							<p className="text-sm hidden lg:block">
-								{courseData.description}
+								{courseData?.description}
 							</p>
 						</div>
 					</div>
@@ -329,73 +528,79 @@ const CourseLearning = () => {
 				<div className="flex-1 p-6">
 					<div className="max-w-4xl mx-auto">
 						<Card>
-							<CardHeader>
-								<div className="flex items-center justify-between">
-									<CardTitle className="text-xl">
-										{currentLessonData.title}
-									</CardTitle>
-								</div>
+							<CardHeader className="w-full text-center">
+								<CardTitle className="text-xl">
+									{currentLessonData?.title}
+								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								{currentLessonData.type === "content" ? (
+								{currentLessonData?.type === "content" ? (
 									<div className="prose max-w-none">
-										<p className="text-muted-foreground">
-											{currentLessonData.content}
-										</p>
+										<LessonContent content={currentLessonData2?.content} />
 									</div>
 								) : (
 									<div className="space-y-6">
 										<p className="text-lg font-medium">
-											{currentLessonData.question}
+											{currentLessonData?.question}
 										</p>
 										<RadioGroup
 											value={selectedAnswer}
 											onValueChange={setSelectedAnswer}
 											disabled={quizSubmissionStatus !== null}
 										>
-											{shuffledOptions.map((option, index) => {
+											{shuffledOptions?.map((option, index) => {
 												const isSelected = selectedAnswer === option.text;
 												const isCorrectAnswer =
-													currentLessonData.correctAnswer === option.text;
+													currentLessonData?.correct_answer === option.text;
 												const isSubmitted = quizSubmissionStatus !== null;
 
 												return (
-													<Button
-														variant={"outline"}
-														key={index}
-														className={cn(
-															"flex items-center space-x-3 rounded-lg border",
-															isSubmitted &&
-																isCorrectAnswer &&
-																"!border-green-500 bg-green-100 text-green-500 hover:!text-green-500",
-															isSubmitted &&
-																isSelected &&
-																!isCorrectAnswer &&
-																"!border-red-500 bg-red-100 text-red-500 hover:!text-red-500"
-														)}
-													>
-														<RadioGroupItem
-															value={option.text}
-															id={option.text}
-														/>
-														<Label
-															htmlFor={option.text}
-															className="flex-1 cursor-pointer py-3 flex items-center gap-2"
-														>
-															<span className="font-semibold text-muted-foreground">
-																{String.fromCharCode(65 + index)}.
-															</span>
-															{option.text}
-															{isSubmitted && isCorrectAnswer && (
-																<Check className="w-5 h-5 text-green-400" />
+													<div key={option}>
+														<Button
+															variant={"outline"}
+															key={index}
+															disabled={quizSubmissionStatus !== null}
+															onClick={() => setSelectedAnswer(option.text)}
+															className={cn(
+																"space-x-3 rounded-lg border justify-start",
+																isSubmitted &&
+																	isCorrectAnswer &&
+																	"!border-green-500 bg-green-100 text-green-500 hover:!text-green-500",
+																isSubmitted &&
+																	isSelected &&
+																	!isCorrectAnswer &&
+																	"!border-red-500 bg-red-100 text-red-500 hover:!text-red-500"
 															)}
-															{isSubmitted &&
-																isSelected &&
-																!isCorrectAnswer && (
-																	<X className="w-5 h-5 text-red-400" />
-																)}
-														</Label>
-													</Button>
+														>
+															<div className="flex gap-2 justify-start items-center">
+																<RadioGroupItem
+																	value={
+																		isSubmitted && !isSelected
+																			? `obfuscated-${index}`
+																			: option.text
+																	}
+																	id={option.text}
+																/>
+																<Label
+																	htmlFor={option.text}
+																	className="flex-1 cursor-pointer py-3 flex items-center gap-2"
+																>
+																	<span className="font-semibold text-muted-foreground">
+																		{String.fromCharCode(65 + index)}.
+																	</span>
+																	{option.text}
+																	{isSubmitted && isCorrectAnswer && (
+																		<Check className="w-5 h-5 text-green-400" />
+																	)}
+																	{isSubmitted &&
+																		isSelected &&
+																		!isCorrectAnswer && (
+																			<X className="w-5 h-5 text-red-400" />
+																		)}
+																</Label>
+															</div>
+														</Button>
+													</div>
 												);
 											})}
 										</RadioGroup>
@@ -418,24 +623,28 @@ const CourseLearning = () => {
 
 							<Button
 								onClick={
-									quizSubmissionStatus !== null
-										? handleNext
-										: handleLessonComplete
+									isLastLesson && quizSubmissionStatus !== null
+										? async () => await handleCourseCompletion()
+										: quizSubmissionStatus !== null
+											? handleNext
+											: handleLessonComplete
 								}
-								disabled={!selectedAnswer && currentLessonData.type === "quiz"}
+								disabled={!selectedAnswer && currentLessonData?.type === "quiz"}
 								variant={
 									quizSubmissionStatus !== null
 										? "nextLesson"
-										: currentLessonData.type === "quiz"
+										: currentLessonData?.type === "quiz"
 											? "checkAnswer"
 											: "default"
 								}
 							>
-								{quizSubmissionStatus !== null
-									? "Next Lesson"
-									: currentLessonData.type === "quiz"
-										? "Check Answer"
-										: "Mark Complete"}
+								{isLastLesson && quizSubmissionStatus !== null
+									? "Complete Course"
+									: quizSubmissionStatus !== null
+										? "Next Lesson"
+										: currentLessonData?.type === "quiz"
+											? "Check Answer"
+											: "Mark Complete"}
 							</Button>
 						</div>
 					</div>
@@ -445,4 +654,4 @@ const CourseLearning = () => {
 	);
 };
 
-export default CourseLearning;
+export default Page;
