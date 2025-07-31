@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppKitAccount } from "@reown/appkit/react";
+import QuizCreation from "@/components/quiz-creation";
 
 export type CourseFormData = z.infer<typeof courseSchema>;
 
@@ -87,13 +88,13 @@ const CourseCreation = () => {
 							isPreview: false,
 						},
 					],
-					quizzes: [
-						{
-							question: "",
-							options: ["", "", "", ""],
-							correctAnswer: 0,
-						},
-					],
+				},
+			],
+			quizzes: [
+				{
+					question: "",
+					options: ["", "", "", ""],
+					correctAnswer: 0,
 				},
 			],
 		},
@@ -137,7 +138,7 @@ const CourseCreation = () => {
 			const fetchData = async () => {
 				const { data } = await supabase
 					.from("courses")
-					.select(`*, sections(*, lessons(*), quizzes(*))`)
+					.select(`*, sections(*, lessons(*)), quizzes(*)`)
 					.eq("id", courseId)
 					.maybeSingle();
 
@@ -154,7 +155,6 @@ const CourseCreation = () => {
 								title: string;
 								chapter_number: number;
 								lessons: any[];
-								quizzes: any[];
 							}) => ({
 								title: section.title,
 								chapters: section.chapter_number,
@@ -169,17 +169,17 @@ const CourseCreation = () => {
 										isPreview: lesson.is_preview,
 									})
 								),
-								quizzes: (section.quizzes || []).map(
-									(q: {
-										question: string;
-										options: string[];
-										correct_answer: number;
-									}) => ({
-										question: q.question,
-										options: q.options,
-										correctAnswer: q.correct_answer,
-									})
-								),
+							})
+						),
+						quizzes: (data.quizzes || []).map(
+							(q: {
+								question: string;
+								options: string[];
+								correct_answer: number;
+							}) => ({
+								question: q.question,
+								options: q.options,
+								correctAnswer: q.correct_answer,
 							})
 						),
 					};
@@ -332,20 +332,17 @@ const CourseCreation = () => {
 
 							if (lessonError) throw lessonError;
 						}
-
-						for (const quiz of section.quizzes) {
-							const { error: quizError } = await supabase
-								.from("quizzes")
-								.insert([
-									{
-										section_id: newSection.id,
-										question: quiz.question,
-										options: quiz.options,
-										correct_answer: quiz.correctAnswer,
-									},
-								]);
-							if (quizError) throw quizError;
-						}
+					}
+					for (const quiz of processedData.quizzes) {
+						const { error: quizError } = await supabase.from("quizzes").insert([
+							{
+								course_id: courseUpdate.id,
+								question: quiz.question,
+								options: quiz.options,
+								correct_answer: quiz.correctAnswer,
+							},
+						]);
+						if (quizError) throw quizError;
 					}
 					toast.success("Course updated successfully!");
 					localStorage.removeItem(LOCAL_STORAGE_KEY);
@@ -419,21 +416,18 @@ const CourseCreation = () => {
 
 							if (lessonError) throw lessonError;
 						}
-
-						// Insert quizzes for the section
-						for (const quiz of section.quizzes) {
-							const { error: quizError } = await supabase
-								.from("quizzes")
-								.insert([
-									{
-										section_id: newSection.id,
-										question: quiz.question,
-										options: quiz.options,
-										correct_answer: quiz.correctAnswer,
-									},
-								]);
-							if (quizError) throw quizError;
-						}
+					}
+					// Insert quizzes for the course
+					for (const quiz of processedData.quizzes) {
+						const { error: quizError } = await supabase.from("quizzes").insert([
+							{
+								course_id: course.id,
+								question: quiz.question,
+								options: quiz.options,
+								correct_answer: quiz.correctAnswer,
+							},
+						]);
+						if (quizError) throw quizError;
 					}
 					form.reset();
 					localStorage.removeItem(LOCAL_STORAGE_KEY);
@@ -781,8 +775,7 @@ const CourseCreation = () => {
 												<div>
 													<CardTitle>Course Content</CardTitle>
 													<p className="text-sm text-muted-foreground mt-1">
-														Organize your course into sections with lessons and
-														quizzes
+														Organize your course into sections with lessons
 													</p>
 													{form.formState.errors.sections?.root?.message && (
 														<p className="text-sm text-destructive">
@@ -801,13 +794,6 @@ const CourseCreation = () => {
 																	title: "",
 																	content: null,
 																	isPreview: false,
-																},
-															],
-															quizzes: [
-																{
-																	question: "",
-																	options: ["", "", "", ""],
-																	correctAnswer: 0,
 																},
 															],
 														})
@@ -878,7 +864,7 @@ const CourseCreation = () => {
 										</CardContent>
 									</Card>
 								</div>
-
+								<QuizCreation form={form} isPending={isPending} />
 								<div className="flex justify-end">
 									<Button
 										type="submit"

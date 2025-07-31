@@ -22,11 +22,9 @@ import useCourseInfo from "@/hooks/course";
 
 function transformCourseData(fetchedData: any) {
 	if (!fetchedData) return null;
-	return {
-		id: fetchedData.id,
-		title: fetchedData?.title,
-		description: fetchedData.description,
-		sections: fetchedData?.sections?.map((section: any, i: number) => {
+
+	const lessonSections =
+		fetchedData.sections?.map((section: any, i: number) => {
 			const lessons =
 				section.lessons?.map((lesson: any) => {
 					const contentText = lesson?.content?.blocks;
@@ -38,24 +36,38 @@ function transformCourseData(fetchedData: any) {
 					};
 				}) || [];
 
-			const quizzes =
-				section.quizzes?.map((quiz: any, index: number) => ({
-					id: quiz.id,
-					title: `Quiz #${index}`,
-					type: "quiz",
-					question: quiz?.question || "",
-					options: quiz?.options?.map((option: string) => ({
-						text: option,
-					})),
-
-					correct_answer: quiz?.options[quiz?.correct_answer] || "",
-				})) || [];
-
 			return {
 				title: section?.title || `Section ${i + 1}`,
-				lessons: [...lessons, ...quizzes], // merge quizzes and lessons
+				lessons: lessons,
 			};
-		}),
+		}) || [];
+
+	const quizzes =
+		fetchedData.quizzes?.map((quiz: any, index: number) => ({
+			id: quiz.id,
+			title: `Quiz #${index + 1}`,
+			type: "quiz",
+			question: quiz?.question || "",
+			options: quiz?.options?.map((option: string) => ({
+				text: option,
+			})),
+			correct_answer: quiz?.options[quiz?.correct_answer] || "",
+		})) || [];
+
+	const allSections = [...lessonSections];
+
+	if (quizzes.length > 0) {
+		allSections.push({
+			title: "Quizzes",
+			lessons: quizzes,
+		});
+	}
+
+	return {
+		id: fetchedData.id,
+		title: fetchedData?.title,
+		description: fetchedData.description,
+		sections: allSections,
 	};
 }
 
@@ -77,22 +89,59 @@ const Page = () => {
 		"correct" | "incorrect" | null
 	>(null);
 
+	const [lastUnlockedLesson, setLastUnlockedLesson] = useState(0);
+
 	const { data, isPending } = useQuery({
 		queryKey: ["learn", id],
 		queryFn: async () => {
-			const response = await supabase
+			const courseResponse = await supabase
 				.from("courses")
-				.select("*, sections(lessons(*),quizzes(*))")
-				.eq("id", courseId)
+				.select("*, sections(lessons(*))")
+				.eq("id", id)
 				.single();
-			if (response.error) {
-				throw new Error(response.error.message);
+
+			if (courseResponse.error) {
+				throw new Error(courseResponse.error.message);
 			}
-			return response.data;
+
+			const courseData = courseResponse.data;
+
+			const quizzesResponse = await supabase
+				.from("quizzes")
+				.select("*")
+				.eq("course_id", id);
+
+			if (quizzesResponse.error) {
+				throw new Error(quizzesResponse.error.message);
+			}
+
+			return { ...courseData, quizzes: quizzesResponse.data };
 		},
 	});
-
 	const courseData = useMemo(() => transformCourseData(data), [data]);
+
+	const allLessons = useMemo(() => {
+		if (!courseData) return [];
+		return courseData.sections.flatMap((section: any) => section.lessons);
+	}, [courseData]);
+
+	useEffect(() => {
+		if (!allLessons.length) {
+			setLastUnlockedLesson(0);
+			return;
+		}
+
+		const firstIncompleteIndex = allLessons.findIndex(
+			(lesson) => !completedLessons.has(lesson.id)
+		);
+
+		if (firstIncompleteIndex === -1) {
+			// All lessons completed
+			setLastUnlockedLesson(allLessons.length);
+		} else {
+			setLastUnlockedLesson(firstIncompleteIndex);
+		}
+	}, [completedLessons, allLessons]);
 
 	const { data: existingProgress, isPending: existingProgressPending } =
 		useQuery({
@@ -259,8 +308,7 @@ const Page = () => {
 	}, [currentLessonData, quizAnswers]);
 
 	const totalLessons = courseData?.sections.reduce(
-		(sum: number, section: (typeof courseData)["sections"]) =>
-			sum + section.lessons.length,
+		(sum: number, section: { lessons: any[] }) => sum + section.lessons.length,
 		0
 	);
 	const completedCount = completedLessons.size;
@@ -346,9 +394,17 @@ const Page = () => {
 
 		const nextLessonId =
 			courseData.sections[nextSection].lessons[nextLesson].id;
-		await updateUserProgress({
-			current_lesson: nextLessonId,
-		});
+
+		const newCurrentLessonIndex = allLessons.findIndex(
+			(lesson: any) => lesson.id === nextLessonId
+		);
+
+		// Only update current_lesson in DB if it's a newly unlocked lesson
+		if (newCurrentLessonIndex >= lastUnlockedLesson) {
+			await updateUserProgress({
+				current_lesson: nextLessonId,
+			});
+		}
 	};
 
 	const handlePrevious = async () => {
@@ -374,12 +430,6 @@ const Page = () => {
 			setCurrentSection(prevSection);
 			setCurrentLesson(prevLesson);
 			setSelectedAnswer("");
-
-			const prevLessonId =
-				courseData.sections[prevSection].lessons[prevLesson].id;
-			await updateUserProgress({
-				current_lesson: prevLessonId,
-			});
 		}
 	};
 
@@ -395,12 +445,6 @@ const Page = () => {
 		setCurrentSection(sectionIndex);
 		setCurrentLesson(lessonIndex);
 		setSelectedAnswer("");
-
-		const newLessonId =
-			courseData.sections[sectionIndex].lessons[lessonIndex].id;
-		await updateUserProgress({
-			current_lesson: newLessonId,
-		});
 	};
 
 	const handleCourseCompletion = async () => {
@@ -488,14 +532,15 @@ const Page = () => {
 	}
 
 	return (
-		<div className="min-h-screen flex">
+		<div className="flex">
 			<CourseSidebar
 				course={courseData}
 				currentSection={currentSection}
 				currentLesson={currentLesson}
 				onNavigate={handleNavigate}
 				completedLessons={completedLessons}
-				className="hidden lg:block lg:sticky lg:top-12"
+				lastUnlockedLesson={lastUnlockedLesson}
+				className="hidden lg:flex"
 			/>
 			<CourseMobileSidebar
 				course={courseData}
@@ -503,6 +548,7 @@ const Page = () => {
 				currentLesson={currentLesson}
 				completedLessons={completedLessons}
 				onNavigate={handleNavigate}
+				lastUnlockedLesson={lastUnlockedLesson}
 			/>
 
 			<div className="flex-1 flex flex-col">

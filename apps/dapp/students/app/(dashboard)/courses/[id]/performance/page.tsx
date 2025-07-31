@@ -22,6 +22,7 @@ import { useSession } from "@/lib/auth-client";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 type Quiz = {
 	question: string;
@@ -29,6 +30,7 @@ type Quiz = {
 	options: string[];
 	correct_answer: number;
 	selectedAnswer?: number;
+	isCorrect?: boolean;
 };
 
 type Section = {
@@ -47,6 +49,7 @@ type ProgressData =
 				id: any;
 				title: any;
 				sections: any[];
+				quizzes: Quiz[];
 			};
 	  }
 	| undefined;
@@ -71,22 +74,23 @@ const CoursePerformance = () => {
                        title,
                        sections (
                          id,
-                         title,
-                         quizzes (
-                           id,
-                           question,
-                           correct_answer,
-						   options
-                         )
+                         title
+                       ),
+                       quizzes!course_quizzes (
+                         id,
+                         question,
+                         correct_answer,
+                         options
                        )
                      )
-                     `
+                   `
 				)
 				.eq("user_id", session?.user.id)
 				.eq("course_id", id)
 				.single();
 
 			if (error) {
+				console.log(error);
 				throw new Error(error.message);
 			}
 
@@ -94,57 +98,34 @@ const CoursePerformance = () => {
 		},
 	});
 
-	const allSections = (progressData as ProgressData)?.course.sections;
+	const allQuizzes = (progressData as ProgressData)?.course?.quizzes;
+	const allSections = (progressData as ProgressData)?.course?.sections;
 	const quizAnswers = progressData?.quiz_answers || {};
-	const sectionResults = allSections?.map((section: Section) => {
-		const quizResults = section?.quizzes?.map((quiz: Quiz) => {
-			const userAnswer = quizAnswers[quiz.id];
-			const correctAnswer = quiz?.options?.[quiz?.correct_answer];
-			const isCorrect = userAnswer === correctAnswer;
 
-			return {
-				id: quiz.id,
-				question: quiz.question,
-				userAnswer,
-				correctAnswer,
-				isCorrect,
-			};
-		});
-
-		const score =
-			quizResults?.length > 0
-				? Math.round(
-						(quizResults.filter((q) => q.isCorrect)?.length /
-							quizResults?.length) *
-							100
-					)
-				: 0;
+	const quizResults = allQuizzes?.map((quiz: Quiz) => {
+		const userAnswer = quizAnswers[quiz.id];
+		const correctAnswer = quiz?.options?.[quiz?.correct_answer];
+		const isCorrect = userAnswer === correctAnswer;
 
 		return {
-			sectionTitle: section.title,
-			completed: section.quizzes.every((q) => quizAnswers[q.id]),
-			score,
-			quizResults,
+			id: quiz.id,
+			question: quiz.question,
+			userAnswer,
+			correctAnswer,
+			isCorrect,
 		};
 	});
 
-	const correctAnswers = sectionResults?.reduce(
-		(sum: number, section: { quizResults: { isCorrect: boolean }[] }) =>
-			sum +
-			section.quizResults.filter((q: { isCorrect: boolean }) => q.isCorrect)
-				?.length,
-		0
-	);
+	const correctAnswers = quizResults?.filter((q) => q.isCorrect).length;
 
-	const totalQuestions = sectionResults?.reduce(
-		(sum: number, section: { quizResults: any[] }) =>
-			sum + section.quizResults?.length,
-		0
-	);
+	const totalQuestions = quizResults?.length;
 
-	const sectionsCompleted = sectionResults?.filter(
-		(s: { completed: boolean }) => s.completed
-	)?.length;
+	const sectionsCompleted = allSections?.filter((section: any) => {
+		const completedLessonsInSection = section.lessons?.filter(
+			(lessonId: string) => progressData?.completed_lessons?.includes(lessonId)
+		).length;
+		return completedLessonsInSection === section.lessons?.length;
+	}).length;
 	const totalSections = allSections?.length;
 
 	const getGrade = (accuracy: number) => {
@@ -180,7 +161,7 @@ const CoursePerformance = () => {
 		totalQuizzes: totalQuestions,
 		correctAnswers,
 		totalQuestions,
-		sections: sectionResults,
+		quizResults,
 	};
 
 	const getGradeColor = (score: number) => {
@@ -337,91 +318,56 @@ const CoursePerformance = () => {
 					</Card>
 				</div>
 
-				{/* Detailed Section Performance */}
+				{/* Detailed Quiz Results */}
 				<Card className="mb-6">
 					<CardHeader>
-						<CardTitle className="text-lg">Section Performance</CardTitle>
+						<CardTitle className="text-lg">Detailed Quiz Results</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="space-y-4">
-							{performanceData.sections?.map(
+							{performanceData.quizResults?.map(
 								(
-									section: {
-										sectionTitle: string;
-										completed: boolean;
-										score: number;
-										timeSpent?: string;
-										quizResults?: {
-											id: string;
-											question: string;
-											userAnswer: any;
-											correctAnswer: string;
-											isCorrect: boolean;
-										}[];
+									quiz: {
+										id: string;
+										question: string;
+										userAnswer: any;
+										correctAnswer: string;
+										isCorrect: boolean;
 									},
 									index: number
 								) => (
-									<div key={index} className="border rounded-lg p-4">
-										<div className="flex items-center justify-between mb-3">
-											<h3 className="font-semibold">{section.sectionTitle}</h3>
-											<div className="flex items-center gap-2">
-												<Badge variant="outline">{section.score}%</Badge>
-												<span className="text-sm text-muted-foreground">
-													{section.timeSpent}
-												</span>
-											</div>
-										</div>
-										<Progress value={section.score} className="mb-3" />
-
-										{section.quizResults && (
-											<div className="space-y-2">
-												<h4 className="font-medium text-sm">Quiz Results:</h4>
-												{section.quizResults.map(
-													(
-														quiz: {
-															id: string;
-															question: string;
-															userAnswer: any;
-															correctAnswer: string;
-															isCorrect: boolean;
-														},
-														quizIndex: number
-													) => (
-														<div
-															key={quiz.id ?? quizIndex}
-															className="flex items-start gap-2 p-2 bg-secondary rounded text-sm"
-														>
-															{quiz.isCorrect ? (
-																<CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-															) : (
-																<XCircle className="w-4 h-4 text-red-500 mt-0.5" />
-															)}
-															<div className="flex-1">
-																<p className="font-medium">{quiz.question}</p>
-																<p className="text-muted-foreground">
-																	Your answer:{" "}
-																	<span
-																		className={
-																			quiz.isCorrect
-																				? "text-green-600"
-																				: "text-red-600"
-																		}
-																	>
-																		{quiz.userAnswer}
-																	</span>
-																	{!quiz.isCorrect && (
-																		<span className="text-muted-foreground">
-																			{" "}
-																			(Correct: {quiz.correctAnswer})
-																		</span>
-																	)}
-																</p>
-															</div>
-														</div>
-													)
-												)}
-											</div>
+									<div
+										key={quiz.id ?? index}
+										className={cn(
+											"flex items-start gap-2 p-2 bg-lime-400/10 rounded text-sm",
+											{
+												"bg-destructive/10": !quiz.isCorrect,
+											}
 										)}
+									>
+										{quiz.isCorrect ? (
+											<CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+										) : (
+											<XCircle className="w-4 h-4 text-red-500 mt-0.5" />
+										)}
+										<div className="flex-1">
+											<p className="font-medium">{quiz.question}</p>
+											<p className="text-muted-foreground">
+												Your answer:{" "}
+												<span
+													className={
+														quiz.isCorrect ? "text-green-600" : "text-red-600s"
+													}
+												>
+													{quiz.userAnswer}
+												</span>
+												{!quiz.isCorrect && (
+													<span className="text-muted-foreground">
+														(Correct: {quiz.correctAnswer})
+													</span>
+												)}
+											</p>
+										</div>
 									</div>
 								)
 							)}

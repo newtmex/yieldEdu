@@ -5,7 +5,6 @@ import { createReactEditorJS } from "react-editor-js";
 import Header from "@editorjs/header";
 import Paragraph from "@editorjs/paragraph";
 import List from "@editorjs/list";
-import ImageTool from "@editorjs/image";
 import Checklist from "@editorjs/checklist";
 import Quote from "@editorjs/quote";
 import Warning from "@editorjs/warning";
@@ -25,7 +24,6 @@ const tools = {
 	header: Header,
 	paragraph: Paragraph,
 	list: List,
-	image: ImageTool,
 	checklist: Checklist,
 	quote: Quote,
 	warning: Warning,

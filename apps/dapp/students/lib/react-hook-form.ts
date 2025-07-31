@@ -49,10 +49,6 @@ export const sectionSchema = z.object({
 		.array(lessonSchema)
 		.min(1, "Each section must have at least 1 lessons")
 		.max(15, "Maximum 15 lessons per section"),
-	quizzes: z
-		.array(quizQuestionSchema)
-		.min(1, "Each section must have at least 1 quiz question")
-		.max(15, "Maximum 15 quiz questions per section"),
 });
 
 export const courseSchema = z.object({
@@ -86,4 +82,8 @@ export const courseSchema = z.object({
 		.array(sectionSchema)
 		.min(1, "Course must have at least 1 sections")
 		.max(10, "Maximum 10 sections per course"),
+	quizzes: z
+		.array(quizQuestionSchema)
+		.min(1, "Each section must have at least 1 quiz question")
+		.max(15, "Maximum 15 quiz questions per section"),
 });

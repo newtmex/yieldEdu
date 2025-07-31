@@ -1,8 +1,8 @@
 "use client";
-"use client";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import CourseSidebar from "./course-sidebar";
 import { useCourseSidebar } from "@/hooks/use-course-sidebar";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface CourseMobileSidebarProps {
 	currentSection: number;
@@ -15,6 +15,7 @@ interface CourseMobileSidebarProps {
 		description: any;
 		sections: any;
 	} | null;
+	lastUnlockedLesson: number;
 }
 
 const CourseMobileSidebar = ({
@@ -23,6 +24,7 @@ const CourseMobileSidebar = ({
 	completedLessons,
 	course,
 	onNavigate,
+	lastUnlockedLesson,
 }: CourseMobileSidebarProps) => {
 	const { isCourseSidebarOpen, toggleCourseSidebar } = useCourseSidebar();
 
@@ -36,6 +38,7 @@ const CourseMobileSidebar = ({
 					onNavigate={onNavigate}
 					completedLessons={completedLessons}
 					className="w-full h-full border-r-0"
+					lastUnlockedLesson={lastUnlockedLesson}
 				/>
 			</SheetContent>
 		</Sheet>
