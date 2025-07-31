@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {
-	// const session = await auth.api.getSession({
-	// 	query: {
-	// 		disableCookieCache: true,
-	// 	},
-	// 	headers: request.headers,
-	// });
+	const session = await auth.api.getSession({
+		query: {
+			disableCookieCache: true,
+		},
+		headers: request.headers,
+	});
 
-	// if (!session) {
-	// 	return NextResponse.redirect(new URL("/signin", request.url));
-	// }
+	if (!session) {
+		return NextResponse.redirect(new URL("/signin", request.url));
+	}
 
 	const lockedRoutes = [
 		"/performance",

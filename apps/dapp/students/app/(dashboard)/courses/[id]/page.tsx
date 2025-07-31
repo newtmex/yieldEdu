@@ -470,7 +470,11 @@ const Page = () => {
 												{enrollmentLoading && (
 													<LoaderCircle className="animate-spin" size={16} />
 												)}
-												{enrollmentLoading ? "Please wait..." : "Start Course"}
+												{enrollmentLoading
+													? "Please wait..."
+													: !course_completed
+														? "Continue"
+														: "Start Course"}
 											</Button>
 											<CourseLike courseId={id} />
 										</>
