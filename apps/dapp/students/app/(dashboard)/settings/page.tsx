@@ -171,7 +171,7 @@ const Page = () => {
 				onValueChange={handleTabChange}
 				className="flex flex-col md:flex-row gap-4"
 			>
-				<TabsList className="md:flex-col gap-2 h-full flex-[15%] items-start bg-transparent">
+				<TabsList className="w-fit mx-auto flex flex-wrap md:flex-col gap-2 h-full flex-[15%] items-start bg-transparent">
 					<TabsTrigger
 						value="profile"
 						className="w-full group justify-start flex gap-3 dark:data-[state=active]:!bg-lime-500/10 dark:data-[state=active]:!text-lime-400 dark:hover:!text-lime-500 hover:data-[state=active]:!bg-transparent hover:data-[state=active]:!text-lime-600 data-[state=active]:!text-lime-600 data-[state=active]:!bg-transparent data-[state=active]:!shadow-none"

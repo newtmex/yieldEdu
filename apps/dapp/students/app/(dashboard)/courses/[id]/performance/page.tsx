@@ -33,13 +33,6 @@ type Quiz = {
 	isCorrect?: boolean;
 };
 
-type Section = {
-	title: string;
-	description?: string;
-	lessons?: string[];
-	quizzes: Quiz[];
-};
-
 type ProgressData =
 	| {
 			quiz_answers: any;
@@ -59,8 +52,13 @@ const CoursePerformance = () => {
 	const router = useRouter();
 	const { data: session } = useSession();
 
-	const { data: progressData, isPending } = useQuery({
-		queryKey: ["completed_course", id],
+	const {
+		data: progressData,
+		isPending,
+		error,
+	} = useQuery({
+		queryKey: ["completed_course", session?.user.id, id],
+		enabled: !!session?.user.id && !!id,
 		queryFn: async () => {
 			const { data, error } = await supabase
 				.from("user_course_progress")
@@ -97,6 +95,10 @@ const CoursePerformance = () => {
 			return data;
 		},
 	});
+
+	if (error) {
+		console.log(error);
+	}
 
 	const allQuizzes = (progressData as ProgressData)?.course?.quizzes;
 	const allSections = (progressData as ProgressData)?.course?.sections;
@@ -362,7 +364,7 @@ const CoursePerformance = () => {
 													{quiz.userAnswer}
 												</span>
 												{!quiz.isCorrect && (
-													<span className="text-muted-foreground">
+													<span className="text-green-600">
 														(Correct: {quiz.correctAnswer})
 													</span>
 												)}
