@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import Link from "next/link";
 import { authClient, useSession } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
 export function NavUser({
 	showInfo = true,
@@ -49,14 +50,14 @@ export function NavUser({
 
 	const { data: session } = useSession();
 	const profileDetails = session?.user;
-
-	const handleDisconnect = async () => {
+	const router = useRouter();
+	const handleLogout = async () => {
 		try {
 			if (isConnected) {
 				await disconnect();
-				toast.success("Disconnected wallet");
 			}
 			await authClient.signOut();
+			router.push("/signin");
 		} catch (error) {
 			console.error("Failed to disconnect:", error);
 			toast.error("Failed to disconnect.");
@@ -170,7 +171,7 @@ export function NavUser({
 								Log In
 							</DropdownMenuItem>
 						) : (
-							<DropdownMenuItem onClick={handleDisconnect}>
+							<DropdownMenuItem onClick={handleLogout}>
 								<IconLogout />
 								Log out
 							</DropdownMenuItem>

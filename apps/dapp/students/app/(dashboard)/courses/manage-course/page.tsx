@@ -27,6 +27,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type DraftCourse = {
 	id: string;
@@ -42,6 +43,7 @@ export default function ManageCourses() {
 	const { data: session } = useSession();
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [drafts, setDrafts] = useState<DraftCourse[]>([]);
+	const router = useRouter();
 
 	useEffect(() => {
 		const draftCourses: DraftCourse[] = [];
@@ -185,6 +187,9 @@ export default function ManageCourses() {
 
 	const allCourses = [...(courses || []), ...drafts];
 
+	if (session?.user.role === "user") {
+		router.push("/unauthorized");
+	}
 	return (
 		<div className="min-h-screen bg-background">
 			<div className="container mx-auto px-4 py-8">

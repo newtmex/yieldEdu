@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Geist_Mono, Montserrat } from "next/font/google";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -6,7 +5,8 @@ import WagmiContextProvider from "@/components/wagmi-provider";
 import { headers } from "next/headers";
 import DashboardHeader from "@/components/dashboard-header";
 import { CourseSidebarProvider } from "@/hooks/use-course-sidebar";
-import { yieldEduMetadata } from "@/metadata";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 
 const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
@@ -18,8 +18,6 @@ const montserrat = Montserrat({
 	variable: "--font-montserrat",
 });
 
-export const metadata: Metadata = yieldEduMetadata;
-
 export default async function Layout({
 	children,
 }: Readonly<{
@@ -27,6 +25,14 @@ export default async function Layout({
 }>) {
 	const headersObj = await headers();
 	const cookies = headersObj.get("cookie");
+
+	const session = await auth.api.getSession({
+		headers: await headers(),
+	});
+
+	if (!session || !session.user) {
+		redirect("/signin");
+	}
 
 	return (
 		<div className={`${montserrat.variable} ${geistMono.variable}`}>

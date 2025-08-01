@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import CoursePreview from "@/components/course-preview";
 import { courseSchema } from "@/lib/react-hook-form";
 import { TooltipInfo } from "@/components/tooltip-info";
-import { authClient } from "@/lib/auth-client";
+import { authClient, useSession } from "@/lib/auth-client";
 import featuredCourseImage from "@/public/featured-course.svg";
 import SectionContent from "@/components/course-section-content";
 import { useEffect, useState, useTransition } from "react";
@@ -46,6 +46,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppKitAccount } from "@reown/appkit/react";
 import QuizCreation from "@/components/quiz-creation";
+import Loading from "@/app/loading";
 
 export type CourseFormData = z.infer<typeof courseSchema>;
 
@@ -63,6 +64,7 @@ const CourseCreation = () => {
 	const [showDraftModal, setShowDraftModal] = useState(false);
 	const [draftData, setDraftData] = useState<any | null>(null);
 	const [hasChanges, setHasChanges] = useState(false);
+	const [authorized, setAuthorized] = useState<boolean | null>(null);
 	const [initialData, setInitialData] = useState<CourseFormData | null>(null);
 	const [isFromDraft, setIsFromDraft] = useState(false);
 	const queryClient = useQueryClient();
@@ -474,6 +476,42 @@ const CourseCreation = () => {
 		}
 	}, []);
 
+	// useEffect(() => {
+	// 	const userHasPermissions = async () => {
+	// 		try {
+	// 			const hasPermission = await authClient.admin.hasPermission({
+	// 				userId: session?.user.id,
+	// 				permissions: {
+	// 					user: ["create", "delete"],
+	// 				},
+	// 			});
+
+	// 			if (hasPermission.error) {
+	// 				throw new Error(hasPermission.error.message);
+	// 			}
+
+	// 			if (!hasPermission.data.success) {
+	// 				router.push("/unauthorized");
+	// 			} else {
+	// 				setAuthorized(true);
+	// 			}
+	// 		} catch (error) {
+	// 			console.log(error);
+	// 			toast.error("Unauthorized access", {
+	// 				description: "You are not authorized to access this page.",
+	// 			});
+	// 		}
+	// 	};
+	// 	userHasPermissions();
+	// }, []);
+
+	// if (authorized === null) {
+	// 	return <Loading />;
+	// }
+
+	if (session?.user.role === "user") {
+		router.push("/unauthorized");
+	}
 	return (
 		<div className="min-h-screen bg-background">
 			<div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -485,7 +523,6 @@ const CourseCreation = () => {
 					>
 						<ArrowLeft className="size-5" />
 					</Button>
-					{session?.user.name}
 					<div className="flex gap-4 flex-wrap items-center justify-between w-full">
 						<div className="flex lg:mr-auto items-center gap-4">
 							<div className="mr-auto">
@@ -862,6 +899,29 @@ const CourseCreation = () => {
 												</div>
 											))}
 										</CardContent>
+										<Button
+											type="button"
+											onClick={() =>
+												sectionArrays.append({
+													title: "",
+													chapters: 1,
+													lessons: [
+														{
+															title: "",
+															content: null,
+															isPreview: false,
+														},
+													],
+												})
+											}
+											variant="default"
+											size="sm"
+											className="gap-2 w-fit mx-auto"
+											disabled={isPending}
+										>
+											<Plus className="h-4 w-4" />
+											Add Another Section
+										</Button>
 									</Card>
 								</div>
 								<QuizCreation form={form} isPending={isPending} />

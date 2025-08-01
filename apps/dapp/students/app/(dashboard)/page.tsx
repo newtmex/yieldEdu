@@ -126,32 +126,32 @@ export default function Page() {
 				.from("user_course_progress")
 				.select(
 					`
-					  current_section,
-					  current_lesson,
-					  completed_lessons,
-					  course:course_id (
+					current_section,
+					current_lesson,
+					completed_lessons,
+					course:course_id (
 						id,
 						title,
 						description,
 						sections (
-						  id,
-						  lessons (
+						id,
+						lessons (
 							id,
 							title,
 							course_id
-						  ),
-						  quizzes (
-							id,
-							question
-						  )
 						)
-					  )
+						),
+						quizzes (
+						id,
+						question
+						)
+					)
 					`
 				)
-
 				.eq("user_id", session?.user.id);
 
 			if (error) {
+				console.log(error);
 				throw new Error(error.message);
 			}
 			return data;

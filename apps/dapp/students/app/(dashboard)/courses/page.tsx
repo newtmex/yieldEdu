@@ -10,8 +10,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { authClient } from "@/lib/auth-client";
 
 const page = () => {
+	const { data: session } = authClient.useSession();
 	const { data: courses, isPending } = useQuery({
 		queryKey: ["courses"],
 		queryFn: async () => {
@@ -39,14 +41,16 @@ const page = () => {
 						momentum. As you complete activities, you’ll earn YUZU points, grow
 						your learning streak, and unlock new opportunities on your journey.
 					</p>
-					<div className="flex gap-4">
-						<Link href={"/courses/create-course"}>
-							<Button>Create Course</Button>
-						</Link>
-						<Link href={"/courses/manage-course"}>
-							<Button variant={"outline"}>Manage Course</Button>
-						</Link>
-					</div>
+					{session?.user.role !== "user" && (
+						<div className="flex gap-4">
+							<Link href={"/courses/create-course"}>
+								<Button>Create Course</Button>
+							</Link>
+							<Link href={"/courses/manage-course"}>
+								<Button variant={"outline"}>Manage Course</Button>
+							</Link>
+						</div>
+					)}
 				</div>
 				<div className="flex-1 hidden md:flex w-full">
 					<Image

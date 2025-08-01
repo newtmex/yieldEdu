@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSessionCookie } from "better-auth/cookies";
 
 export async function middleware(request: NextRequest) {
-	const session = await auth.api.getSession({
-		query: {
-			disableCookieCache: true,
-		},
-		headers: request.headers,
-	});
+	const sessionCookie = getSessionCookie(request);
 
-	if (!session) {
+	if (!sessionCookie) {
 		return NextResponse.redirect(new URL("/signin", request.url));
 	}
 
@@ -19,6 +14,7 @@ export async function middleware(request: NextRequest) {
 		"/campaigns",
 		"/achievements",
 	];
+
 	if (
 		lockedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
 	) {

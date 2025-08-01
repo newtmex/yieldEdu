@@ -1,14 +1,21 @@
 import EmailTemplate from "@/components/email-template";
 import { betterAuth, string } from "better-auth";
-import { admin } from "better-auth/plugins/admin";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { Pool } from "pg";
 import { Resend } from "resend";
-
+import { admin } from "better-auth/plugins";
+import { ac, roles } from "@/lib/permissions";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 if (!process.env.RESEND_API_KEY) {
 	throw new Error("RESEND_API_KEY is not set");
+}
+
+export enum UserRoles {
+	admin = "admin",
+	partner = "partner",
+	creator = "creators",
+	user = "user",
 }
 
 export const auth = betterAuth({
@@ -16,9 +23,15 @@ export const auth = betterAuth({
 		additionalFields: {
 			OCId: {
 				type: "string",
+				input: false,
 			},
 			ethAddress: {
 				type: "string",
+				input: false,
+			},
+			role: {
+				type: ["admin", "partner", "creator", "user"],
+				input: false,
 			},
 		},
 	},
@@ -29,6 +42,9 @@ export const auth = betterAuth({
 				type: "string",
 			},
 			ethAddress: {
+				type: "string",
+			},
+			role: {
 				type: "string",
 			},
 		},
@@ -80,9 +96,11 @@ export const auth = betterAuth({
 				if (error) console.log(error);
 			},
 		}),
-
 		admin({
-			adminRoles: ["admin", "partner admin"],
+			defaultRole: UserRoles.user,
+			adminRoles: [UserRoles.admin, UserRoles.creator, UserRoles.partner],
+			ac,
+			roles,
 		}),
 	],
 	/** if no database is provided, the user data will be stored in memory.

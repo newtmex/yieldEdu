@@ -66,8 +66,8 @@ const QuizCreation: React.FC<{
 							?.message && (
 							<p className="text-sm text-destructive">
 								{
-									form.formState.errors.quizzes?.[questionIndex]?.options
-										?.root?.message
+									form.formState.errors.quizzes?.[questionIndex]?.options?.root
+										?.message
 								}
 							</p>
 						)}
@@ -151,8 +151,8 @@ const QuizCreation: React.FC<{
 									?.message && (
 									<p className="text-sm text-destructive">
 										{
-											form.formState.errors.quizzes?.[questionIndex]
-												?.options?.message
+											form.formState.errors.quizzes?.[questionIndex]?.options
+												?.message
 										}
 									</p>
 								)}
@@ -164,6 +164,23 @@ const QuizCreation: React.FC<{
 					</div>
 				))}
 			</CardContent>
+			<Button
+				type="button"
+				onClick={() => {
+					quizArrays.append({
+						question: "",
+						options: ["", "", "", ""],
+						correctAnswer: 0,
+					});
+				}}
+				variant="default"
+				size="sm"
+				className="gap-2 w-fit mx-auto"
+				disabled={isPending}
+			>
+				<Plus className="h-4 w-4" />
+				Add Another Question
+			</Button>
 		</Card>
 	);
 };
