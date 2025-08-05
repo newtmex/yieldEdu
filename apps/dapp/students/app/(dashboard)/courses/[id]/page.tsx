@@ -16,6 +16,7 @@ import { useSession } from "@/lib/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import useCourseInfo from "@/hooks/course";
+import { IconCheck, IconLock } from "@tabler/icons-react";
 
 const Page = () => {
 	const { id } = useParams();
@@ -55,43 +56,51 @@ const Page = () => {
 	});
 
 	const handleStartCourse = async (id: string) => {
-		setEnrollmentLoading(true);
-
-		toast.loading("You are being enrolled in the course please wait...", {
-			id: "enroll-course",
-		});
-
 		if (!session || !session.user) {
 			toast.error("You must be logged in to start a course.");
 			return;
 		}
-		try {
-			const { error } = await supabase
-				.from("enrollments")
-				.insert([{ user_id: session?.user.id, course_id: id }]);
+		setEnrollmentLoading(true);
 
-			if (error) {
-				if (error.message.includes("enrollments_course_id_key")) {
-					toast.dismiss("enroll-course");
-					router.push(`/courses/${id}/learning`);
-					return;
-				}
-
-				throw new Error(error.message);
-			}
-			toast.dismiss("enroll-course");
-			toast.success("Enrollment Success!", {
-				description: courseData?.title
-					? `You have been enrolled in ${courseData.title}`
-					: "You have been successfully enrolled.",
+		if (course_completed === undefined) {
+			toast.loading("You are being enrolled in the course please wait...", {
+				id: "enroll-course",
 			});
+		}
 
+		try {
+			// 1. Check if user is already enrolled
+			const { data: existingEnrollment, error: fetchError } = await supabase
+				.from("enrollments")
+				.select("id")
+				.eq("user_id", session.user.id)
+				.eq("course_id", id)
+				.maybeSingle();
+
+			if (fetchError) throw new Error(fetchError.message);
+
+			// 2. If not enrolled, insert new enrollment
+			if (!existingEnrollment) {
+				const { error: insertError } = await supabase
+					.from("enrollments")
+					.insert([{ user_id: session.user.id, course_id: id }]);
+
+				if (insertError) throw new Error(insertError.message);
+
+				toast.success("Enrollment Success!", {
+					description: courseData?.title
+						? `You have been enrolled in ${courseData.title}`
+						: "You have been successfully enrolled.",
+				});
+			}
+
+			// 3. Redirect to learning page
 			router.push(`/courses/${id}/learning`);
 		} catch (error: any) {
-			toast.dismiss("enroll-course");
 			console.error("Error starting course:", error);
 			toast.error("Failed to start course. Please try again.");
 		} finally {
+			toast.dismiss("enroll-course");
 			setEnrollmentLoading(false);
 		}
 	};
@@ -449,33 +458,37 @@ const Page = () => {
 											</Button>
 											<CourseLike courseId={id} />
 										</>
-									) : course_completed ? (
-										<>
-											<Button
-												disabled
-												className=" w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400"
-											>
-												Course Completed
-											</Button>
-											<CourseLike courseId={id} />
-										</>
 									) : (
 										<>
-											<Button
-												disabled={enrollmentLoading}
-												onClick={() => handleStartCourse(courseData.id)}
-												variant="outline"
-												className="flex-1"
-											>
-												{enrollmentLoading && (
-													<LoaderCircle className="animate-spin" size={16} />
-												)}
-												{enrollmentLoading
-													? "Please wait..."
-													: !course_completed
-														? "Continue"
-														: "Start Course"}
-											</Button>
+											{course_completed === true ? (
+												<div className="flex flex-col gap-2">
+													<p className="text-xs text-yellow-400 flex items-center gap-2">
+														<IconCheck className="ml-2 size-4 text-inherit" />
+														Course Completed
+													</p>
+													<Button disabled variant="outline" className="flex-1">
+														View Performance{" "}
+														<IconLock className="ml-2 w-4 h-4 text-muted-foreground" />
+													</Button>
+												</div>
+											) : (
+												<Button
+													disabled={enrollmentLoading}
+													onClick={() => handleStartCourse(courseData.id)}
+													variant="outline"
+													className="flex-1"
+												>
+													{enrollmentLoading && (
+														<LoaderCircle className="animate-spin" size={16} />
+													)}
+													{enrollmentLoading
+														? "Please wait..."
+														: course_completed === undefined
+															? "Start Course"
+															: "Continue Learning"}
+												</Button>
+											)}
+
 											<CourseLike courseId={id} />
 										</>
 									)}

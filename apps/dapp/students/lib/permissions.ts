@@ -1,7 +1,12 @@
 import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
 import { createAccessControl } from "better-auth/plugins/access";
-import { UserRoles } from "./auth";
 
+enum UserRoles {
+	admin = "admin",
+	partner = "partner",
+	creator = "creators",
+	user = "user",
+}
 /**
  * make sure to use `as const` so typescript can infer the type correctly
  */

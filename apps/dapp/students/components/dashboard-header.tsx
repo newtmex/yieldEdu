@@ -15,6 +15,7 @@ import { Separator } from "./ui/separator";
 import {
 	IconBrandTelegram,
 	IconBrandX,
+	IconCoin,
 	IconFlameFilled,
 	IconWallet,
 } from "@tabler/icons-react";
@@ -75,14 +76,15 @@ const DashboardHeader = () => {
 					<div className="pr-5 flex gap-5">
 						<div className="text-center">
 							<div className="flex items-center justify-center gap-2">
-								<IconFlameFilled className="size-3 md:size-5 text-orange-500" />
-								<span className="text-xs md:text-sm font-bold">
-									0 {isMobile ? "" : ""}
-								</span>
+								<IconCoin className="size-3 md:size-5 text-orange-500" />
 								<TooltipInfo
-									className="text-muted-foreground hidden md:flex"
-									content="You earn a streak for each day you complete a course or activity. Keep your streak alive to boost your rewards and stay consistent in your learning!"
-								/>
+									className="flex items-center justify-center gap-2"
+									content="You earn points by completing courses and activities. At the end of each season, your total points will determine how much YUZU you earn."
+								>
+									<span className="text-xs md:text-sm font-bold">
+										0 {isMobile ? "" : ""}
+									</span>
+								</TooltipInfo>
 							</div>
 						</div>
 
@@ -94,13 +96,14 @@ const DashboardHeader = () => {
 									className="w-3 md:w-5 h-auto"
 								/>
 
-								<span className="text-xs md:text-sm font-bold">
-									0{isMobile ? "" : " "}
-								</span>
 								<TooltipInfo
-									className="hidden md:flex text-muted-foreground"
+									className="flex items-center justify-center gap-2"
 									content="YUZU is your learning reward currency. Earn YUZU by completing lessons, challenges, and maintaining streaks. Use them to unlock premium content, get rewards, or redeem exclusive perks."
-								/>
+								>
+									<span className="text-xs md:text-sm font-bold">
+										0{isMobile ? "" : " "}
+									</span>
+								</TooltipInfo>
 							</div>
 						</div>
 					</div>

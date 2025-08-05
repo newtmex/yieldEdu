@@ -125,6 +125,16 @@ const Page = () => {
 		return courseData.sections.flatMap((section: any) => section.lessons);
 	}, [courseData]);
 
+	const currentLessonLinearIndex = useMemo(() => {
+		if (!courseData || !courseData.sections[currentSection]) return 0;
+		let linearIndex = 0;
+		for (let i = 0; i < currentSection; i++) {
+			linearIndex += courseData.sections[i].lessons.length;
+		}
+		linearIndex += currentLesson;
+		return linearIndex;
+	}, [courseData, currentSection, currentLesson]);
+
 	useEffect(() => {
 		if (!allLessons.length) {
 			setLastUnlockedLesson(0);
@@ -135,13 +145,15 @@ const Page = () => {
 			(lesson) => !completedLessons.has(lesson.id)
 		);
 
-		if (firstIncompleteIndex === -1) {
-			// All lessons completed
-			setLastUnlockedLesson(allLessons.length);
-		} else {
-			setLastUnlockedLesson(firstIncompleteIndex);
-		}
-	}, [completedLessons, allLessons]);
+		const unlockedByCompletion =
+			firstIncompleteIndex === -1
+				? allLessons.length
+				: firstIncompleteIndex;
+
+		setLastUnlockedLesson(
+			Math.max(unlockedByCompletion, currentLessonLinearIndex)
+		);
+	}, [completedLessons, allLessons, currentLessonLinearIndex]);
 
 	const { data: existingProgress, isPending: existingProgressPending } =
 		useQuery({
@@ -169,16 +181,44 @@ const Page = () => {
 	const updateUserProgress = async (progress: any) => {
 		if (!session?.user.id || !courseId) return;
 
+		const lessonId =
+			progress.current_lesson || currentLessonData?.id || undefined;
+		const sectionIndex =
+			progress.current_section ?? currentSection ?? undefined;
+
+		if (lessonId === undefined || sectionIndex === undefined) {
+			if (progress.completed_lessons || progress.quiz_answers) {
+				const { error } = await supabase
+					.from("user_course_progress")
+					.update({
+						...progress,
+						updated_at: new Date().toISOString(),
+					})
+					.eq("user_id", session.user.id)
+					.eq("course_id", courseId);
+				if (error) {
+					console.log(error);
+					toast.error("Failed to update progress", {
+						description: error.message,
+					});
+				}
+			}
+			return;
+		}
+
 		const { error } = await supabase
 			.from("user_course_progress")
 			.update({
 				...progress,
+				current_lesson: lessonId,
+				current_section: sectionIndex,
 				updated_at: new Date().toISOString(),
 			})
 			.eq("user_id", session.user.id)
 			.eq("course_id", courseId);
 
 		if (error) {
+			console.log(error);
 			toast.error("Failed to update progress", {
 				description: error.message,
 			});
@@ -335,6 +375,8 @@ const Page = () => {
 		await updateUserProgress({
 			completed_lessons: Array.from(newCompletedLessons),
 			quiz_answers: newQuizAnswers,
+			current_lesson: lessonId,
+			current_section: currentSection,
 		});
 	};
 
@@ -355,6 +397,8 @@ const Page = () => {
 
 		await updateUserProgress({
 			completed_lessons: Array.from(newCompletedLessons),
+			current_lesson: lessonId,
+			current_section: currentSection,
 		});
 		handleNext();
 	};
@@ -403,6 +447,7 @@ const Page = () => {
 		if (newCurrentLessonIndex >= lastUnlockedLesson) {
 			await updateUserProgress({
 				current_lesson: nextLessonId,
+				current_section: nextSection,
 			});
 		}
 	};
@@ -430,6 +475,11 @@ const Page = () => {
 			setCurrentSection(prevSection);
 			setCurrentLesson(prevLesson);
 			setSelectedAnswer("");
+			const lessonId = courseData.sections[prevSection].lessons[prevLesson].id;
+			await updateUserProgress({
+				current_lesson: lessonId,
+				current_section: prevSection,
+			});
 		}
 	};
 
@@ -445,6 +495,11 @@ const Page = () => {
 		setCurrentSection(sectionIndex);
 		setCurrentLesson(lessonIndex);
 		setSelectedAnswer("");
+		const lessonId = courseData.sections[sectionIndex].lessons[lessonIndex].id;
+		await updateUserProgress({
+			current_lesson: lessonId,
+			current_section: sectionIndex,
+		});
 	};
 
 	const handleCourseCompletion = async () => {

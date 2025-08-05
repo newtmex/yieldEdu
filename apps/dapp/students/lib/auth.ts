@@ -11,7 +11,7 @@ if (!process.env.RESEND_API_KEY) {
 	throw new Error("RESEND_API_KEY is not set");
 }
 
-export enum UserRoles {
+enum UserRoles {
 	admin = "admin",
 	partner = "partner",
 	creator = "creators",

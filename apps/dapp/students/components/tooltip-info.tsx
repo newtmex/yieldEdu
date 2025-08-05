@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ClassValue } from "clsx";
 import { HelpCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 function useIsTouchDevice() {
 	const [isTouch, setIsTouch] = useState(false);
@@ -26,26 +26,30 @@ export function TooltipInfo({
 	content,
 	className,
 	disabled,
+	children,
 }: {
 	content: string;
 	className?: ClassValue;
 	disabled?: boolean;
+	children?: React.ReactNode;
 }) {
 	const isTouch = useIsTouchDevice();
 
 	if (disabled)
 		return (
-			<span className={cn("cursor-help text-muted-foreground", className)}>
-				<HelpCircle className="size-3 text-inherit" />
+			<span className={cn("cursor-help", className)}>
+				{children}
+				<HelpCircle className="size-3 text-muted-foreground" />
 			</span>
 		);
 
 	if (isTouch) {
 		return (
 			<Popover>
-				<PopoverTrigger asChild>
+				<PopoverTrigger className={cn(className)}>
+					{children}
 					<span className={cn("cursor-help text-muted-foreground", className)}>
-						<HelpCircle className="size-3 text-inherit" />
+						<HelpCircle className="size-3 text-muted-foreground" />
 					</span>
 				</PopoverTrigger>
 				<PopoverContent className="max-w-xs text-sm">{content}</PopoverContent>
@@ -56,9 +60,10 @@ export function TooltipInfo({
 	return (
 		<TooltipProvider>
 			<Tooltip>
-				<TooltipTrigger asChild>
-					<span className={cn("cursor-help text-muted-foreground", className)}>
-						<HelpCircle className="size-3 text-inherit" />
+				<TooltipTrigger className={cn(className)}>
+					{children}
+					<span className={cn("cursor-help", className)}>
+						<HelpCircle className="size-3 text-muted-foreground" />
 					</span>
 				</TooltipTrigger>
 				<TooltipContent className="max-w-xs text-sm">{content}</TooltipContent>

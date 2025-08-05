@@ -66,41 +66,44 @@ const Page = () => {
 			email: typeof email === "string" ? email : "",
 		};
 
-		try {
-			if (!email) {
-				toast.error("email is required");
-				return;
-			}
-			await signIn.magicLink(
-				{
-					email: data.email,
-					callbackURL: "/",
-				},
-				{
-					onRequest: () => {
-						toast.loading("Magic link being created...");
-						setMagicLinkLoading(true);
-					},
-					onResponse: (ctx) => {
-						if (!ctx.response.ok) {
-							throw new Error(ctx.response.statusText);
-						}
-						if (ctx.response.ok) {
-							toast.dismiss();
-							toast.success("Magic link has been sent");
-							setMagicLinkLoading(false);
-						}
-					},
-				}
-			);
-		} catch (error: any) {
-			console.log(error);
-			toast.dismiss();
-			setMagicLinkLoading(false);
-			toast.error("Error signin in. Please try again", {
-				description: error.message,
-			});
+		if (!email) {
+			toast.error("email is required");
+			return;
 		}
+		await signIn.magicLink(
+			{
+				email: data.email,
+				callbackURL: "/",
+			},
+			{
+				onRequest: () => {
+					toast.loading("Magic link being created...");
+					setMagicLinkLoading(true);
+				},
+				onResponse: (ctx) => {
+					if (ctx.response.status === 429) {
+						const retryAfter = ctx.response.headers.get("X-Retry-After");
+						toast.dismiss();
+						toast.error("Too many requests", {
+							description: `Please wait ${retryAfter} seconds before trying again`,
+						});
+						setMagicLinkLoading(false);
+						return;
+					}
+
+					if (!ctx.response.ok) {
+						toast.error("Error signin in. Please try again", {
+							description: ctx.response.statusText,
+						});
+					}
+					if (ctx.response.ok) {
+						toast.dismiss();
+						toast.success("Magic link has been sent");
+						setMagicLinkLoading(false);
+					}
+				},
+			}
+		);
 	};
 
 	const disabled =

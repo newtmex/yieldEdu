@@ -53,10 +53,16 @@ export default function CourseCard({
 							<Button disabled className="mt-4 text-sm px-4 py-2 rounded">
 								Course Completed
 							</Button>
-						) : (
+						) : course_completed === undefined ? (
 							<Link href={`/courses/${id}`}>
 								<Button className="mt-4 text-sm px-4 py-2 rounded">
 									Enroll Now
+								</Button>
+							</Link>
+						) : (
+							<Link href={`/courses/${id}/learning`}>
+								<Button className="mt-4 text-sm px-4 py-2 rounded">
+									Continue course
 								</Button>
 							</Link>
 						)}

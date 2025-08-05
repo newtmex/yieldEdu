@@ -60,6 +60,7 @@ const CoursePerformance = () => {
 		queryKey: ["completed_course", session?.user.id, id],
 		enabled: !!session?.user.id && !!id,
 		queryFn: async () => {
+			if (!session?.user?.id) return;
 			const { data, error } = await supabase
 				.from("user_course_progress")
 				.select(
@@ -85,7 +86,7 @@ const CoursePerformance = () => {
 				)
 				.eq("user_id", session?.user.id)
 				.eq("course_id", id)
-				.single();
+				.maybeSingle();
 
 			if (error) {
 				console.log(error);

@@ -89,10 +89,10 @@ type ProgressData = {
 				id: string;
 				title: string;
 			}[];
-			quizzes: {
-				id: string;
-				question: string;
-			}[];
+		}[];
+		quizzes: {
+			id: string;
+			question: string;
 		}[];
 	};
 };
@@ -162,19 +162,24 @@ export default function Page() {
 		const { course, completed_lessons, current_section, current_lesson } = item;
 
 		const typedCourse = course as unknown as ProgressData["course"];
+
 		const totalLessons = typedCourse.sections?.reduce(
-			(total, section) => total + section.lessons.length,
+			(total, section) => total + (section.lessons?.length || 0),
 			0
 		);
+		const totalQuizzes = typedCourse.quizzes?.length || 0;
+		const totalItems = totalLessons + totalQuizzes;
+
 		const completedCount = completed_lessons?.length ?? 0;
-		const percentage = totalLessons
-			? Math.min(100, Math.round((completedCount / totalLessons) * 100))
+		const percentage = totalItems
+			? Math.min(100, Math.round((completedCount / totalItems) * 100))
 			: 0;
 
-		const lessonsLeft = Math.max(0, totalLessons - completedCount);
+		const itemsLeft = Math.max(0, totalItems - completedCount);
 
 		const section = typedCourse.sections?.[current_section];
 		let lessonTitle = "Continue Learning";
+		let itemsLeftText = `${itemsLeft} lessons left`;
 
 		if (section) {
 			const foundLesson = section.lessons.find(
@@ -186,26 +191,30 @@ export default function Page() {
 					(l) => l.id === current_lesson
 				);
 				lessonTitle = `Lesson ${lessonIndex + 1}: ${foundLesson.title}`;
-			} else {
-				const foundQuiz = section?.quizzes?.find(
-					(quiz) => quiz.id === current_lesson
-				);
-				if (foundQuiz) {
-					const quizIndex = section?.quizzes?.findIndex(
-						(q) => q.id === current_lesson
-					);
-					lessonTitle = `Quiz ${quizIndex + 1}: ${foundQuiz.question}`;
-				}
-			}
+			} 
 		}
+
+		const foundQuiz = typedCourse.quizzes?.find(
+				(quiz) => quiz.id === current_lesson
+			);
+
+		if (foundQuiz) {
+			const quizIndex = typedCourse.quizzes?.findIndex(
+				(q) => q.id === current_lesson
+			);
+			lessonTitle = `Quiz ${quizIndex + 1}: ${foundQuiz.question}`;
+			itemsLeftText = `${itemsLeft} quizzes left`;
+		}
+
 
 		return {
 			title: typedCourse.title,
 			lesson: lessonTitle,
 			description: typedCourse.description,
 			progress: percentage,
-			lessonsLeft,
+			lessonsLeft: itemsLeft,
 			id: typedCourse.id,
+			itemsLeftText: itemsLeftText,
 		};
 	});
 

@@ -11,16 +11,16 @@ type courseProgressProps = {
 	lesson: string;
 	description: string;
 	progress: number;
-	lessonsLeft: number;
 	title: string;
+	itemsLeftText: string;
 };
 const ProgressCourse = ({
 	id,
 	lesson,
 	description,
 	progress,
-	lessonsLeft,
 	title,
+	itemsLeftText,
 }: courseProgressProps) => {
 	const { isPending, course_completed } = useCourseInfo(id as string);
 
@@ -30,19 +30,21 @@ const ProgressCourse = ({
 				<div className="space-y-4">
 					<div className="flex flex-col gap-4 sm:flex-row justify-between">
 						<div className="">
-							<h3 className="font-semibold">{title}</h3>
-							<p className="text-sm text-black/50 dark:text-white/50">
+							<h3 className="font-semibold text-md truncate text-ellipsis overflow-hidden whitespace-nowrap w-64">
+								{title}
+							</h3>
+							<p className="text-sm truncate text-ellipsis overflow-hidden whitespace-nowrap w-64 text-black/50 dark:text-white/50">
 								{lesson}
 							</p>
-							<p className="text-sm mt-2 ">{description.slice(0, 70)}</p>
+							<p className="text-sm mt-2 truncate text-ellipsis overflow-hidden whitespace-nowrap w-64">
+								{description.slice(0, 70)}
+							</p>
 						</div>
 						<div className="text-right">
 							<div className="text-sm whitespace-nowrap font-semibold text-lime-600">
 								{progress}% Complete
 							</div>
-							<div className="text-xs text-yellow-500">
-								{lessonsLeft} lessons left
-							</div>
+							<div className="text-xs text-yellow-500">{itemsLeftText}</div>
 						</div>
 					</div>
 					<Progress value={progress} className="h-2" />
