@@ -5,13 +5,13 @@ const PROCESS_PHASES = [
 		id: "feature-1",
 		title: "sTokens: Your Proof of Progress",
 		description:
-			"sTokens is an ERC-1155 token that gives students access to gated lessons and serve as verifiable, on-chain credentials—representing real ownership of knowledge earned.",
+			"sTokens are ERC-1155 token that gives students access to gated lessons and serve as verifiable, on-chain credentials representing real ownership of knowledge earned.",
 	},
 	{
 		id: "feature-2",
 		title: "Funded Learning, Earned Rewards",
 		description:
-			"Education on YieldEdu is powered by capital—students learn because someone believed in their future. Progress is rewarded, not just graded.",
+			"Education on YieldEdu is powered by capital. Students learn because someone believed in their future and progress is rewarded, not just graded.",
 	},
 	{
 		id: "feature-3",
@@ -23,13 +23,13 @@ const PROCESS_PHASES = [
 		id: "feature-4",
 		title: "Investor Impact",
 		description:
-			"When investors fund education, they receive sTokens—each representing learning capacity. These tokens are then used by students to access content, tying investor support directly to real educational outcomes.",
+			"When investors fund education, they receive sTokens and each represents a learning capacity. These tokens are used by students to access content, tying investor support directly to real educational outcomes.",
 	},
 	{
 		id: "feature-5",
 		title: "Transparent Education Economy",
 		description:
-			"From staking to rewards, every flow of value is visible. YieldEdu is not just a platform—it’s a decentralized education economy in motion.",
+			"From staking to rewards, every flow of value is visible. YieldEdu is not just a platform it’s a decentralized education economy in motion.",
 	},
 ];
 
@@ -46,7 +46,7 @@ const Features = () => {
 					<p className="max-w-prose text-sm">
 						YieldEdu is redefining education through tokenized access,
 						performance-driven analytics, and transparent funding mechanics.
-						Learners earn, investors track impact, and credentials are owned—not
+						Learners earn, investors track impact, and credentials are owned not
 						just issued.
 					</p>
 				</div>
