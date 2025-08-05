@@ -57,17 +57,17 @@ export const auth = betterAuth({
 	},
 	rateLimit: {
 		enabled: true,
-		window: 60, // 1 minute
-		max: 3, // Max 3 requests per minute
+		window: 900, // 15  minutes
+		max: 20, // Max 20 requests per minute
 		storage: "database",
 		customRules: {
 			"/sign-in/magic-link": {
-				window: 60,
-				max: 3,
+				window: 600, // 10 minutes
+				max: 3, // 3 magic links per 10 minutes
 			},
 		},
 	},
-	trustedOrigins: ["http://localhost:3000", "https://students.yieldedu.xyz"],
+	trustedOrigins: ["https://students.yieldedu.xyz"],
 	socialProviders: {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,

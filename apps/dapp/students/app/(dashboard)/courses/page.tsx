@@ -1,5 +1,4 @@
 "use client";
-import React from "react";
 import VIPHuman from "@/public/being-vip.svg";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
@@ -10,10 +9,21 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { useCoursePermissions } from "@/hooks/course";
+import { UserRoles } from "@/lib/permissions";
 import { authClient } from "@/lib/auth-client";
+import Loading from "@/app/loading";
 
 const page = () => {
 	const { data: session } = authClient.useSession();
+
+	const { hasContentCreationPermissions } = useCoursePermissions({
+		role: session?.user.role as UserRoles,
+		permissions: {
+			course: ["create", "delete:own", "update:own"],
+		},
+	});
+
 	const { data: courses, isPending } = useQuery({
 		queryKey: ["courses"],
 		queryFn: async () => {
@@ -29,6 +39,10 @@ const page = () => {
 		},
 	});
 
+	if (hasContentCreationPermissions === null) {
+		return <Loading />;
+	}
+
 	return (
 		<div className="space-y-4 p-5">
 			<div className="flex flex-col md:flex-row max-w-4xl mx-auto justify-center items-center gap-4 ">
@@ -41,7 +55,7 @@ const page = () => {
 						momentum. As you complete activities, you’ll earn YUZU points, grow
 						your learning streak, and unlock new opportunities on your journey.
 					</p>
-					{session?.user.role !== "user" && (
+					{hasContentCreationPermissions && (
 						<div className="flex gap-4">
 							<Link href={"/courses/create-course"}>
 								<Button>Create Course</Button>

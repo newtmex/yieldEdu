@@ -28,6 +28,9 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCoursePermissions } from "@/hooks/course";
+import { UserRoles } from "@/lib/permissions";
+import Loading from "@/app/loading";
 
 type DraftCourse = {
 	id: string;
@@ -43,7 +46,18 @@ export default function ManageCourses() {
 	const { data: session } = useSession();
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [drafts, setDrafts] = useState<DraftCourse[]>([]);
+	const queryClient = useQueryClient();
 	const router = useRouter();
+	const {
+		hasContentCreationPermissions,
+		permissionsLoading,
+		isPermissionPending,
+	} = useCoursePermissions({
+		role: session?.user.role as UserRoles,
+		permissions: {
+			course: ["create", "delete:own", "update:own"],
+		},
+	});
 
 	useEffect(() => {
 		const draftCourses: DraftCourse[] = [];
@@ -84,8 +98,6 @@ export default function ManageCourses() {
 
 		setDrafts(draftCourses);
 	}, []);
-
-	const queryClient = useQueryClient();
 
 	const {
 		data: courses,
@@ -140,6 +152,10 @@ export default function ManageCourses() {
 	}
 
 	const handleDeleteCourse = async (courseId: string) => {
+		if (!hasContentCreationPermissions) {
+			router.push("/unauthorized");
+			return;
+		}
 		setIsDeleting(true);
 
 		try {
@@ -171,6 +187,10 @@ export default function ManageCourses() {
 	};
 
 	const handleDeleteDraft = (id: string) => {
+		if (!hasContentCreationPermissions) {
+			router.push("/unauthorized");
+			return;
+		}
 		const key = id === "unsaved" ? "course_draft" : `course_draft_${id}`;
 		localStorage.removeItem(key);
 		setDrafts((prev) => prev.filter((draft) => draft.id !== id));
@@ -187,9 +207,18 @@ export default function ManageCourses() {
 
 	const allCourses = [...(courses || []), ...drafts];
 
-	if (session?.user.role === "user") {
+	if (
+		hasContentCreationPermissions === null ||
+		permissionsLoading ||
+		isPermissionPending
+	) {
+		return <Loading />;
+	}
+
+	if (hasContentCreationPermissions === false) {
 		router.push("/unauthorized");
 	}
+
 	return (
 		<div className="min-h-screen bg-background">
 			<div className="container mx-auto px-4 py-8">

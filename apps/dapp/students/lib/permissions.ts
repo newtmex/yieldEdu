@@ -1,10 +1,10 @@
 import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
 import { createAccessControl } from "better-auth/plugins/access";
 
-enum UserRoles {
+export enum UserRoles {
 	admin = "admin",
 	partner = "partner",
-	creator = "creators",
+	creator = "creator",
 	user = "user",
 }
 /**

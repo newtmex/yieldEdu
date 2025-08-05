@@ -47,6 +47,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppKitAccount } from "@reown/appkit/react";
 import QuizCreation from "@/components/quiz-creation";
 import Loading from "@/app/loading";
+import { useCoursePermissions } from "@/hooks/course";
+import { UserRoles } from "@/lib/permissions";
 
 export type CourseFormData = z.infer<typeof courseSchema>;
 
@@ -476,40 +478,26 @@ const CourseCreation = () => {
 		}
 	}, []);
 
-	// useEffect(() => {
-	// 	const userHasPermissions = async () => {
-	// 		try {
-	// 			const hasPermission = await authClient.admin.hasPermission({
-	// 				userId: session?.user.id,
-	// 				permissions: {
-	// 					user: ["create", "delete"],
-	// 				},
-	// 			});
+	const {
+		hasContentCreationPermissions,
+		permissionsLoading,
+		isPermissionPending,
+	} = useCoursePermissions({
+		role: session?.user.role as UserRoles,
+		permissions: {
+			course: ["create", "delete:own", "update:own"],
+		},
+	});
 
-	// 			if (hasPermission.error) {
-	// 				throw new Error(hasPermission.error.message);
-	// 			}
+	if (
+		hasContentCreationPermissions === null ||
+		permissionsLoading ||
+		isPermissionPending
+	) {
+		return <Loading />;
+	}
 
-	// 			if (!hasPermission.data.success) {
-	// 				router.push("/unauthorized");
-	// 			} else {
-	// 				setAuthorized(true);
-	// 			}
-	// 		} catch (error) {
-	// 			console.log(error);
-	// 			toast.error("Unauthorized access", {
-	// 				description: "You are not authorized to access this page.",
-	// 			});
-	// 		}
-	// 	};
-	// 	userHasPermissions();
-	// }, []);
-
-	// if (authorized === null) {
-	// 	return <Loading />;
-	// }
-
-	if (session?.user.role === "user") {
+	if (hasContentCreationPermissions === false) {
 		router.push("/unauthorized");
 	}
 	return (

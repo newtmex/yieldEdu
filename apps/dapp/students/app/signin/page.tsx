@@ -82,10 +82,10 @@ const Page = () => {
 				},
 				onResponse: (ctx) => {
 					if (ctx.response.status === 429) {
-						const retryAfter = ctx.response.headers.get("X-Retry-After");
 						toast.dismiss();
 						toast.error("Too many requests", {
-							description: `Please wait ${retryAfter} seconds before trying again`,
+							description:
+								"Please try again later or use another sign-in option",
 						});
 						setMagicLinkLoading(false);
 						return;
