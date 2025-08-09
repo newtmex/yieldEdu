@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import CoursePreview from "@/components/course-preview";
 import { courseSchema } from "@/lib/react-hook-form";
 import { TooltipInfo } from "@/components/tooltip-info";
-import { authClient, useSession } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import featuredCourseImage from "@/public/featured-course.svg";
 import SectionContent from "@/components/course-section-content";
 import { useEffect, useState, useTransition } from "react";
