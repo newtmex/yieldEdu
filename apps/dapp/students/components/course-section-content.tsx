@@ -23,7 +23,10 @@ const SectionContent: React.FC<{
 	form: any;
 	isPending: boolean;
 }> = ({ sectionIndex, form, isPending }) => {
-	const watchedSection = form.watch(`sections.${sectionIndex}`);
+	const { fields, append, remove } = useFieldArray({
+		control: form.control,
+		name: `sections.${sectionIndex}.lessons`,
+	});
 
 	return (
 		<div className="space-y-6">
@@ -50,17 +53,11 @@ const SectionContent: React.FC<{
 					<Button
 						type="button"
 						onClick={() => {
-							const currentLessons = form.getValues(
-								`sections.${sectionIndex}.lessons`
-							);
-							form.setValue(`sections.${sectionIndex}.lessons`, [
-								...currentLessons,
-								{
-									title: "",
-									content: null,
-									isPreview: false,
-								},
-							]);
+							append({
+								title: "",
+								content: null,
+								isPreview: false,
+							});
 						}}
 						variant="outline"
 						size="sm"
@@ -72,28 +69,17 @@ const SectionContent: React.FC<{
 					</Button>
 				</div>
 
-				{watchedSection?.lessons?.map((lesson: any, lessonIndex: number) => (
+				{fields.map((lesson, lessonIndex) => (
 					<div
-						key={lessonIndex}
+						key={lesson.id}
 						className="p-4 bg-muted/50 rounded-lg space-y-4"
 					>
 						<div className="flex items-center justify-between">
 							<Badge variant="outline">Lesson {lessonIndex + 1}</Badge>
-							{watchedSection.lessons.length > 1 && (
+							{fields.length > 1 && (
 								<Button
 									type="button"
-									onClick={() => {
-										const currentLessons = form.getValues(
-											`sections.${sectionIndex}.lessons`
-										);
-										const newLessons = currentLessons.filter(
-											(_: any, i: number) => i !== lessonIndex
-										);
-										form.setValue(
-											`sections.${sectionIndex}.lessons`,
-											newLessons
-										);
-									}}
+									onClick={() => remove(lessonIndex)}
 									variant="ghost"
 									size="sm"
 									className="text-destructive"
@@ -127,17 +113,18 @@ const SectionContent: React.FC<{
 							<p className="text-sm text-muted-foreground">
 								Use the rich text editor to create lesson content
 							</p>
-							<LessonEditor
-								content={lesson.content}
-								onChange={(data) =>
-									form.setValue(
-										`sections.${sectionIndex}.lessons.${lessonIndex}.content`,
-										data
-									)
-								}
-								placeholder="Start writing your lesson content..."
-								isReadOnly={isPending}
-							/>
+                            <Controller
+                                name={`sections.${sectionIndex}.lessons.${lessonIndex}.content`}
+                                control={form.control}
+                                render={({ field }) => (
+                                    <LessonEditor
+                                        content={field.value}
+                                        onChange={field.onChange}
+                                        placeholder="Start writing your lesson content..."
+                                        isReadOnly={isPending}
+                                    />
+                                )}
+                            />
 						</div>
 					</div>
 				))}

@@ -22,6 +22,14 @@ const QuizCreation: React.FC<{
 		name: "quizzes",
 	});
 
+	// Sync field array with form values on initial mount and whenever quizzes length changes externally
+	const watchedQuizzes = form.watch("quizzes");
+	const currentLen = watchedQuizzes?.length ?? 0;
+	const arrayLen = quizArrays.fields.length;
+	if (currentLen !== arrayLen) {
+		quizArrays.replace(watchedQuizzes || []);
+	}
+
 	return (
 		<Card>
 			<CardHeader>

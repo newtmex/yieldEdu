@@ -5,17 +5,18 @@ import EditorJS from "@editorjs/editorjs";
 import Header from "@editorjs/header";
 import Paragraph from "@editorjs/paragraph";
 import List from "@editorjs/list";
-import ImageTool from "@editorjs/image";
 import Checklist from "@editorjs/checklist";
 import Quote from "@editorjs/quote";
 import Warning from "@editorjs/warning";
 import Marker from "@editorjs/marker";
-import Code from "@editorjs/code";
-import Delimiter from "@editorjs/delimiter";
+import CodeBox from "@bomdi/codebox";
+import Delimiter from "@coolbytes/editorjs-delimiter";
 import InlineCode from "@editorjs/inline-code";
 import LinkTool from "@editorjs/link";
 import Embed from "@editorjs/embed";
 import Table from "@editorjs/table";
+import SimpleImage from "@editorjs/simple-image";
+import Undo from "editorjs-undo";
 
 export const LessonEditor: React.FC<{
 	content: any;
@@ -30,8 +31,12 @@ export const LessonEditor: React.FC<{
 		if (!containerRef.current || editorRef.current) return;
 
 		editorRef.current = new EditorJS({
-				holder: containerRef.current,
-				readOnly: isReadOnly,
+			onReady: () => {
+				new Undo({ editor: editorRef.current });
+			},
+
+			holder: containerRef.current,
+			readOnly: isReadOnly,
 			tools: {
 				header: {
 					class: Header,
@@ -49,12 +54,7 @@ export const LessonEditor: React.FC<{
 					class: List,
 					inlineToolbar: true,
 				},
-				image: {
-					class: ImageTool,
-					config: {
-						// Optionally add uploader config here
-					},
-				},
+				image: SimpleImage,
 				checklist: {
 					class: Checklist,
 					inlineToolbar: true,
@@ -69,7 +69,21 @@ export const LessonEditor: React.FC<{
 				},
 				warning: Warning,
 				marker: Marker,
-				code: Code,
+				code: {
+					class: CodeBox,
+
+					config: {
+						modes: {
+							js: "JavaScript",
+							py: "Python",
+							go: "Go",
+							cpp: "C++",
+							cs: "C#",
+							md: "Markdown",
+						},
+						defaultMode: "go",
+					},
+				},
 				delimiter: Delimiter,
 				inlineCode: InlineCode,
 				linkTool: {

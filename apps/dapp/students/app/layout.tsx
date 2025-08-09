@@ -5,11 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import NextTopLoader from "nextjs-toploader";
 import { ThemeProvider } from "next-themes";
 import OCConnectWrapper from "@/components/oc-connect-wrapper";
-import "@opencampus/ocid-connect-js/lib/react/OCSpinner.css";
 import { yieldEduMetadata } from "@/metadata";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",

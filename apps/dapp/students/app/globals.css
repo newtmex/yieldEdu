@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@opencampus/ocid-connect-js/lib/react/OCSpinner.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -254,4 +255,455 @@
 }
 .animate-delay-1400 {
 	animation-delay: 1400ms;
+}
+
+/* ===========
+   Editor.js Base Styling
+   =========== */
+.ce-block {
+	margin-bottom: 1rem;
+	padding: 0.25rem 0;
+}
+
+/* Paragraphs */
+.ce-paragraph {
+	font-size: 1rem;
+	line-height: 1.7;
+	color: var(--foreground);
+}
+
+/* Headers */
+.ce-header {
+	font-weight: 600;
+	color: var(--foreground);
+	margin: 0.75rem 0 0.5rem;
+}
+.ce-header[contenteditable="true"]:focus {
+	outline: none;
+}
+
+/* Lists */
+.cdx-list {
+	padding-left: 1.5rem;
+}
+.cdx-list--unordered {
+	list-style: disc;
+}
+.cdx-list--ordered {
+	list-style: decimal;
+}
+
+/* Quote Tool */
+.cdx-quote {
+	border-left: 4px solid var(--primary);
+	padding-left: 1rem;
+	font-style: italic;
+	background-color: var(--muted);
+	color: var(--muted-foreground);
+	border-radius: 0.25rem;
+}
+
+/* Checklist */
+.cdx-checklist__item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.cdx-checklist__item-checkbox {
+	width: 18px;
+	height: 18px;
+}
+
+/* Warning Tool */
+.cdx-warning {
+	padding: 1rem;
+	background: var(--accent);
+	color: var(--accent-foreground);
+	border-radius: var(--radius);
+}
+
+/* Delimiter */
+.ce-delimiter {
+	text-align: center;
+	font-size: 1.5rem;
+	color: var(--muted-foreground);
+}
+
+/* Inline Code */
+.cdx-inline-code {
+	background: var(--muted);
+	color: var(--muted-foreground);
+	padding: 0.15rem 0.4rem;
+	border-radius: 0.25rem;
+	font-family: var(--font-mono);
+}
+
+/* Table Tool */
+.cdx-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+.cdx-table td,
+.cdx-table th {
+	border: 1px solid var(--border);
+	padding: 0.5rem;
+}
+
+/* Embed Tool */
+.embed-tool__caption {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+/* Image Tool */
+.image-tool__caption {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	text-align: center;
+	margin-top: 0.25rem;
+}
+
+/* ===========
+	 Code Tool (Always Dark Theme)
+	 =========== */
+.ce-code {
+	font-family: var(--font-mono);
+	background: #1e1e1e;
+	color: #d4d4d4;
+	padding: 0.75rem;
+	border-radius: var(--radius);
+	font-size: 0.875rem;
+	overflow-x: auto;
+}
+.ce-code ::selection {
+	background: rgba(255, 255, 255, 0.2);
+}
+/* 
+/* ==============================
+   Editor.js Unified Styling
+   ============================== */
+
+/* Light Mode Defaults */
+.cdx-block,
+.ce-header,
+.inlineToolButton,
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn,
+.ce-popover__search {
+	/* background: var(--background); */
+	color: var(--foreground);
+}
+
+.ce-inline-tool,
+.ce-conversion-toolbar__label,
+.ce-toolbox__button,
+.cdx-settings-button,
+.ce-toolbar__plus {
+	color: var(--foreground);
+}
+
+::selection {
+	background: var(--accent);
+	color: var(--accent-foreground);
+}
+
+.dark ::selection {
+	background: var(--primary);
+	color: var(--foreground);
+}
+
+/* Toolbars & Popovers - Light Mode */
+.ce-block--selected .ce-block__content,
+.ce-inline-toolbar,
+.codex-editor--narrow .ce-toolbox,
+.ce-conversion-toolbar,
+.ce-settings,
+.ce-settings__button,
+.ce-toolbar__settings-btn,
+.cdx-button,
+.ce-popover,
+.ce-toolbar__plus:hover {
+	background: var(--popover);
+	color: var(--foreground);
+}
+
+.cdx-settings-button:hover,
+.ce-settings__button:hover,
+.ce-toolbox__button--active,
+.ce-toolbox__button:hover,
+.cdx-button:hover,
+.ce-inline-toolbar__dropdown:hover,
+.ce-inline-tool:hover,
+.ce-popover__item:hover,
+.ce-toolbar__settings-btn:hover {
+	background-color: var(--accent);
+	color: var(--accent-foreground);
+}
+
+/* ==============================
+   Dark Mode
+   ============================== */
+.dark .cdx-block,
+.dark .ce-header,
+.dark .inlineToolButton,
+.dark .ce-toolbar__plus,
+.dark .ce-toolbar__settings-btn,
+.dark .ce-popover__search {
+	/* background: var(--background); */
+	color: var(--foreground);
+}
+
+.dark .ce-toolbar__plus:hover,
+.dark .ce-toolbar__settings-btn:hover,
+.dark .cdx-loader,
+.dark .cdx-button {
+	background: var(--muted);
+	color: var(--foreground);
+}
+
+.dark .cdx-button:hover {
+	background: var(--muted);
+}
+
+.dark .ce-popover,
+.dark .ce-popover-item,
+.dark .ce-popover-item__icon,
+.dark .ce-popover-items,
+.dark .ce-popover-item:hover {
+	/* background: var(--popover); */
+	color: var(--foreground);
+	border: none;
+}
+
+.dark .ce-popover__container {
+	background: var(--popover);
+	border: 1px solid var(--border);
+	box-shadow: 0 3px 15px -3px var(--border) / 0.2;
+}
+
+.dark .ce-popover--opened > .ce-popover__container {
+	border: 1px solid var(--border);
+}
+
+.dark .ce-popover-item-separator__line {
+	border: 1px solid var(--border);
+}
+
+.dark .cdx-search-field.ce-popover__search {
+	background-color: var(--muted) / 0.3;
+	border-color: var(--border);
+}
+
+.dark .cdx-search-field__input {
+	color: var(--foreground);
+}
+
+.dark .ce-inline-toolbar,
+.dark .ce-conversion-tool__icon,
+.dark .ce-popover-item__icon,
+.dark .tc-popover__item-icon {
+	/* background-color: var(--popover); */
+	color: var(--foreground);
+	border-color: var(--border);
+}
+
+.dark .ce-inline-tool:hover,
+.dark .ce-inline-toolbar__dropdown:hover,
+.dark .ce-toolbar__plus:hover,
+.dark .ce-toolbar__settings-btn:hover,
+.dark .ce-conversion-tool:hover,
+.dark .ce-popover-item:hover {
+	background-color: var(--accent);
+	color: var(--accent-foreground);
+}
+
+.dark *::selection,
+.dark .ce-block.ce-block--selected .ce-block__content {
+	background-color: var(--accent) / 0.2;
+}
+
+/* Scrollbar Styling */
+.ce-popover__items::-webkit-scrollbar {
+	width: 4px;
+}
+.ce-popover__items::-webkit-scrollbar-thumb {
+	background-color: #ccc;
+	border-radius: 10px;
+}
+.dark .ce-popover__items::-webkit-scrollbar-thumb {
+	background-color: var(--border);
+}
+
+/* Inline Tools */
+.ce-inline-tool {
+	color: var(--foreground);
+	transition:
+		background 0.2s,
+		color 0.2s;
+}
+.ce-inline-tool--active {
+	background: var(--accent);
+	color: var(--accent-foreground);
+}
+.dark .ce-inline-tool {
+	color: var(--foreground);
+}
+.dark .ce-inline-tool--active {
+	background: var(--accent);
+	color: var(--accent-foreground);
+}
+.dark .ce-inline-tool-input,
+.dark .ce-inline-tool-input--showed {
+	background: var(--popover);
+	color: var(--popover-foreground);
+}
+
+/* Code Tool Dark Mode */
+.dark .ce-code__textarea {
+	background: #0d1117;
+	color: #c9d1d9;
+	border-radius: 6px;
+	font-family: monospace;
+	padding: 1rem;
+	border: 1px solid var(--border);
+}
+.dark .ce-code__textarea:focus {
+	outline: 1px solid var(--accent);
+}
+
+/* Table Tool */
+.dark .tc-wrap,
+.dark .tc-wrap * {
+	--color-border: var(--border);
+	--color-text-secondary: var(--foreground);
+	--color-background: var(--accent) / 0.2;
+	--toggler-dots-color: var(--accent) / 0.2;
+	--toggler-dots-color-hovered: var(--foreground);
+}
+
+/* ==============================
+   Table Tool Dark Mode Styling
+   ============================== */
+.dark .tc-table {
+	border: 1px solid var(--border);
+	background: var(--background);
+}
+
+.dark .tc-row {
+	border-bottom: 1px solid var(--border);
+}
+
+.dark .tc-cell {
+	padding: 8px;
+	border-right: 1px solid var(--border);
+	color: var(--foreground);
+}
+
+.dark .tc-cell:last-child {
+	border-right: none;
+}
+
+/* Row hover effect */
+.dark .tc-row:hover .tc-cell {
+	background-color: var(--accent) / 0.1;
+}
+
+/* Add new row/column buttons */
+.dark .tc-add-row,
+.dark .tc-add-column {
+	background: var(--muted);
+	color: var(--foreground);
+	border: 1px solid var(--border);
+}
+.dark .tc-add-row:hover,
+.dark .tc-add-column:hover {
+	background: var(--accent);
+	color: var(--accent-foreground);
+}
+
+/* ==============================
+   Warning Tool Light Mode
+   ============================== */
+.cdx-warning,
+.cdx-warning > * {
+	background-color: #fff4f4; /* soft red tint */
+	border: 1px solid #ff6b6b5b;
+	border-radius: 6px;
+	color: #a33;
+}
+
+.cdx-warning__title {
+	font-weight: bold;
+	color: #d33;
+}
+
+.cdx-warning__message {
+	color: #a33;
+}
+
+/* ==============================
+   Warning Tool Light Mode
+   ============================== */
+.cdx-warning,
+.cdx-warning > * {
+	background-color: #fff0f0; /* stronger soft red tint */
+	border: 1px solid #ff4d4f; /* vivid red border */
+	border-radius: 6px;
+	color: #a00000;
+	padding: 8px;
+}
+
+.cdx-warning__title {
+	font-weight: bold;
+	color: #d93025; /* more visible red */
+	margin-bottom: 4px;
+}
+
+.cdx-warning__message {
+	color: #a00000;
+}
+
+/* ==============================
+	  Warning Tool Dark Mode
+	  ============================== */
+.dark .cdx-warning,
+.dark .cdx-warning > * {
+	background-color: #2d1f1f; /* subtle red tone */
+	border: 1px solid #ff6b6b5b;
+	border-radius: 6px;
+	color: #ffd6d6;
+	/* padding: 8px; */
+}
+
+.dark .cdx-warning__title {
+	font-weight: bold;
+	color: #ff9b9b;
+	/* margin-bottom: 4px; */
+}
+
+.dark .cdx-warning__message {
+	color: #ffd6d6;
+}
+
+h1.ce-header {
+	font-size: 2rem;
+}
+h2.ce-header {
+	font-size: 1.75rem;
+}
+h3.ce-header {
+	font-size: 1.5rem;
+}
+h4.ce-header {
+	font-size: 1.25rem;
+}
+
+/* Mobile Fixes */
+@media (max-width: 650px) {
+	.dark .ce-toolbar__settings-btn,
+	.dark .ce-toolbar__plus {
+		background-color: var(--popover);
+		border-color: var(--border);
+		box-shadow: 0 3px 15px -3px var(--border) / 0.2;
+	}
 }
