@@ -4,6 +4,7 @@ declare module "@editorjs/list";
 declare module "@editorjs/header";
 declare module "@editorjs/paragraph";
 declare module "@bomdi/codebox";
+declare module "@bruh-codes/codebox";
 declare module "@coolbytes/editorjs-delimiter";
 declare module "@editorjs/table";
 declare module "@editorjs/marker";

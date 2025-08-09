@@ -9,7 +9,7 @@ import Checklist from "@editorjs/checklist";
 import Quote from "@editorjs/quote";
 import Warning from "@editorjs/warning";
 import Marker from "@editorjs/marker";
-import Code from "@editorjs/code";
+import CodeBox from "@bruh-codes/codebox";
 import Delimiter from "@editorjs/delimiter";
 import InlineCode from "@editorjs/inline-code";
 import LinkTool from "@editorjs/link";
@@ -28,7 +28,21 @@ const tools = {
 	quote: Quote,
 	warning: Warning,
 	marker: Marker,
-	code: Code,
+	code: {
+		class: CodeBox,
+
+		config: {
+			modes: {
+				js: "JavaScript",
+				py: "Python",
+				go: "Go",
+				cpp: "C++",
+				cs: "C#",
+				md: "Markdown",
+			},
+			defaultMode: "go",
+		},
+	},
 	delimiter: Delimiter,
 	inlineCode: InlineCode,
 	linkTool: LinkTool,
@@ -60,7 +74,7 @@ const LessonContent: React.FC<LessonContentProps> = ({ content }) => {
 			defaultValue={content}
 			readOnly
 			tools={tools}
-			minHeight={10}
+			minHeight={500}
 			onInitialize={(instance) => (editorCoreRef.current = instance)}
 		/>
 	);

@@ -698,6 +698,35 @@ h4.ce-header {
 	font-size: 1.25rem;
 }
 
+.light .codeBoxTextArea {
+	color: #383a42;
+	background-color: var(--color-border);
+}
+.codeBoxTextArea {
+	color: var(--foreground);
+	background-color: var(--color-border);
+	padding: 1em;
+	border-radius: 0.4em;
+}
+
+div .codeBoxSelectPreview.codeBoxShow {
+	background-color: var(--background);
+	color: var(--background);
+}
+.light div .codeBoxSelectItem {
+	background-color: var(--color-border);
+	color: var(--secondary);
+}
+
+.codeBoxSelectDropIcon.dark,
+.codeBoxSelectInput.dark {
+	background-color: var(--accent);
+}
+
+.codeBoxTextArea {
+	font-size: 14px;
+}
+
 /* Mobile Fixes */
 @media (max-width: 650px) {
 	.dark .ce-toolbar__settings-btn,
