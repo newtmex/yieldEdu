@@ -7,6 +7,8 @@ import featuredCourseImage from "@/public/featured-course.svg";
 import { Badge } from "./ui/badge";
 import { LoaderCircle } from "lucide-react";
 import useCourseInfo from "@/hooks/course";
+import { TooltipInfo } from "./tooltip-info";
+import { formatNumber } from "@/helpers";
 
 type CourseCardProps = {
 	title: string;
@@ -15,6 +17,7 @@ type CourseCardProps = {
 	id?: string;
 	difficulty?: string;
 	Category?: string;
+	rating?: { userId: string; rating: number }[];
 };
 
 export default function CourseCard({
@@ -24,8 +27,15 @@ export default function CourseCard({
 	id,
 	difficulty,
 	Category,
+	rating,
 }: CourseCardProps) {
 	const { isPending, course_completed } = useCourseInfo(id as string);
+
+	const averageRating = rating?.length
+		? (
+				rating.reduce((sum: number, r) => sum + r.rating, 0) / rating.length
+			).toFixed(1)
+		: "0";
 
 	return (
 		<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
@@ -50,9 +60,19 @@ export default function CourseCard({
 								)}
 							</Button>
 						) : course_completed ? (
-							<Button disabled className="mt-4 text-sm px-4 py-2 rounded">
-								Course Completed
-							</Button>
+							<div className="flex flex-wrap sm:flex-nowrap">
+								<Button disabled className="mt-4 text-sm px-4 py-2 rounded">
+									Course Completed
+								</Button>
+								<Link href={`/courses/${id}`}>
+									<Button
+										variant={"link"}
+										className="mt-4 text-xs px-4 underline hover:text-white/70 py-2 rounded"
+									>
+										Course details
+									</Button>
+								</Link>
+							</div>
 						) : course_completed === undefined ? (
 							<Link href={`/courses/${id}`}>
 								<Button className="mt-4 text-sm px-4 py-2 rounded">
@@ -60,11 +80,21 @@ export default function CourseCard({
 								</Button>
 							</Link>
 						) : (
-							<Link href={`/courses/${id}/learning`}>
-								<Button className="mt-4 text-sm px-4 py-2 rounded">
-									Continue course
-								</Button>
-							</Link>
+							<div className="flex flex-wrap sm:flex-nowrap">
+								<Link href={`/courses/${id}/learning`}>
+									<Button className="mt-4 text-sm px-4 py-2 rounded">
+										Continue course
+									</Button>
+								</Link>
+								<Link href={`/courses/${id}`}>
+									<Button
+										variant={"link"}
+										className="mt-4 text-xs px-4 underline hover:text-white/70 py-2 rounded"
+									>
+										Course details
+									</Button>
+								</Link>
+							</div>
 						)}
 					</div>
 					<Image
@@ -75,10 +105,18 @@ export default function CourseCard({
 						className="object-contain hidden [@media(min-width:425px)]:flex invert-0 dark:invert"
 					/>
 				</CardContent>
-				<div className="absolute bottom-3 w-fit text-xs right-5 flex items-center gap-1">
-					<IconStarFilled className="!text-yellow-500 h-auto w-3" />
-					4.9
-				</div>
+				{parseFloat(averageRating) > 0 && (
+					<div className="absolute bottom-3 w-fit text-xs right-5 ">
+						<TooltipInfo
+							showHelp={false}
+							className="flex items-center gap-1"
+							content={`Average rating from ${formatNumber(rating?.length || 0)} user(s)`}
+						>
+							<IconStarFilled className="!text-yellow-500 h-auto w-3" />
+							{averageRating}
+						</TooltipInfo>
+					</div>
+				)}
 			</Card>
 		</div>
 	);

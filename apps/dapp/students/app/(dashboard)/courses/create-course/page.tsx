@@ -316,6 +316,7 @@ const CourseCreation = () => {
 				instructor: {
 					name: session?.user.name,
 					avatar: session?.user.image,
+					user_id: session?.user.id,
 				},
 			};
 
@@ -436,6 +437,7 @@ const CourseCreation = () => {
 						.from("courses")
 						.insert([
 							{
+								user_id: processedData.instructor.user_id,
 								title: processedData.title,
 								description: processedData.description,
 								long_description: processedData.longDescription,
@@ -472,6 +474,7 @@ const CourseCreation = () => {
 								.from("lessons")
 								.insert([
 									{
+										course_id: course.id,
 										section_id: newSection.id,
 										title: lesson.title,
 										is_preview: lesson.isPreview,

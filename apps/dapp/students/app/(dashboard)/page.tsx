@@ -111,7 +111,7 @@ export default function Page() {
 		queryFn: async () => {
 			const { data, error } = await supabase
 				.from("courses")
-				.select("title,id,description,image_url")
+				.select("title,id,description,rating,image_url")
 				.eq("featured", true);
 			if (error) {
 				throw new Error(error.message);
@@ -191,12 +191,12 @@ export default function Page() {
 					(l) => l.id === current_lesson
 				);
 				lessonTitle = `Lesson ${lessonIndex + 1}: ${foundLesson.title}`;
-			} 
+			}
 		}
 
 		const foundQuiz = typedCourse.quizzes?.find(
-				(quiz) => quiz.id === current_lesson
-			);
+			(quiz) => quiz.id === current_lesson
+		);
 
 		if (foundQuiz) {
 			const quizIndex = typedCourse.quizzes?.findIndex(
@@ -205,7 +205,6 @@ export default function Page() {
 			lessonTitle = `Quiz ${quizIndex + 1}: ${foundQuiz.question}`;
 			itemsLeftText = `${itemsLeft} quizzes left`;
 		}
-
 
 		return {
 			title: typedCourse.title,

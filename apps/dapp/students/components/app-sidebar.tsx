@@ -71,6 +71,12 @@ const data = {
 			locked: false,
 		},
 		{
+			title: "Achievements",
+			url: "/achievements",
+			icon: IconTrophy,
+			locked: true,
+		},
+		{
 			title: "Performance",
 			url: "/performance",
 			icon: IconGymnastics,
@@ -86,12 +92,6 @@ const data = {
 			title: "Campaigns",
 			url: "/campaigns",
 			icon: IconSpeakerphone,
-			locked: true,
-		},
-		{
-			title: "Achievements",
-			url: "/achievements",
-			icon: IconTrophy,
 			locked: true,
 		},
 	],

@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import useCourseInfo from "@/hooks/course";
 import { LoaderCircle } from "lucide-react";
+import CourseRating from "./course-rating";
 
 type courseProgressProps = {
 	id?: string;
@@ -55,12 +56,15 @@ const ProgressCourse = ({
 							{isPending && <LoaderCircle className="animate-spin" size={16} />}
 						</Button>
 					) : course_completed ? (
-						<Button
-							disabled
-							className=" w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400"
-						>
-							Course Completed
-						</Button>
+						<>
+							<CourseRating className="flex-row" courseId={id} />
+							<Button
+								disabled
+								className=" w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400"
+							>
+								Course Completed
+							</Button>
+						</>
 					) : (
 						<Link href={`/courses/${id}/learning`}>
 							<Button className=" w-full dark:bg-lime-600/30 dark:hover:bg-lime-600/20 dark:text-lime-400">

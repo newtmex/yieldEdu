@@ -27,11 +27,13 @@ export function TooltipInfo({
 	className,
 	disabled,
 	children,
+	showHelp = true,
 }: {
 	content: string;
 	className?: ClassValue;
 	disabled?: boolean;
 	children?: React.ReactNode;
+	showHelp?: boolean;
 }) {
 	const isTouch = useIsTouchDevice();
 
@@ -39,7 +41,7 @@ export function TooltipInfo({
 		return (
 			<span className={cn("cursor-help", className)}>
 				{children}
-				<HelpCircle className="size-3 text-muted-foreground" />
+				{showHelp && <HelpCircle className="size-3 text-muted-foreground" />}
 			</span>
 		);
 
@@ -49,7 +51,9 @@ export function TooltipInfo({
 				<PopoverTrigger className={cn(className)}>
 					{children}
 					<span className={cn("cursor-help text-muted-foreground", className)}>
-						<HelpCircle className="size-3 text-muted-foreground" />
+						{showHelp && (
+							<HelpCircle className="size-3 text-muted-foreground" />
+						)}
 					</span>
 				</PopoverTrigger>
 				<PopoverContent className="max-w-xs text-sm">{content}</PopoverContent>
@@ -63,7 +67,9 @@ export function TooltipInfo({
 				<TooltipTrigger className={cn(className)}>
 					{children}
 					<span className={cn("cursor-help", className)}>
-						<HelpCircle className="size-3 text-muted-foreground" />
+						{showHelp && (
+							<HelpCircle className="size-3 text-muted-foreground" />
+						)}
 					</span>
 				</TooltipTrigger>
 				<TooltipContent className="max-w-xs text-sm">{content}</TooltipContent>

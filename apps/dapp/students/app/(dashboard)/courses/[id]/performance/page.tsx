@@ -23,6 +23,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
+import CourseRating from "@/components/course-rating";
 
 type Quiz = {
 	question: string;
@@ -190,6 +191,73 @@ const CoursePerformance = () => {
 		}
 	}, [progressData]);
 
+	useEffect(() => {
+		async function savePerformance() {
+			if (!performanceData || !session?.user.id) return;
+
+			// Check if performance already exists for this user & course
+			const { data: existing, error: fetchError } = await supabase
+				.from("performance")
+				.select("id")
+				.eq("user_id", session.user.id)
+				.eq("course_id", id)
+				.single();
+
+			if (fetchError && fetchError.code !== "PGRST116") {
+				// Only log error if it's not "No rows found"
+				console.error(fetchError);
+				return;
+			}
+
+			if (existing) {
+				console.log("Performance already exists, skipping insert");
+				return;
+			}
+
+			//  Precompute quiz accuracy percent
+			const quizAccuracyPercent =
+				performanceData.totalQuestions &&
+				performanceData.correctAnswers &&
+				performanceData.totalQuestions > 0
+					? Math.round(
+							(performanceData.correctAnswers /
+								performanceData.totalQuestions) *
+								100
+						)
+					: 0;
+
+			let completionDate = null;
+			if (performanceData.completionDate) {
+				const date = new Date(performanceData.completionDate);
+				completionDate = isNaN(date.getTime()) ? null : date.toISOString();
+			}
+
+			//  Insert new record
+			const { error } = await supabase.from("performance").insert([
+				{
+					user_id: session.user.id,
+					course_id: id,
+					course_name: performanceData.courseName,
+					completion_date: completionDate,
+					overall_score: performanceData.overallScore,
+					grade: performanceData.grade,
+					sections_completed: performanceData.sectionsCompleted,
+					total_sections: performanceData.totalSections,
+					correct_answers: performanceData.correctAnswers,
+					total_questions: performanceData.totalQuestions,
+					quiz_accuracy_percent: quizAccuracyPercent,
+					quizzes_completed: performanceData.quizzesCompleted,
+					total_quizzes: performanceData.totalQuizzes,
+					quiz_results: performanceData.quizResults,
+				},
+			]);
+
+			if (error) console.error(error);
+		}
+
+		savePerformance();
+	}, [performanceData, session?.user.id, id]);
+
 	return isPending ? (
 		<CoursePerformanceSkeleton />
 	) : !progressData ? (
@@ -222,14 +290,19 @@ const CoursePerformance = () => {
 					<CardContent className="p-6">
 						<div className="text-center">
 							<div className="w-16 h-16 bg-lime-600 rounded-full flex items-center justify-center mx-auto mb-4">
-								<Trophy className="size-8" />
+								<Trophy className="size-8 text-white" />
 							</div>
-							<h1 className="text-2xl font-bold mb-2">Congratulations!</h1>
+							<h1 className="text-2xl font-bold mb-2">
+								Congratulations! You've completed
+							</h1>
 							<p className="text-muted-foreground mb-4">
-								You've completed {performanceData.courseName}
+								{performanceData.courseName}
 							</p>
-							<div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+							<div className="flex items-center justify-center gap-6 text-sm text-amber-500">
 								<span>Completed on {performanceData.completionDate}</span>
+							</div>
+							<div className="flex mt-5 gap-2">
+								<CourseRating courseId={id} />
 							</div>
 						</div>
 					</CardContent>

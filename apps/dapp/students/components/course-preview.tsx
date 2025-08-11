@@ -53,6 +53,7 @@ const CoursePreview: React.FC<{ courseData: extendedCourseData }> = ({
 					courseData.description || "Course description will appear here..."
 				}
 				title={courseData.title || "Course Title"}
+				rating={[]}
 			/>
 
 			<div className="grid lg:grid-cols-5 gap-4">

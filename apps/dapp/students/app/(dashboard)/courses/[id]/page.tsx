@@ -241,11 +241,12 @@ const Page = () => {
 		return <EmptyState />;
 	}
 
-	const ratings = courseData?.rating ?? [];
-	const averageRating =
-		ratings.length > 0
-			? ratings.reduce((sum: number, r: number) => sum + r, 0) / ratings.length
-			: 0;
+	const ratings = (courseData?.rating ?? []) as { rating: number }[];
+	const averageRating = ratings?.length
+		? (
+				ratings.reduce((sum: number, r) => sum + r.rating, 0) / ratings.length
+			).toFixed(1)
+		: "0";
 
 	return (
 		<div className="min-h-screen">
@@ -280,7 +281,7 @@ const Page = () => {
 												<Star
 													key={i}
 													className={`w-4 h-4 ${
-														i < Math.round(averageRating)
+														i < Math.round(parseFloat(averageRating))
 															? "fill-yellow-400 text-yellow-400"
 															: "text-gray-300"
 													}`}
@@ -492,10 +493,6 @@ const Page = () => {
 											<CourseLike courseId={id} />
 										</>
 									)}
-
-									{/* <div className="flex gap-2">
-										<CourseRating />
-									</div> */}
 								</div>
 
 								{/* Course Includes */}

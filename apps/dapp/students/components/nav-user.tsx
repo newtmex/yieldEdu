@@ -52,12 +52,14 @@ export function NavUser({
 	const profileDetails = session?.user;
 	const router = useRouter();
 	const handleLogout = async () => {
+		toast.loading("Logging out of session", { id: "sessionId" });
 		try {
 			if (isConnected) {
 				await disconnect();
 			}
 			await authClient.signOut();
 			router.push("/signin");
+			toast.dismiss("sessionId");
 		} catch (error) {
 			console.error("Failed to disconnect:", error);
 			toast.error("Failed to disconnect.");

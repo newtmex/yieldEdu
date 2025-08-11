@@ -75,9 +75,10 @@ const CourseLike = ({ courseId }: { courseId?: ParamValue }) => {
 	});
 
 	const handleLike = () => {
-		if (!userId || !courseData) return;
+		if (!userId) return;
+		const currentData: any = queryClient.getQueryData(["likes", courseId]);
+		const currentLikes = currentData?.likes || [];
 
-		const currentLikes = courseData.likes || [];
 		const updatedLikes = isLiked
 			? currentLikes.filter((id: string) => id !== userId)
 			: [...currentLikes, userId];
@@ -96,6 +97,7 @@ const CourseLike = ({ courseId }: { courseId?: ParamValue }) => {
 			variant="ghost"
 			size="sm"
 			onClick={handleLike}
+			disabled={likeMutation.isPending}
 			className="flex items-center gap-2"
 		>
 			<Heart
