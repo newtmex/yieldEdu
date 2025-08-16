@@ -25,13 +25,12 @@ export default async function RootLayout({
 	children: React.ReactNode;
 }>) {
 	const opts = {
-		clientId: "",
-		// clientId: process.env.NEXT_PUBLIC_OCID_CLIENT_ID!,
+		clientId: process.env.NEXT_PUBLIC_OCID_CLIENT_ID!,
 		redirectUri: (() => {
-			// const baseUrl = process.env.BETTER_AUTH_URL;
-			// if (baseUrl) {
-			// 	return `${baseUrl}/redirect`;
-			// }
+			const baseUrl = process.env.BETTER_AUTH_URL;
+			if (baseUrl) {
+				return `${baseUrl}/redirect`;
+			}
 			return "http://localhost:3000/redirect";
 		})(),
 		referralCode: "PARTNER6",
@@ -54,7 +53,7 @@ export default async function RootLayout({
 					shadow="0 0 10px #84cc16,0 0 5px #84cc16"
 					zIndex={9999}
 				/>
-				<OCConnectWrapper opts={opts} sandboxMode={true}>
+				<OCConnectWrapper opts={opts} sandboxMode={false}>
 					<ThemeProvider
 						attribute="class"
 						defaultTheme="system"

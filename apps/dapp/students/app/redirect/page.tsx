@@ -12,17 +12,17 @@ export default function Page() {
 	const [timeoutReached, setTimeoutReached] = useState(false);
 	const { authState } = useOCAuth();
 
-	// useEffect(() => {
-	// 	const timer = setTimeout(() => {
-	// 		setTimeoutReached(true);
-	// 	}, 20000); // 10 seconds timeout
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setTimeoutReached(true);
+		}, 20000); // 10 seconds timeout
 
-	// 	return () => clearTimeout(timer); // Cleanup on unmount
-	// }, []);
+		return () => clearTimeout(timer); // Cleanup on unmount
+	}, []);
 
 	const onLoginSuccess = async () => {
 		if (!timeoutReached) {
-			router.push("/");
+			router.push("/achievements");
 		}
 	};
 
