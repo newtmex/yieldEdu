@@ -1,21 +1,39 @@
 "use client";
 
-import { LoginCallBack } from "@opencampus/ocid-connect-js";
+import { LoginCallBack, useOCAuth } from "@opencampus/ocid-connect-js";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-export default function RedirectPage() {
+export default function Page() {
 	const router = useRouter();
+	const [timeoutReached, setTimeoutReached] = useState(false);
+	const { authState } = useOCAuth();
+
+	// useEffect(() => {
+	// 	const timer = setTimeout(() => {
+	// 		setTimeoutReached(true);
+	// 	}, 20000); // 10 seconds timeout
+
+	// 	return () => clearTimeout(timer); // Cleanup on unmount
+	// }, []);
 
 	const onLoginSuccess = async () => {
-		// router.push("/");
+		if (!timeoutReached) {
+			router.push("/");
+		}
 	};
 
 	const onLoginError = () => {
-		console.log("Error during login callback");
+		console.log("Error during login callback", authState.error);
+		return <div>Error Logging in: {authState.error}</div>;
 	};
+
+	if (timeoutReached) {
+		return <TimeoutScreen />;
+	}
 
 	return (
 		<LoginCallBack
@@ -24,6 +42,20 @@ export default function RedirectPage() {
 			customErrorComponent={<ErrorScreen />}
 			customLoadingComponent={<LoadingScreen />}
 		/>
+	);
+}
+
+function TimeoutScreen() {
+	return (
+		<div className="container flex flex-col items-center justify-center min-h-[70vh] py-12 text-center space-y-6">
+			<AlertTriangle className="h-16 w-16 text-yellow-600 dark:text-yellow-400" />
+			<h1 className="text-3xl font-bold">This is taking too long</h1>
+			<p className="max-w-[600px] text-muted-foreground md:text-lg">
+				The login process is taking longer than expected. Please refresh the
+				page and try again.
+			</p>
+			<Button onClick={() => window.location.reload()}>Refresh Page</Button>
+		</div>
 	);
 }
 

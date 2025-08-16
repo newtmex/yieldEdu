@@ -25,10 +25,15 @@ export default async function RootLayout({
 	children: React.ReactNode;
 }>) {
 	const opts = {
-		clientId: process.env.NEXT_PUBLIC_OCID_CLIENT_ID!,
-		redirectUri:
-			process.env.NEXT_PUBLIC_OCID_REDIRECT_URI! ||
-			"http://localhost:3000/redirect",
+		clientId: "",
+		// clientId: process.env.NEXT_PUBLIC_OCID_CLIENT_ID!,
+		redirectUri: (() => {
+			// const baseUrl = process.env.BETTER_AUTH_URL;
+			// if (baseUrl) {
+			// 	return `${baseUrl}/redirect`;
+			// }
+			return "http://localhost:3000/redirect";
+		})(),
 		referralCode: "PARTNER6",
 	};
 

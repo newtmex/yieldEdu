@@ -16,7 +16,7 @@ interface EmailProps {
 	link: string;
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://yieldedu.org";
+const baseUrl = process.env.BETTER_AUTH_URL ?? "https://yieldedu.org";
 
 export const EmailTemplate = ({ link }: EmailProps) => (
 	<Html style={{ minHeight: "100vh" }}>

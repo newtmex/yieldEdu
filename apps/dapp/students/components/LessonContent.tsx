@@ -74,7 +74,7 @@ const LessonContent: React.FC<LessonContentProps> = ({ content }) => {
 			defaultValue={content}
 			readOnly
 			tools={tools}
-			minHeight={500}
+			minHeight={200}
 			onInitialize={(instance) => (editorCoreRef.current = instance)}
 		/>
 	);

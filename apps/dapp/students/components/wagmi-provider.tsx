@@ -32,7 +32,7 @@ const metadata = {
 	name: "YieldEdu",
 	description:
 		"A decentralized education and a fixed-yield protocol that earns users guaranteed yields on their EDU tokens.",
-	url: process.env.NEXT_PUBLIC_APP_URL!,
+	url: process.env.BETTER_AUTH_URL!,
 	icons: ["https://avatars.githubusercontent.com/u/179229932"],
 };
 

@@ -45,7 +45,7 @@ const page = () => {
 
 	return (
 		<div className="space-y-4 p-5">
-			<div className="flex flex-col md:flex-row max-w-4xl mx-auto justify-center items-center gap-4 ">
+			<div className="flex border-b flex-col md:flex-row max-w-4xl mx-auto justify-center items-center gap-4 ">
 				<div className="flex-[1.5] w-full space-y-3">
 					<h1 className="text-xl md:text-3xl lg:text-5xl mb-2 font-bold">
 						Learn and Earn at Your Own Pace
@@ -74,7 +74,6 @@ const page = () => {
 					/>
 				</div>
 			</div>
-			<Separator />
 			<div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-4">
 				{isPending ? (
 					Array.from({ length: 5 }).map((_, idx) => (

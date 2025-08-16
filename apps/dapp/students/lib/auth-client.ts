@@ -8,7 +8,7 @@ import type { auth } from "./auth.ts";
 import { ac, roles } from "./permissions";
 
 export const authClient = createAuthClient({
-	baseURL: process.env.NEXT_PUBLIC_APP_URL,
+	baseURL: process.env.BETTER_AUTH_URL,
 	fetchOptions: {
 		onError(context) {
 			const { response } = context;

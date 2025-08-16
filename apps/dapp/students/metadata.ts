@@ -47,7 +47,7 @@ export const yieldEduMetadata: Metadata = {
 		images: ["/opengraph.png"],
 		creator: "@bruh_codes",
 	},
-	metadataBase: new URL(process.env.NEXT_PUBLIC_WEBSITE_URL as string),
+	metadataBase: new URL(process.env.BETTER_AUTH_URL as string),
 
 	category: "education",
 
