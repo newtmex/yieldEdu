@@ -3,14 +3,12 @@
 import { Stars } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useEffect } from "react";
-// import { FiArrowRight } from "react-icons/fi"
 import {
 	useMotionTemplate,
 	useMotionValue,
 	motion,
 	animate,
 } from "framer-motion";
-import { Badge } from "./ui/badge";
 import { PlasticButton } from "./plastic-button";
 import Link from "next/link";
 
