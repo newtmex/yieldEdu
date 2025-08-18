@@ -50,7 +50,7 @@ import QuizCreation from "@/components/quiz-creation";
 import Loading from "@/app/loading";
 import { useCoursePermissions } from "@/hooks/course";
 import { UserRoles } from "@/lib/permissions";
-import { LoadingScreen } from "@/app/redirect/page";
+import LoadingScreen from "@/components/loading-screen";
 
 export type CourseFormData = z.infer<typeof courseSchema>;
 
