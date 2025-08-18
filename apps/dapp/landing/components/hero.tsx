@@ -46,7 +46,7 @@ export const Hero = () => {
 					where learners grow through verified progress and investors track real
 					impact.
 				</p>
-				<div className="flex gap-5 relative">
+				<div className="flex items-center gap-5 relative">
 					<motion.button
 						disabled
 						style={{

@@ -48,7 +48,7 @@ const Page = () => {
 					/>
 					<div className="absolute inset-0 z-1 grainy" />
 
-					<p className=" absolute left-1/2 text-center -translate-x-1/2 bottom-24 text-lg text-[#00353B] font-bold mb-12 max-w-md mx-auto leading-relaxed">
+					<p className="w-full absolute left-1/2 text-center -translate-x-1/2 bottom-24 text-md md:text-lg text-[#165a62] font-bold mb-12 max-w-md mx-auto leading-relaxed">
 						YieldEdu gives you a way to earn Yuzu while impacting the future of
 						Education.
 					</p>
