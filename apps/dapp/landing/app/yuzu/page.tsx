@@ -87,10 +87,18 @@ const Page = () => {
 							</h2>
 
 							<p className="text-lg text-primary/80 leading-relaxed">
-								Yuzu Points are on-chain rewards within the EDU Chain ecosystem.
-								They cannot be traded, but they are earned through participation
-								and investment. On YieldEdu, Yuzu is proof of your learning
-								journey or your contribution to funding education.
+								Yuzu Points are{" "}
+								<span className="font-bold">on-chain rewards</span> within the{" "}
+								<span className="font-bold">EDU Chain ecosystem</span>. They{" "}
+								<span className="font-bold">cannot be traded</span>, but they
+								are{" "}
+								<span className="font-bold">earned through participation </span>
+								and <span className="font-bold">investment</span>. At YieldEdu,
+								Yuzu is{" "}
+								<span className="font-bold">proof of your learning</span>,
+								<span className="font-bold"> journey</span> and{" "}
+								<span className="font-bold">contribution</span> to{" "}
+								<span className="font-bold">funding education</span>.
 							</p>
 						</div>
 					</div>
