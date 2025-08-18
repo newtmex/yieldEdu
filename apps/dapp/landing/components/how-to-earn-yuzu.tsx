@@ -57,7 +57,7 @@ export function EarnYuzu() {
 						<CardContent>
 							<p className="text-md">
 								<span className="font-bold">Invest $EDU</span> to fund education
-								and <span className="font-bold">earn YUZU Points</span> , while
+								and <span className="font-bold">earn YUZU Points</span>, while
 								receiving back your{" "}
 								<span className="font-bold">yields plus principal</span>
 							</p>
