@@ -84,7 +84,7 @@ function ErrorScreen() {
 	);
 }
 
-function LoadingScreen() {
+export function LoadingScreen({ text }: { text?: string }) {
 	return (
 		<div className="flex h-screen flex-col items-center justify-center">
 			<svg
@@ -127,7 +127,11 @@ function LoadingScreen() {
 					/>
 				</circle>
 			</svg>
-			<p className="mt-4 text-lg">Please wait, we are redirecting you...</p>
+			{text ? (
+				<p className="mt-4 text-lg">{text}.</p>
+			) : (
+				<p className="mt-4 text-lg">Please wait, we are redirecting you...</p>
+			)}
 		</div>
 	);
 }

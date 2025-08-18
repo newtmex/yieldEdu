@@ -37,22 +37,24 @@ import featuredCourseImage from "@/public/featured-course.svg";
 import SectionContent from "@/components/course-section-content";
 import { useEffect, useState, useTransition } from "react";
 import { supabase } from "@/lib/supabase";
+import { debounce } from "lodash";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppKitAccount } from "@reown/appkit/react";
 import QuizCreation from "@/components/quiz-creation";
 import Loading from "@/app/loading";
 import { useCoursePermissions } from "@/hooks/course";
 import { UserRoles } from "@/lib/permissions";
+import { LoadingScreen } from "@/app/redirect/page";
 
 export type CourseFormData = z.infer<typeof courseSchema>;
 
-const CourseCreation = () => {
+const Page = () => {
 	const router = useRouter();
 	const { data: session } = authClient.useSession();
 	const [isPending, startTransition] = useTransition();
@@ -70,12 +72,92 @@ const CourseCreation = () => {
 	const [isFromDraft, setIsFromDraft] = useState(false);
 	const queryClient = useQueryClient();
 	const { address } = useAppKitAccount();
+	const {
+		hasContentCreationPermissions,
+		permissionsLoading,
+		isPermissionPending,
+	} = useCoursePermissions({
+		role: session?.user.role as UserRoles,
+		permissions: {
+			course: ["create", "delete:own", "update:own"],
+		},
+	});
 
+	const {
+		data: courseData,
+		isLoading,
+		isError,
+		error,
+	} = useQuery({
+		queryKey: ["modify_course", courseId],
+		queryFn: async () => {
+			const { data, error } = await supabase
+				.from("courses")
+				.select(`*, sections(*, lessons(*)), quizzes(*)`)
+				.eq("id", courseId)
+				.maybeSingle();
+
+			if (error) {
+				throw new Error(error.message);
+			}
+
+			if (!data) {
+				return null;
+			}
+
+			// Normalize the data
+			const normalizedDbData: CourseFormData = {
+				title: data.title || "",
+				description: data.description || "",
+				longDescription: data.long_description || "",
+				category: data.category || "",
+				difficulty: data.difficulty || "Beginner",
+				whatYouWillLearn: data.learning_outcomes || [""],
+				sections: (data.sections || [])?.map(
+					(section: {
+						title: string;
+						chapter_number: number;
+						lessons: any[];
+					}) => ({
+						title: section.title,
+						chapters: section.chapter_number,
+						lessons: (section.lessons || [])?.map(
+							(lesson: {
+								title: string;
+								content: any;
+								is_preview: boolean;
+							}) => ({
+								title: lesson.title,
+								content: lesson.content,
+								isPreview: lesson.is_preview,
+							})
+						),
+					})
+				),
+				quizzes: (data.quizzes || [])?.map(
+					(q: {
+						question: string;
+						options: string[];
+						correct_answer: number;
+					}) => ({
+						question: q.question,
+						options: q.options,
+						correctAnswer: q.correct_answer,
+					})
+				),
+			};
+
+			return normalizedDbData;
+		},
+		enabled: isEditMode && !!courseId, // Only fetch when in edit mode and courseId exists
+		staleTime: 5 * 60 * 1000, // 5 minutes
+		retry: 2,
+	});
 	const trimData = (data: CourseFormData): CourseFormData => {
 		const deepClean = (obj: any): any => {
 			if (Array.isArray(obj)) {
 				return obj
-					.map(deepClean) // clean each element
+					?.map(deepClean) // clean each element
 					.filter((item) => item !== undefined && item !== null && item !== "");
 			}
 			if (obj && typeof obj === "object") {
@@ -177,6 +259,106 @@ const CourseCreation = () => {
 		);
 	};
 
+	function logDeepDiff(a: any, b: any, path = "") {
+		if (a === b) return; // identical, no diff
+
+		if (a === undefined || b === undefined) {
+			console.log(`Diff at ${path || "root"}:`, { a, b });
+			return;
+		}
+
+		if (
+			typeof a !== "object" ||
+			typeof b !== "object" ||
+			a === null ||
+			b === null
+		) {
+			console.log(`Diff at ${path || "root"}:`, { a, b });
+			return;
+		}
+
+		if (Array.isArray(a) && Array.isArray(b)) {
+			if (a.length !== b.length) {
+				console.log(`Diff at ${path}: array length ${a.length} vs ${b.length}`);
+			}
+			a.forEach((item, i) => {
+				logDeepDiff(item, b[i], `${path}[${i}]`);
+			});
+			return;
+		}
+
+		const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+		keys.forEach((key) => {
+			if (!(key in a)) {
+				console.log(`Diff at ${path}.${key}: key missing in first object`, {
+					b: b[key],
+				});
+			} else if (!(key in b)) {
+				console.log(`Diff at ${path}.${key}: key missing in second object`, {
+					a: a[key],
+				});
+			} else {
+				logDeepDiff(a[key], b[key], path ? `${path}.${key}` : key);
+			}
+		});
+	}
+
+	function customDeepEqual(a: any, b: any): boolean {
+		// Same reference or primitive value
+		if (a === b) return true;
+
+		// Handle null or non-object types
+		if (
+			typeof a !== "object" ||
+			typeof b !== "object" ||
+			a === null ||
+			b === null
+		) {
+			return false;
+		}
+
+		// Arrays
+		if (Array.isArray(a) && Array.isArray(b)) {
+			if (a.length !== b.length) return false;
+			for (let i = 0; i < a.length; i++) {
+				if (!customDeepEqual(a[i], b[i])) return false;
+			}
+			return true;
+		}
+
+		// If one is array and other is not
+		if (Array.isArray(a) !== Array.isArray(b)) return false;
+
+		// Objects
+		const keysA = Object.keys(a).filter((k) => k !== "time"); // ignore "time" fields
+		const keysB = Object.keys(b).filter((k) => k !== "time");
+
+		if (keysA.length !== keysB.length) return false;
+
+		// Compare keys ignoring order
+		const allKeys = new Set([...keysA, ...keysB]);
+		for (let key of allKeys) {
+			if (!customDeepEqual(a[key], b[key])) return false;
+		}
+
+		return true;
+	}
+
+	const clearOldDrafts = () => {
+		try {
+			const keys = Object.keys(localStorage);
+			const draftKeys = keys.filter(
+				(key) => key.startsWith("course_draft_") && key !== LOCAL_STORAGE_KEY
+			);
+
+			draftKeys.forEach((key) => localStorage.removeItem(key));
+			console.log(`Cleared ${draftKeys.length} old drafts`);
+		} catch (error) {
+			console.error("Failed to clear old drafts:", error);
+		}
+	};
+
+	// Handle non-edit mode (draft loading)
 	useEffect(() => {
 		if (!isEditMode) {
 			const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -198,96 +380,140 @@ const CourseCreation = () => {
 				setInitialData(JSON.parse(JSON.stringify(form.getValues())));
 			}
 		}
+	}, [isEditMode, form.getValues]);
 
-		if (isEditMode) {
-			const fetchData = async () => {
-				const { data } = await supabase
-					.from("courses")
-					.select(`*, sections(*, lessons(*)), quizzes(*)`)
-					.eq("id", courseId)
-					.maybeSingle();
+	// Handle course data when it's available (edit mode)
+	useEffect(() => {
+		if (!isEditMode || !courseData) return;
 
-				if (data) {
-					const normalizedDbData: CourseFormData = {
-						title: data.title || "",
-						description: data.description || "",
-						longDescription: data.long_description || "",
-						category: data.category || "",
-						difficulty: data.difficulty || "Beginner",
-						whatYouWillLearn: data.learning_outcomes || [""],
-						sections: (data.sections || []).map(
-							(section: {
-								title: string;
-								chapter_number: number;
-								lessons: any[];
-							}) => ({
-								title: section.title,
-								chapters: section.chapter_number,
-								lessons: (section.lessons || []).map(
-									(lesson: {
-										title: string;
-										content: any;
-										is_preview: boolean;
-									}) => ({
-										title: lesson.title,
-										content: lesson.content,
-										isPreview: lesson.is_preview,
-									})
-								),
-							})
-						),
-						quizzes: (data.quizzes || []).map(
-							(q: {
-								question: string;
-								options: string[];
-								correct_answer: number;
-							}) => ({
-								question: q.question,
-								options: q.options,
-								correctAnswer: q.correct_answer,
-							})
-						),
-					};
+		const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
+		let hasMeaningfulDraft = false;
 
-					const savedDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
-					let hasMeaningfulDraft = false;
-					if (savedDraft) {
-						try {
-							const parsedDraft = JSON.parse(savedDraft);
-							// If the draft differs from the DB-normalized data, present the modal.
-							const draftDiffersFromDb = !deepEqual(
-								parsedDraft,
-								normalizedDbData
-							);
-							if (draftDiffersFromDb) {
-								hasMeaningfulDraft = true;
-								setDraftData(parsedDraft);
-								setInitialData(JSON.parse(JSON.stringify(normalizedDbData))); // DB remains the discard target
-								setIsFromDraft(true);
-								setShowDraftModal(true);
-							}
-						} catch (e) {
-							console.error("Invalid draft in edit mode, ignoring.", e);
-						}
+		if (savedDraft) {
+			try {
+				const parsedDraft = JSON.parse(savedDraft);
+				const draftDiffersFromDb = !deepEqual(parsedDraft, courseData);
+
+				if (draftDiffersFromDb) {
+					hasMeaningfulDraft = true;
+					setDraftData(parsedDraft);
+					setInitialData(JSON.parse(JSON.stringify(courseData)));
+					setIsFromDraft(true);
+					setShowDraftModal(true);
+				}
+			} catch (e) {
+				console.error("Invalid draft in edit mode, ignoring.", e);
+			}
+		}
+
+		if (!hasMeaningfulDraft) {
+			// No draft, or invalid draft, so load DB data now
+			form.reset(courseData);
+			setInitialData(JSON.parse(JSON.stringify(courseData)));
+			setIsFromDraft(false);
+		}
+	}, [courseData, isEditMode, form.reset]);
+
+	// Handle loading and error states
+	useEffect(() => {
+		if (isEditMode && isError) {
+			toast.error("An error occurred", {
+				description:
+					error?.message || "Something went wrong fetching the data.",
+			});
+			console.error(error);
+		}
+	}, [isEditMode, isError, error]);
+
+	useEffect(() => {
+		if (!initialData) return;
+
+		const debouncedSave = debounce((currentValues: CourseFormData) => {
+			try {
+				const serialized = JSON.stringify(currentValues);
+				const sizeInBytes = new Blob([serialized]).size;
+				const sizeInMB = sizeInBytes / (1024 * 1024);
+
+				if (sizeInMB > 4) {
+					toast.warning("Content too large to auto-save");
+					return;
+				}
+
+				localStorage.setItem(LOCAL_STORAGE_KEY, serialized);
+			} catch (error: any) {
+				if (error.name === "QuotaExceededError") {
+					toast.error("Storage full. Please save to server.");
+					clearOldDrafts();
+				}
+			}
+		}, 1000); // Save after 1 second of inactivity
+		const subscription = form.watch(() => {
+			const currentValues = trimData(form.getValues() as CourseFormData);
+			const initialValues = trimData(initialData);
+
+			const changed = !customDeepEqual(currentValues, initialValues);
+
+			if (changed) {
+				console.log("=== Diff Found ===");
+				logDeepDiff(currentValues, initialValues);
+				setHasChanges(true);
+				debouncedSave(currentValues);
+
+				try {
+					const serialized = JSON.stringify(currentValues);
+					const sizeInBytes = new Blob([serialized]).size;
+					const sizeInMB = sizeInBytes / (1024 * 1024);
+
+					if (sizeInMB > 4) {
+						// Keep under 4MB
+						console.warn(`Draft too large: ${sizeInMB.toFixed(2)}MB`);
+						toast.warning("Contents too large to auto-save");
+						return;
 					}
 
-					if (!hasMeaningfulDraft) {
-						// No draft, or invalid draft, so load DB now
-						form.reset(normalizedDbData);
-						setInitialData(JSON.parse(JSON.stringify(normalizedDbData)));
-						setIsFromDraft(false);
+					localStorage.setItem(LOCAL_STORAGE_KEY, serialized);
+				} catch (error: any) {
+					if (error.name === "QuotaExceededError") {
+						console.error("Storage quota exceeded");
+						toast.error("Storage full. Please save your work to the server.");
+						// Optionally clear old drafts
+						clearOldDrafts();
 					}
 				}
-			};
+			} else {
+				setHasChanges(false);
+				localStorage.removeItem(LOCAL_STORAGE_KEY);
+				debouncedSave.cancel();
+			}
+		});
 
-			fetchData();
+		return () => {
+			subscription.unsubscribe();
+			debouncedSave.cancel();
+		};
+	}, [form, initialData, LOCAL_STORAGE_KEY]);
+
+	const { errors } = form.formState;
+
+	useEffect(() => {
+		if (form.formState.isSubmitted && errors) {
+			console.log(errors);
 		}
-	}, [isEditMode, courseId, form.reset, form.getValues]);
+	}, []);
 
+	useEffect(() => {
+		if (hasContentCreationPermissions === false) {
+			router.push("/unauthorized");
+		}
+	}, [hasContentCreationPermissions]);
 	const sectionArrays = useFieldArray({
 		control: form.control,
 		name: "sections",
 	});
+	// In your JSX, you can show loading state:
+	if (isEditMode && isLoading) {
+		return <LoadingScreen text="Loading course data..." />; // or your loading component
+	}
 
 	const watchedData = form.watch();
 
@@ -306,10 +532,10 @@ const CourseCreation = () => {
 			const processedData = {
 				imageUrl: featuredCourseImage,
 				...trimmedData,
-				sections: trimmedData.sections.map((section) => ({
+				sections: trimmedData.sections?.map((section) => ({
 					...section,
 					chapters: section.lessons.length,
-					lessons: section.lessons.map((lesson) => ({
+					lessons: section.lessons?.map((lesson) => ({
 						...lesson,
 					})),
 				})),
@@ -515,133 +741,6 @@ const CourseCreation = () => {
 		});
 	};
 
-	function logDeepDiff(a: any, b: any, path = "") {
-		if (a === b) return; // identical, no diff
-
-		if (a === undefined || b === undefined) {
-			console.log(`Diff at ${path || "root"}:`, { a, b });
-			return;
-		}
-
-		if (
-			typeof a !== "object" ||
-			typeof b !== "object" ||
-			a === null ||
-			b === null
-		) {
-			console.log(`Diff at ${path || "root"}:`, { a, b });
-			return;
-		}
-
-		if (Array.isArray(a) && Array.isArray(b)) {
-			if (a.length !== b.length) {
-				console.log(`Diff at ${path}: array length ${a.length} vs ${b.length}`);
-			}
-			a.forEach((item, i) => {
-				logDeepDiff(item, b[i], `${path}[${i}]`);
-			});
-			return;
-		}
-
-		const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-		keys.forEach((key) => {
-			if (!(key in a)) {
-				console.log(`Diff at ${path}.${key}: key missing in first object`, {
-					b: b[key],
-				});
-			} else if (!(key in b)) {
-				console.log(`Diff at ${path}.${key}: key missing in second object`, {
-					a: a[key],
-				});
-			} else {
-				logDeepDiff(a[key], b[key], path ? `${path}.${key}` : key);
-			}
-		});
-	}
-
-	function customDeepEqual(a: any, b: any): boolean {
-		// Same reference or primitive value
-		if (a === b) return true;
-
-		// Handle null or non-object types
-		if (
-			typeof a !== "object" ||
-			typeof b !== "object" ||
-			a === null ||
-			b === null
-		) {
-			return false;
-		}
-
-		// Arrays
-		if (Array.isArray(a) && Array.isArray(b)) {
-			if (a.length !== b.length) return false;
-			for (let i = 0; i < a.length; i++) {
-				if (!customDeepEqual(a[i], b[i])) return false;
-			}
-			return true;
-		}
-
-		// If one is array and other is not
-		if (Array.isArray(a) !== Array.isArray(b)) return false;
-
-		// Objects
-		const keysA = Object.keys(a).filter((k) => k !== "time"); // ignore "time" fields
-		const keysB = Object.keys(b).filter((k) => k !== "time");
-
-		if (keysA.length !== keysB.length) return false;
-
-		// Compare keys ignoring order
-		const allKeys = new Set([...keysA, ...keysB]);
-		for (let key of allKeys) {
-			if (!customDeepEqual(a[key], b[key])) return false;
-		}
-
-		return true;
-	}
-
-	useEffect(() => {
-		if (!initialData) return;
-
-		const subscription = form.watch(() => {
-			const currentValues = trimData(form.getValues() as CourseFormData);
-			const initialValues = trimData(initialData);
-
-			const changed = !customDeepEqual(currentValues, initialValues);
-
-			if (changed) {
-				console.log("=== Diff Found ===");
-				logDeepDiff(currentValues, initialValues);
-				setHasChanges(true);
-				localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentValues));
-			} else {
-				setHasChanges(false);
-				localStorage.removeItem(LOCAL_STORAGE_KEY);
-			}
-		});
-
-		return () => subscription.unsubscribe();
-	}, [form, initialData, LOCAL_STORAGE_KEY]);
-
-	const { errors } = form.formState;
-
-	useEffect(() => {
-		if (form.formState.isSubmitted && errors) {
-			console.log(errors);
-		}
-	}, []);
-
-	const {
-		hasContentCreationPermissions,
-		permissionsLoading,
-		isPermissionPending,
-	} = useCoursePermissions({
-		role: session?.user.role as UserRoles,
-		permissions: {
-			course: ["create", "delete:own", "update:own"],
-		},
-	});
-
 	if (
 		hasContentCreationPermissions === null ||
 		permissionsLoading ||
@@ -650,9 +749,6 @@ const CourseCreation = () => {
 		return <Loading />;
 	}
 
-	if (hasContentCreationPermissions === false) {
-		router.push("/unauthorized");
-	}
 	return (
 		<div className="min-h-screen bg-background">
 			<div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -895,7 +991,7 @@ const CourseCreation = () => {
 														}
 													</p>
 												)}
-												{watchedData.whatYouWillLearn.map((_, index) => (
+												{watchedData.whatYouWillLearn?.map((_, index) => (
 													<div key={index} className="flex gap-2">
 														<FormField
 															control={form.control}
@@ -987,7 +1083,7 @@ const CourseCreation = () => {
 											</div>
 										</CardHeader>
 										<CardContent className="space-y-6">
-											{sectionArrays.fields.map((section, sectionIndex) => (
+											{sectionArrays.fields?.map((section, sectionIndex) => (
 												<div
 													key={section.id}
 													className="border rounded-lg p-6 space-y-4"
@@ -1141,4 +1237,4 @@ const CourseCreation = () => {
 	);
 };
 
-export default CourseCreation;
+export default Page;

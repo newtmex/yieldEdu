@@ -74,7 +74,7 @@ const data = {
 			title: "Achievements",
 			url: "/achievements",
 			icon: IconTrophy,
-			locked: false,
+			locked: true,
 		},
 		{
 			title: "Performance",

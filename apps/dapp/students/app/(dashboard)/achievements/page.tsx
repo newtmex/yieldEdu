@@ -14,7 +14,11 @@ import { Button } from "@/components/ui/button";
 import { BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import achievementImage from "@/public/digital-nomad.svg";
-import { IconBadges, IconLaurelWreath } from "@tabler/icons-react";
+import {
+	IconBadges,
+	IconCertificate,
+	IconLaurelWreath,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useOCAuth } from "@opencampus/ocid-connect-js";
 import { useQuery } from "@tanstack/react-query";
@@ -83,7 +87,7 @@ const Achievements = () => {
 		error,
 		isPending,
 	} = useQuery({
-		queryKey: ["achievements"],
+		queryKey: ["badges"],
 		enabled: !!session?.user.id,
 		queryFn: async () => {
 			const { data, error } = await supabase
@@ -118,10 +122,45 @@ const Achievements = () => {
 		},
 	});
 
-	const certifications = [
-		{ title: "DeFi Fundamentals Certificate", status: "Issued" },
-		{ title: "Smart Contract Associate", status: "Eligible" },
-	];
+	const {
+		data: certifications,
+		error: certifications_error,
+		isPending: certifications_pending,
+	} = useQuery({
+		queryKey: ["certifications"],
+		enabled: !!session?.user.id,
+		queryFn: async () => {
+			const { data, error } = await supabase
+				.from("achievements")
+				.select("*")
+				.eq("credential_type", "certification");
+			if (error) {
+				console.log(error);
+				throw new Error(error.message);
+			}
+			return data;
+		},
+	});
+
+	const {
+		data: achievements,
+		error: achievements_error,
+		isPending: achievements_pending,
+	} = useQuery({
+		queryKey: ["achievements-data"],
+		enabled: !!session?.user.id,
+		queryFn: async () => {
+			const { data, error } = await supabase
+				.from("achievements")
+				.select("*")
+				.eq("credential_type", "achievement");
+			if (error) {
+				console.log(error);
+				throw new Error(error.message);
+			}
+			return data;
+		},
+	});
 
 	const handleLogin = async () => {
 		try {
@@ -157,39 +196,6 @@ const Achievements = () => {
 			</div>
 
 			<main className="container mx-auto px-6 py-8 space-y-10">
-				{/* achievements */}
-				<section>
-					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-xl font-semibold flex items-center gap-2">
-							<IconLaurelWreath className="size-5 text-primary" />
-							Achievements
-						</h2>
-					</div>
-					<div className="grid gap-4 sm:grid-cols-2">
-						{certifications.map((c, i) => (
-							<Card key={i}>
-								<CardHeader>
-									<div className="flex items-center gap-3">
-										<BadgeCheck className="w-5 h-5 text-primary" />
-
-										<CardTitle className="text-base">{c.title}</CardTitle>
-									</div>
-									<CardDescription>Status: {c.status}</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="flex gap-2">
-										<Button size="sm" variant="outline">
-											View
-										</Button>
-										<Button size="sm" disabled={c.status !== "Issued"}>
-											Download
-										</Button>
-									</div>
-								</CardContent>
-							</Card>
-						))}
-					</div>
-				</section>
 				<section>
 					<div className="flex items-center justify-between mb-4">
 						<h2 className="text-xl font-semibold flex items-center gap-2">
@@ -312,6 +318,148 @@ const Achievements = () => {
 							);
 						})}
 					</div>
+				</section>
+				{/* achievements */}
+				<section>
+					<div className="flex items-center justify-between mb-4">
+						<h2 className="text-xl font-semibold flex items-center gap-2">
+							<IconLaurelWreath className="size-5 text-primary" />
+							Achievements
+						</h2>
+					</div>
+					{achievements_pending && (
+						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+							{skeletonArray.map((_, i) => (
+								<Card key={i} className="p-4">
+									<Skeleton className="aspect-square rounded-lg" />
+									<div className="mt-3 space-y-2">
+										<Skeleton className="h-4 w-3/4" />
+										<Skeleton className="h-4 w-1/2" />
+										<Skeleton className="h-3 w-full" />
+									</div>
+									<div className="mt-2">
+										<Skeleton className="h-8 w-20" />
+									</div>
+								</Card>
+							))}
+						</div>
+					)}
+					{!achievements_pending && achievements_error && (
+						<div className="text-center text-red-500 p-6">
+							<p>Failed to load achievements.</p>
+							<Button
+								variant="outline"
+								onClick={() => location.reload()}
+								className="mt-2"
+							>
+								Retry
+							</Button>
+						</div>
+					)}
+					<div className="grid gap-4 sm:grid-cols-2">
+						{achievements?.map((c, i) => (
+							<Card key={i}>
+								<CardHeader>
+									<div className="flex items-center gap-3">
+										<BadgeCheck className="w-5 h-5 text-primary" />
+
+										<CardTitle className="text-base">{c.name}</CardTitle>
+									</div>
+									<CardDescription>Status: {c.status}</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="flex gap-2">
+										<Button size="sm" variant="outline">
+											View
+										</Button>
+										<Button size="sm" disabled={c.status !== "Issued"}>
+											Download
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+					{!achievements_pending &&
+						!achievements_error &&
+						achievements &&
+						achievements.length === 0 && (
+							<div className="text-center p-6 text-muted-foreground">
+								<IconLaurelWreath className="mx-auto size-8 text-primary mb-2" />
+								<p>No achievements yet!</p>
+							</div>
+						)}
+				</section>
+				{/* certifications */}
+				<section>
+					<div className="flex items-center justify-between mb-4">
+						<h2 className="text-xl font-semibold flex items-center gap-2">
+							<IconCertificate className="size-5 text-primary" />
+							Certifications
+						</h2>
+					</div>
+					{certifications_pending && (
+						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+							{skeletonArray.map((_, i) => (
+								<Card key={i} className="p-4">
+									<Skeleton className="aspect-square rounded-lg" />
+									<div className="mt-3 space-y-2">
+										<Skeleton className="h-4 w-3/4" />
+										<Skeleton className="h-4 w-1/2" />
+										<Skeleton className="h-3 w-full" />
+									</div>
+									<div className="mt-2">
+										<Skeleton className="h-8 w-20" />
+									</div>
+								</Card>
+							))}
+						</div>
+					)}
+					{!certifications_pending && certifications_error && (
+						<div className="text-center text-red-500 p-6">
+							<p>Failed to load certifications.</p>
+							<Button
+								variant="outline"
+								onClick={() => location.reload()}
+								className="mt-2"
+							>
+								Retry
+							</Button>
+						</div>
+					)}
+					<div className="grid gap-4 sm:grid-cols-2">
+						{certifications?.map((c, i) => (
+							<Card key={i}>
+								<CardHeader>
+									<div className="flex items-center gap-3">
+										<BadgeCheck className="w-5 h-5 text-primary" />
+
+										<CardTitle className="text-base">{c.name}</CardTitle>
+									</div>
+									<CardDescription>Status: {c.status}</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="flex gap-2">
+										<Button size="sm" variant="outline">
+											View
+										</Button>
+										<Button size="sm" disabled={c.status !== "Issued"}>
+											Download
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+					{!certifications_pending &&
+						!certifications_error &&
+						certifications &&
+						certifications.length === 0 && (
+							<div className="text-center p-6 text-muted-foreground">
+								<IconCertificate className="mx-auto size-8 text-primary mb-2" />
+								<p>No certifications yet!</p>
+							</div>
+						)}
 				</section>
 			</main>
 		</div>

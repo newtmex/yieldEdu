@@ -105,7 +105,7 @@ const CourseSidebar = ({
 																<div className="flex items-center gap-2">
 																	<span className="text-sm font-medium">
 																		{lesson.type === "quiz"
-																			? `Quiz ${sectionIndex + 1}.${quizIndex}`
+																			? `Quiz ${quizIndex}`
 																			: `Lesson ${sectionIndex + 1}.${
 																					lessonIndex + 1
 																				}`}
