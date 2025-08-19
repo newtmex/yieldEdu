@@ -15,6 +15,7 @@ import InlineCode from "@editorjs/inline-code";
 import LinkTool from "@editorjs/link";
 import Embed from "@editorjs/embed";
 import Table from "@editorjs/table";
+import SimpleImage from "@editorjs/simple-image";
 
 type LessonContentProps = {
 	content: any;
@@ -48,6 +49,7 @@ const tools = {
 	linkTool: LinkTool,
 	embed: Embed,
 	table: Table,
+	image: SimpleImage,
 };
 
 const ReactEditorJS = createReactEditorJS();
