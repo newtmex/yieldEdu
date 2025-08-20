@@ -82,6 +82,42 @@ export const courseSchema = z.object({
 		.array(sectionSchema)
 		.min(1, "Course must have at least 1 sections")
 		.max(10, "Maximum 10 sections per course"),
+	// rewards: z
+	// 	.object({
+	// 		enabled: z.boolean().default(false),
+	// 		pointsPerLesson: z
+	// 			.number()
+	// 			.min(1, "Points per lesson must be at least 1")
+	// 			.max(5, "Points per lesson cannot exceed 5")
+	// 			.optional(),
+	// 		pointsPerQuizAnswer: z
+	// 			.number()
+	// 			.min(1, "Points per quiz answer must be at least 1")
+	// 			.max(5, "Points per quiz answer cannot exceed 5")
+	// 			.optional(),
+	// 		maxCoursePoints: z
+	// 			.number()
+	// 			.min(1, "Maximum course points must be at least 1")
+	// 			.max(30, "Maximum course points cannot exceed 30")
+	// 			.optional(),
+	// 	})
+	// 	.refine(
+	// 		(data) => {
+	// 			if (data.enabled) {
+	// 				return (
+	// 					data.pointsPerLesson != null &&
+	// 					data.pointsPerQuizAnswer != null &&
+	// 					data.maxCoursePoints != null
+	// 				);
+	// 			}
+	// 			return true;
+	// 		},
+	// 		{
+	// 			message: "All reward fields are required when rewards are enabled",
+	// 			path: ["enabled"], // attach error to `enabled`
+	// 		}
+	// 	),
+
 	quizzes: z
 		.array(quizQuestionSchema)
 		.min(1, "Each section must have at least 1 quiz question")

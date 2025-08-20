@@ -8,12 +8,7 @@ export async function middleware(request: NextRequest) {
 		return NextResponse.redirect(new URL("/signin", request.url));
 	}
 
-	const lockedRoutes = [
-		"/performance",
-		"/leaderboards",
-		"/campaigns",
-		"/achievements",
-	];
+	const lockedRoutes = ["/performance", "/leaderboards", "/campaigns"];
 
 	if (
 		lockedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))

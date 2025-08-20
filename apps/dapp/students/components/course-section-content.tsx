@@ -70,20 +70,17 @@ const SectionContent: React.FC<{
 				</div>
 
 				{fields.map((lesson, lessonIndex) => (
-					<div
-						key={lesson.id}
-						className="p-4 bg-muted/50 rounded-lg space-y-4"
-					>
+					<div key={lesson.id} className="p-4 bg-muted/50 rounded-lg space-y-4">
 						<div className="flex items-center justify-between">
 							<Badge variant="outline">Lesson {lessonIndex + 1}</Badge>
 							{fields.length > 1 && (
 								<Button
+									disabled={isPending}
 									type="button"
 									onClick={() => remove(lessonIndex)}
 									variant="ghost"
 									size="sm"
 									className="text-destructive"
-									disabled={isPending}
 								>
 									<Minus className="h-4 w-4" />
 								</Button>
@@ -113,18 +110,18 @@ const SectionContent: React.FC<{
 							<p className="text-sm text-muted-foreground">
 								Use the rich text editor to create lesson content
 							</p>
-                            <Controller
-                                name={`sections.${sectionIndex}.lessons.${lessonIndex}.content`}
-                                control={form.control}
-                                render={({ field }) => (
-                                    <LessonEditor
-                                        content={field.value}
-                                        onChange={field.onChange}
-                                        placeholder="Start writing your lesson content..."
-                                        isReadOnly={isPending}
-                                    />
-                                )}
-                            />
+							<Controller
+								name={`sections.${sectionIndex}.lessons.${lessonIndex}.content`}
+								control={form.control}
+								render={({ field }) => (
+									<LessonEditor
+										content={field.value}
+										onChange={field.onChange}
+										placeholder="Start writing your lesson content..."
+										isReadOnly={isPending}
+									/>
+								)}
+							/>
 						</div>
 					</div>
 				))}

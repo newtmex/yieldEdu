@@ -29,9 +29,10 @@ const page = () => {
 		queryFn: async () => {
 			const response = await supabase
 				.from("courses")
-				.select("title,reward,description,rating,id,image_url");
+				.select("title,description,rating,id,image_url");
 
 			if (response.error) {
+				console.log(response.error);
 				throw new Error(response.error.message);
 			}
 

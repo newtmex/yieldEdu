@@ -47,9 +47,8 @@ export default function CourseCard({
 							{Category && <span>{Category}</span>}
 						</div>
 						<h2 className="font-semibold text-sm md:text-md">{title}</h2>
-						<p className="text-muted-foreground text-sm">
+						<p className="text-muted-foreground text-sm line-clamp-2">
 							{description}
-							{/* {description.slice(0, 70)} */}
 						</p>
 
 						{isPending ? (
