@@ -73,15 +73,15 @@ const DashboardHeader = () => {
 						Feedback
 					</Button>
 				</Feedback> */}
-					<div className="pr-5 flex gap-5">
+					<div className="flex gap-5">
 						<div className="text-center">
 							<div className="flex items-center justify-center gap-2">
-								<IconCoin className="size-3 md:size-5 text-orange-500" />
+								<IconCoin className="size-3 lg:size-5 text-orange-500" />
 								<TooltipInfo
 									className="flex items-center justify-center gap-2"
 									content="You earn points by completing courses and activities. At the end of each season, your total points will determine how much YUZU you earn."
 								>
-									<span className="text-xs md:text-sm font-bold">
+									<span className="text-xs lg:text-sm font-bold">
 										0 {isMobile ? "" : ""}
 									</span>
 								</TooltipInfo>
@@ -93,14 +93,14 @@ const DashboardHeader = () => {
 								<Image
 									alt="yuzu points"
 									src={yuzuIcon}
-									className="w-3 md:w-5 h-auto"
+									className="w-3 lg:w-5 h-auto"
 								/>
 
 								<TooltipInfo
 									className="flex items-center justify-center gap-2"
 									content="YUZU is your learning reward currency. Earn YUZU by completing lessons, challenges, and maintaining streaks. Use them to unlock premium content, get rewards, or redeem exclusive perks."
 								>
-									<span className="text-xs md:text-sm font-bold">
+									<span className="text-xs lg:text-sm font-bold">
 										0{isMobile ? "" : " "}
 									</span>
 								</TooltipInfo>
@@ -120,8 +120,8 @@ const DashboardHeader = () => {
 					) : (
 						<AppKitButton />
 					)}
-					<NavUser className="w-fit" showInfo={false} />
-					<div className="hidden [@media(width>=25rem)]:flex gap-3">
+					<NavUser className="w-fit hidden lg:flex" showInfo={false} />
+					<div className="hidden md:flex gap-3">
 						<Link
 							className="text-primary"
 							href={"https://t.me/+NO7thgSfAFQyMGY0"}

@@ -177,19 +177,19 @@ const Achievements = () => {
 
 	return (
 		<div>
-			<div className="flex border-b p-5 md:p-0 flex-col md:flex-row max-w-4xl mx-auto justify-center items-center gap-4 ">
+			<div className="flex border-b p-5 w-full flex-col md:flex-row max-w-5xl mx-auto justify-center items-center gap-4 ">
 				<div className="flex-[1.5] w-full space-y-3">
 					<h1 className="text-xl md:text-3xl lg:text-4xl mb-2 font-bold">
-						Achievements, Badges & Certifications
+						Achievements, Badges, Certifications, And More.
 					</h1>
 					<p className="text-muted-foreground text-[14px]">
-						Track your progress, unlock badges, and view your certificates.
+						Track your progress and celebrate your milestones.
 					</p>
 				</div>
-				<div className="flex-1 hidden md:flex w-full">
+				<div className="flex-1 md:flex w-full">
 					<Image
 						alt="achievement"
-						className="h-auto w-full invert-0 dark:invert"
+						className="h-auto w-full max-w-full invert-0 dark:invert"
 						src={achievementImage}
 					/>
 				</div>

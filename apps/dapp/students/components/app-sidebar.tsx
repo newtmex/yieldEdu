@@ -3,6 +3,8 @@
 import * as React from "react";
 import {
 	IconBooks,
+	IconBrandTelegram,
+	IconBrandX,
 	IconCamera,
 	IconChartBar,
 	IconDashboard,
@@ -212,6 +214,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser />
+				<div className="p-2 flex gap-3">
+					<Link
+						className="text-primary"
+						href={"https://t.me/+NO7thgSfAFQyMGY0"}
+						target="_blank"
+					>
+						<IconBrandTelegram className="w-5 h-5" />
+					</Link>
+					<Link
+						className="text-primary"
+						href={"https://x.com/yield_edu"}
+						target="_blank"
+					>
+						<IconBrandX className="w-5 h-5" />
+					</Link>
+				</div>
 			</SidebarFooter>
 		</Sidebar>
 	);
