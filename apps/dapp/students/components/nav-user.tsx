@@ -85,7 +85,7 @@ export function NavUser({
 									src={profileDetails?.image || ""}
 									alt={profileDetails?.name}
 								/>
-								<AvatarFallback className="rounded-full">
+								<AvatarFallback className="rounded-full size-8">
 									{(embeddedWalletInfo?.user?.username?.charAt(0) ||
 										profileDetails?.name?.charAt(0)) ??
 										"AN"}

@@ -12,9 +12,9 @@ import { useAppKit } from "@reown/appkit/react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+const baseUrl = process.env.BETTER_AUTH_URL;
 if (!baseUrl) {
-	throw new Error(`NEXT_PUBLIC_APP_URL is not set`);
+	throw new Error(`BETTER_AUTH_URL is not set`);
 }
 const IssueBadge = ({ badge, OCId }: { badge: Achievement; OCId: string }) => {
 	const { data: session } = useSession();
