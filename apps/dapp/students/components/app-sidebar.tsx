@@ -8,7 +8,6 @@ import {
 	IconChartBar,
 	IconGift,
 	IconGymnastics,
-	IconHelp,
 	IconLayersSelected,
 	IconSettings,
 	IconSpeakerphone,
@@ -97,12 +96,6 @@ const data = {
 			url: "/settings",
 			icon: IconSettings,
 			locked: false,
-		},
-		{
-			title: "Get Help",
-			url: "#",
-			icon: IconHelp,
-			locked: true,
 		},
 	],
 };
