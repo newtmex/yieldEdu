@@ -5,28 +5,16 @@ import {
 	IconBooks,
 	IconBrandTelegram,
 	IconBrandX,
-	IconCamera,
 	IconChartBar,
-	IconDashboard,
-	IconDatabase,
-	IconFileAi,
-	IconFileDescription,
-	IconFileWord,
-	IconFolder,
+	IconGift,
 	IconGymnastics,
 	IconHelp,
-	IconInnerShadowTop,
 	IconLayersSelected,
-	IconListDetails,
-	IconReport,
-	IconSearch,
 	IconSettings,
 	IconSpeakerphone,
 	IconTrophy,
-	IconUsers,
 } from "@tabler/icons-react";
 
-import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
@@ -36,7 +24,6 @@ import {
 	SidebarFooter,
 	SidebarHeader,
 	SidebarMenu,
-	SidebarMenuButton,
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
@@ -50,7 +37,7 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { ChevronsUpDown, Lock } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const data = {
@@ -79,14 +66,20 @@ const data = {
 			locked: false,
 		},
 		{
+			title: "Referrals",
+			url: "/referrals",
+			icon: IconGift,
+			locked: true,
+		},
+		{
 			title: "Performance",
 			url: "/performance",
 			icon: IconGymnastics,
 			locked: true,
 		},
 		{
-			title: "Leaderboards",
-			url: "/leaderboards",
+			title: "Leaderboard",
+			url: "/leaderboard",
 			icon: IconChartBar,
 			locked: true,
 		},

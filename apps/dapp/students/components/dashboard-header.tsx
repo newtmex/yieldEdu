@@ -45,7 +45,7 @@ const DashboardHeader = () => {
 
 	return (
 		<header className="rounded-t-lg sticky inset-0 bg-background z-20 flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-			<div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+			<div className="flex w-full items-center gap-2 md:gap-4 px-2">
 				<SidebarTrigger className="-ml-1" />
 				<Separator
 					orientation="vertical"
@@ -62,7 +62,7 @@ const DashboardHeader = () => {
 					</Button>
 				)}
 
-				<div className="flex w-full items-center justify-end gap-1 lg:gap-3">
+				<div className="flex w-full items-center justify-end gap-4">
 					{/* <FaucetButton userAddress={address} /> */}
 
 					{/* <Feedback className="hidden md:flex">
@@ -115,7 +115,7 @@ const DashboardHeader = () => {
 							type="button"
 							onClick={() => open({ view: "Connect" })}
 						>
-							{isMobile ? <IconWallet /> : "Connect wallet"}
+							Connect wallet
 						</Button>
 					) : (
 						<AppKitButton />
