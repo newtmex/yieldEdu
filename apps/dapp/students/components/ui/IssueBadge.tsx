@@ -10,16 +10,19 @@ import { toast } from "sonner";
 import { useAccount } from "wagmi";
 import { useAppKit } from "@reown/appkit/react";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+if (!baseUrl) {
+	throw new Error(`NEXT_PUBLIC_APP_URL is not set`);
+}
 const IssueBadge = ({ badge, OCId }: { badge: Achievement; OCId: string }) => {
 	const { data: session } = useSession();
 	const { address, isConnected } = useAccount();
 	const { open } = useAppKit();
-	const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+	const router = useRouter();
 	const queryClient = useQueryClient();
-	const profileUrl = session?.user?.id
-		? `${baseUrl}/user/${session.user.id}`
-		: `${baseUrl}/user/unknown`; // fallback
+	const profileUrl = `${baseUrl}/user/${session?.user.id}`;
 
 	const mutation = useMutation({
 		mutationFn: async () => {
@@ -88,6 +91,9 @@ const IssueBadge = ({ badge, OCId }: { badge: Achievement; OCId: string }) => {
 	});
 
 	const handleClick = () => {
+		if (!session || !session.user) {
+			router.push("/signin");
+		}
 		if (!isConnected) {
 			// Step 1: Connect wallet
 			open({ view: "Connect" });

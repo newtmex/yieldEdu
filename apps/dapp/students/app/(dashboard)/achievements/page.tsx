@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import OC from "@/public/oc.svg";
 import { Skeleton } from "@/components/ui/skeleton";
 import IssueBadge from "@/components/ui/IssueBadge";
-import { isUnlockable, summarizePerformance } from "@/helpers";
+import { isUnlockable, Performance, summarizePerformance } from "@/helpers";
 
 export type AchievementCondition =
 	| { type: "course_completed"; count: number; score: number; amount: number }
@@ -274,10 +274,7 @@ const Achievements = () => {
 										/>
 									</div>
 									<div className="mt-3">
-										<CardTitle className="text-base">
-											{badge.name}
-											{canUnlock ? " true" : " false"}{" "}
-										</CardTitle>
+										<CardTitle className="text-base">{badge.name}</CardTitle>
 										<span className="text-lime-500 font-semibold">
 											{badge.yuzu_allocation.toLocaleString()} YUZU
 										</span>

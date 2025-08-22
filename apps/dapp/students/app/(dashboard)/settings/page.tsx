@@ -32,8 +32,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
-import { useAppKit } from "@reown/appkit/react";
+import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/auth-client";
 const Page = () => {
 	const [disableUpdate, setDisableUpdate] = useState(true);
 	const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
@@ -43,6 +46,9 @@ const Page = () => {
 	const searchParams = useSearchParams();
 	const currentTab = searchParams.get("tab") || "profile";
 	const router = useRouter();
+	const { embeddedWalletInfo } = useAppKitAccount();
+	const { data: session } = useSession();
+	const user_id = session?.user.id;
 
 	const FormSchema = z.object({
 		name: z.string().min(5, {
@@ -65,17 +71,47 @@ const Page = () => {
 		},
 	});
 
+	const {
+		data: profileDetails,
+		isPending: isProfileDetailsPending,
+		isError: isProfileDetailsError,
+		error: profileDetailsError,
+	} = useQuery({
+		queryKey: ["profile-details"],
+		queryFn: async () => {
+			const response = await supabase
+				.from("students")
+				.select('*, "user"(image)')
+				.eq("user_id", user_id)
+				.single();
+
+			if (response.error) {
+				console.log(response.error);
+				throw new Error(response.error.message);
+			}
+			return response.data;
+		},
+		enabled: !!user_id,
+	});
+
 	async function onSubmit(data: z.infer<typeof FormSchema>) {
 		try {
 			setIsUpdatingProfile(true);
+			const { data: existing } = await supabase
+				.from("students")
+				.select("address")
+				.eq("user_id", user_id)
+				.single();
+
+			// Merge + deduplicate
+			const updatedAddresses = Array.from(
+				new Set([...(existing?.address || []), address])
+			);
 
 			const { error } = await supabase.from("students").upsert(
+				{ user_id, ...data, address: updatedAddresses },
 				{
-					...data,
-					address,
-				},
-				{
-					onConflict: "address",
+					onConflict: "user_id",
 				}
 			);
 
@@ -99,27 +135,9 @@ const Page = () => {
 		}
 	}
 
-	const {
-		data: profileDetails,
-		isPending: isProfileDetailsPending,
-		isError: isProfileDetailsError,
-		error: profileDetailsError,
-	} = useQuery({
-		queryKey: ["profile-details"],
-		queryFn: async () => {
-			const response = await supabase
-				.from("students")
-				.select("*")
-				.eq("address", address)
-				.single();
-
-			return response.data;
-		},
-		enabled: !!address,
-	});
-
 	useEffect(() => {
 		if (isProfileDetailsError && profileDetailsError) {
+			console.log(profileDetailsError);
 			toast.warning("Could not fetch profile details", {
 				description: profileDetailsError.message,
 			});
@@ -204,8 +222,23 @@ const Page = () => {
 				<div className="flex-3/4 p-5 md:py-0">
 					{isConnected ? (
 						<TabsContent value="profile" className="max-w-full md:max-w-xl">
-							<h2 className="text-xl font-semibold">Profile</h2>
-							<p className="text-sm pb-4">Update your profile details.</p>
+							<div className="flex items-center gap-4 pb-4">
+								<Avatar className={cn("size-12 rounded-full grayscale")}>
+									<AvatarImage
+										src={profileDetails?.user?.image || ""}
+										alt={profileDetails?.name}
+									/>
+									<AvatarFallback className="rounded-full">
+										{(embeddedWalletInfo?.user?.username?.charAt(0) ||
+											profileDetails?.name?.charAt(0)) ??
+											"AN"}
+									</AvatarFallback>
+								</Avatar>
+								<div>
+									<h2 className="text-xl font-semibold">Profile</h2>
+									<p className="text-sm">Update your profile details.</p>
+								</div>
+							</div>
 							<Separator />
 
 							<Form {...form}>

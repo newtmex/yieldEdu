@@ -78,7 +78,9 @@ export function NavUser({
 								className
 							)}
 						>
-							<Avatar className="h-8 w-8 rounded-full grayscale">
+							<Avatar
+								className={cn("h-8 w-8 rounded-full grayscale", className)}
+							>
 								<AvatarImage
 									src={profileDetails?.image || ""}
 									alt={profileDetails?.name}

@@ -6,6 +6,8 @@ import NextTopLoader from "nextjs-toploader";
 import { ThemeProvider } from "next-themes";
 import OCConnectWrapper from "@/components/oc-connect-wrapper";
 import { yieldEduMetadata } from "@/metadata";
+import WagmiContextProvider from "@/components/wagmi-provider";
+import { headers } from "next/headers";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -35,6 +37,9 @@ export default async function RootLayout({
 		})(),
 		referralCode: "PARTNER6",
 	};
+	const headersObj = await headers();
+
+	const cookies = headersObj.get("cookie");
 
 	return (
 		<html lang="en" suppressHydrationWarning>
@@ -60,7 +65,9 @@ export default async function RootLayout({
 						enableSystem
 						disableTransitionOnChange
 					>
-						{children}
+						<WagmiContextProvider cookies={cookies}>
+							{children}
+						</WagmiContextProvider>
 					</ThemeProvider>
 				</OCConnectWrapper>
 				<Toaster richColors closeButton />

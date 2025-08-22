@@ -1,7 +1,6 @@
 import { Geist_Mono, Montserrat } from "next/font/google";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import WagmiContextProvider from "@/components/wagmi-provider";
 import { headers } from "next/headers";
 import DashboardHeader from "@/components/dashboard-header";
 import { CourseSidebarProvider } from "@/hooks/use-course-sidebar";
@@ -23,9 +22,6 @@ export default async function Layout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	const headersObj = await headers();
-	const cookies = headersObj.get("cookie");
-
 	const session = await auth.api.getSession({
 		headers: await headers(),
 	});
@@ -44,17 +40,15 @@ export default async function Layout({
 					} as React.CSSProperties
 				}
 			>
-				<WagmiContextProvider cookies={cookies}>
-					<CourseSidebarProvider>
-						<AppSidebar variant="inset" />
-						<SidebarInset>
-							<DashboardHeader />
-							<main className="@container/main w-full md:max-w-7xl md:mx-auto">
-								{children}
-							</main>
-						</SidebarInset>
-					</CourseSidebarProvider>
-				</WagmiContextProvider>
+				<CourseSidebarProvider>
+					<AppSidebar variant="inset" />
+					<SidebarInset>
+						<DashboardHeader />
+						<main className="@container/main w-full md:max-w-7xl md:mx-auto">
+							{children}
+						</main>
+					</SidebarInset>
+				</CourseSidebarProvider>
 			</SidebarProvider>
 		</div>
 	);
