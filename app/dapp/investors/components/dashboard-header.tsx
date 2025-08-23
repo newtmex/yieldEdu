@@ -14,6 +14,8 @@ import { NavUser } from "./nav-user";
 import AppKitButton from "./appkit-button";
 import { Separator } from "./ui/separator";
 import { usePathname } from "next/navigation";
+import { IconBrandTelegram, IconBrandX } from "@tabler/icons-react";
+import Link from "next/link";
 
 const DashboardHeader = () => {
 	const { open } = useAppKit();
@@ -27,7 +29,6 @@ const DashboardHeader = () => {
 	}, [theme, setThemeMode]);
 
 	return (
-		// <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-12 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
 		<header className="rounded-t-lg sticky inset-0 bg-background z-20 flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
 			<div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
 				<SidebarTrigger className="-ml-1" />
@@ -35,10 +36,11 @@ const DashboardHeader = () => {
 					orientation="vertical"
 					className="mx-2 data-[orientation=vertical]:h-4"
 				/>
+
 				<h1 className="text-base font-medium capitalize hidden md:flex">
 					{pathname === "/" ? "Dashboard" : pathname.slice(1)}
 				</h1>
-				<div className="flex w-full items-center justify-end gap-1 lg:gap-2">
+				<div className="flex w-full items-center justify-end gap-1 lg:gap-3">
 					{/* <FaucetButton userAddress={address} /> */}
 
 					{/* <Feedback className="hidden md:flex">
@@ -64,6 +66,22 @@ const DashboardHeader = () => {
 					)}
 					{/* <UserProfile showOCID={false} showTiggerIcon={false} /> */}
 					<NavUser className="w-fit" showInfo={false} />
+					<div className="hidden [@media(width>=25rem)]:flex gap-3">
+						<Link
+							className="text-primary"
+							href={"https://t.me/+NO7thgSfAFQyMGY0"}
+							target="_blank"
+						>
+							<IconBrandTelegram className="w-5 h-5" />
+						</Link>
+						<Link
+							className="text-primary"
+							href={"https://x.com/yield_edu"}
+							target="_blank"
+						>
+							<IconBrandX className="w-5 h-5" />
+						</Link>
+					</div>
 				</div>
 			</div>
 		</header>

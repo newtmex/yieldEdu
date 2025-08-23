@@ -11,7 +11,6 @@ import { Abi, parseEther } from "viem";
 import { toast } from "sonner";
 import {
 	contractAddresses,
-	yieldTokenAbi,
 	weduTokenAbi,
 	deduTokenAbi,
 } from "@/helpers/deployments";
@@ -69,18 +68,11 @@ export const useStake = ({
 	const [isApproving, setIsApproving] = useState(false);
 	const [isStaking, setIsStaking] = useState(false);
 	const stakingAddress = contractAddresses.staking as `0x${string}`;
-	const yldTokenAddress = contractAddresses.yldToken as `0x${string}`;
 	const weduTokenAddress = contractAddresses.wedu as `0x${string}`;
 	const deduTokenAddress = contractAddresses.dEDUToken as `0x${string}`;
 
 	const generateTokenAddressAndABI = () => {
 		switch (selectedToken) {
-			case "stakeEDU":
-				return {
-					address: yldTokenAddress,
-					abi: yieldTokenAbi.abi as Abi,
-				};
-				break;
 			case "stakeWEDU":
 				return {
 					address: weduTokenAddress,
@@ -93,17 +85,16 @@ export const useStake = ({
 					abi: deduTokenAbi.abi as Abi,
 				};
 			default:
-				return {
-					address: yldTokenAddress,
-					abi: yieldTokenAbi.abi as Abi,
-				};
+				return null;
 		}
 	};
 
+	const tokenInfo = generateTokenAddressAndABI();
+
 	// Get allowance
 	const { data: allowance, refetch: refetchAllowance } = useReadContract({
-		abi: generateTokenAddressAndABI().abi,
-		address: generateTokenAddressAndABI().address,
+		abi: tokenInfo?.abi,
+		address: tokenInfo?.address,
 		functionName: "allowance",
 		args: [address, stakingAddress],
 		query: {
@@ -117,8 +108,8 @@ export const useStake = ({
 		isError: isApproveError,
 		error: approveError,
 	} = useSimulateContract({
-		abi: generateTokenAddressAndABI().abi,
-		address: generateTokenAddressAndABI().address,
+		abi: tokenInfo?.abi,
+		address: tokenInfo?.address,
 		functionName: "approve",
 		args: [stakingAddress, parseEther(amount || "0").toString()],
 	});
@@ -190,11 +181,11 @@ export const useStake = ({
 		);
 	};
 
-	const { data: tokenBalance } = useBalance({
+	const { refetch: refetchBalance } = useBalance({
 		address: address as unknown as `0x${string}`,
 		token:
 			selectedToken == "stakeEDU"
-				? yldTokenAddress
+				? undefined //falls back to native token
 				: selectedToken === "stakeDEDU"
 				? deduTokenAddress
 				: weduTokenAddress,
@@ -210,21 +201,44 @@ export const useStake = ({
 		},
 	});
 
+	const formatBalance = (balance: string, decimals: number) => {
+		return Number(balance) / Math.pow(10, decimals);
+	};
+
 	const handleStake = async () => {
 		if (!address) {
 			toast.error("Please connect your wallet");
 			return;
 		}
 
-		if (
-			tokenBalance?.value &&
-			BigInt(tokenBalance.value) < parseEther(amount)
-		) {
-			toast.error("Insufficient balance for this investment.");
+		// Await the fresh balance fetch
+		const freshBalanceResult = await refetchBalance();
+		const freshBalance = freshBalanceResult.data;
+
+		if (!freshBalance || !freshBalance.value) {
+			toast.error("Failed to fetch token balance. Please try again.");
 			return;
 		}
 
 		const amountInWei = parseEther(amount);
+		const balanceInWei = BigInt(freshBalance.value);
+
+		if (balanceInWei < amountInWei) {
+			const balanceFormatted = formatBalance(
+				freshBalance.value,
+				freshBalance.decimals
+			);
+			toast.error("Insufficient balance", {
+				description: `You need ${amount} tokens but only have ${balanceFormatted.toFixed(
+					6
+				)} available.`,
+			});
+			return;
+		}
+		if (selectedToken === "stakeEDU") {
+			await stakeTokens();
+			return;
+		}
 		const needsApproval =
 			!allowance || BigInt(allowance?.toString()) < amountInWei;
 
@@ -278,7 +292,7 @@ export const useStake = ({
 			return;
 		}
 
-		const stakeArgs =
+		const stakeConfig =
 			selectedToken === "stakeEDU"
 				? {
 						...getStakingConfig("stakeEDU", [STokenType]),
@@ -293,7 +307,7 @@ export const useStake = ({
 
 		await handleTxWithTimeout(
 			(onSuccess, onError) => {
-				stakeWrite(stakeArgs, {
+				stakeWrite(stakeConfig, {
 					onSuccess,
 					onError,
 				});
@@ -305,6 +319,7 @@ export const useStake = ({
 					});
 
 					refetchAllowance();
+					refetchBalance();
 					onStakeSuccess?.();
 					setIsStaking(false);
 				},

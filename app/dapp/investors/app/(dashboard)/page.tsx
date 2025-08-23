@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { IconFingerprint } from "@tabler/icons-react";
 import dynamic from "next/dynamic";
+import { TooltipInfo } from "@/components/tooltip-info";
 
 const InvestmentCard = dynamic(() => import("@/components/invest"), {
 	loading: () => <InvestCardSkeleton />,
@@ -170,7 +171,7 @@ export default function Page() {
 				userYLDs={userYLDs}
 				activeInvestments={data?.length ?? 0}
 			/>
-			<div className="px-4 lg:px-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+			<div className="px-4 lg:px-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
 				<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
 					<InvestmentCard
 						setShowWithDrawModal={setShowWithDrawModal}
@@ -182,9 +183,9 @@ export default function Page() {
 					/>
 				</div>
 
-				<div className="grid grid-cols-2 gap-5 h-fit	*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-5 h-fit	*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs">
 					{noncesLoading ? (
-						<Skeleton className="grid grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-[218px] *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
+						<Skeleton className="grid  grid-cols-1 place-content-center gap-3 pl-4 h-[107px] w-full *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card">
 							<Skeleton className="h-[23px] bg-gray-500/20 w-[150px]" />
 							<Skeleton className="h-[15px] bg-gray-500/20 w-[100px]" />
 						</Skeleton>
@@ -194,6 +195,10 @@ export default function Page() {
 								<CardDescription className="flex text-lime-400 items-center gap-2">
 									<IconFingerprint />
 									Granted sTokens
+									<TooltipInfo
+										className="text-muted-foreground"
+										content="sTokens are ERC-1155 tokens issued when you invest. They unlock access to gated content, credentials, and on-chain rewards — and become available to you once unbound"
+									/>
 								</CardDescription>
 								<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 									{totalStaked

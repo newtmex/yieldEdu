@@ -8,7 +8,7 @@ import { Skeleton } from "./ui/skeleton";
 import { formatUnits } from "viem";
 import { useReadContract } from "wagmi";
 import { contractAddresses, yieldTokenAbi } from "@/helpers/deployments";
-
+import { TooltipInfo } from "@/components/tooltip-info";
 import {
 	IconActivity,
 	IconCurrencyDollar,
@@ -62,6 +62,10 @@ export function SectionCards({
 						<CardDescription className="flex items-center gap-2 text-lime-400">
 							<IconCurrencyDollar size={20} />
 							Total Investments
+							<TooltipInfo
+								className="text-muted-foreground"
+								content="Total amount you’ve invested across all opportunities on the platform, including active and completed positions"
+							/>
 						</CardDescription>
 						<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 							{currentReturns
@@ -71,11 +75,11 @@ export function SectionCards({
 								: "0.00"}
 						</CardTitle>
 						{/* <CardAction>
-						<Badge variant="outline">
+							<Badge variant="outline">
 							<IconTrendingUp />
 							+12.5%
 						</Badge>
-					</CardAction> */}
+						</CardAction> */}
 					</CardHeader>
 					{/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
 					<div className="line-clamp-1 flex gap-2 font-medium">
@@ -98,25 +102,29 @@ export function SectionCards({
 						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconActivity size={20} />
 							Active Investments
+							<TooltipInfo
+								className="text-muted-foreground"
+								content="Total investment positions currently generating yield. You can withdraw or claim your positions at any time."
+							/>
 						</CardDescription>
 						<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 							{activeInvestments}
 						</CardTitle>
 						{/* <CardAction>
 						<Badge variant="outline">
-							<IconTrendingDown />
-							-20%
+						<IconTrendingDown />
+						-20%
 						</Badge>
 					</CardAction> */}
 					</CardHeader>
 					{/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
 					<div className="line-clamp-1 flex gap-2 font-medium">
-						Down 20% this period <IconTrendingDown className="size-4" />
+					Down 20% this period <IconTrendingDown className="size-4" />
 					</div>
 					<div className="text-muted-foreground">
-						Acquisition needs attention
+					Acquisition needs attention
 					</div>
-				</CardFooter> */}
+					</CardFooter> */}
 				</Card>
 			)}
 			{isRedeemPending ? (
@@ -130,6 +138,10 @@ export function SectionCards({
 						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconTrendingUp size={20} />
 							Current Returns
+							<TooltipInfo
+								className="text-muted-foreground"
+								content="Total yield earned so far from your active investments. You can claim these returns at any time."
+							/>
 						</CardDescription>
 						<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 							{currentReturns
@@ -140,8 +152,8 @@ export function SectionCards({
 						<Badge variant="outline">
 							<IconTrendingUp />
 							+12.5%
-						</Badge>
-					</CardAction> */}
+							</Badge>
+							</CardAction> */}
 					</CardHeader>
 					{/* <CardFooter className="flex-col items-start gap-1.5 text-sm">
 					<div className="line-clamp-1 flex gap-2 font-medium">
@@ -162,6 +174,10 @@ export function SectionCards({
 						<CardDescription className="flex text-lime-400 items-center gap-2">
 							<IconDropletBolt size={20} />
 							YLDs (Shares)
+							<TooltipInfo
+								className="text-muted-foreground"
+								content="YLD shares represent your portion of the total invested EDU. Their value increases over time as yield is generated."
+							/>
 						</CardDescription>
 						<CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 							{userYLDs?.value

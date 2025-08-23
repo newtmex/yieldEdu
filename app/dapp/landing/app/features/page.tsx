@@ -226,9 +226,9 @@ function Page() {
 												Built on Edu Chain
 											</h2>
 											<p className="text-foreground">
-												A secure, low-cost layer built for on-chain
-												education—ensuring transparency and trust for every
-												learner and investor.
+												A secure, low-cost layer built for on-chain education
+												ensuring transparency and trust for every learner and
+												investor.
 											</p>
 										</div>
 									</div>
@@ -293,7 +293,7 @@ function Page() {
 											</h2>
 											<p className="text-foreground">
 												We’re making education verifiable, accessible, and
-												decentralized—bringing real learning experiences to the
+												decentralized bringing real learning experiences to the
 												blockchain for anyone, anywhere.
 											</p>
 										</div>

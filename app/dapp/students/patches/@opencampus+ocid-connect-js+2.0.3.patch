@@ -1,0 +1,12 @@
+diff --git a/node_modules/@opencampus/ocid-connect-js/lib/react/OCSpinner.js b/node_modules/@opencampus/ocid-connect-js/lib/react/OCSpinner.js
+index a49132b..d5f3da2 100644
+--- a/node_modules/@opencampus/ocid-connect-js/lib/react/OCSpinner.js
++++ b/node_modules/@opencampus/ocid-connect-js/lib/react/OCSpinner.js
+@@ -5,7 +5,6 @@ Object.defineProperty(exports, "__esModule", {
+ });
+ exports["default"] = void 0;
+ var _react = _interopRequireDefault(require("react"));
+-require("./OCSpinner.css");
+ function _interopRequireDefault(e) { return e && e.__esModule ? e : { "default": e }; }
+ /*!
+  * Copyright 2024-Present Animoca Brands Corporation Ltd.

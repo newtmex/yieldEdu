@@ -3,14 +3,12 @@
 import { Stars } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useEffect } from "react";
-// import { FiArrowRight } from "react-icons/fi"
 import {
 	useMotionTemplate,
 	useMotionValue,
 	motion,
 	animate,
 } from "framer-motion";
-import { Badge } from "./ui/badge";
 import { PlasticButton } from "./plastic-button";
 import Link from "next/link";
 
@@ -44,11 +42,11 @@ export const Hero = () => {
 					The Future of On-Chain Education
 				</h1>
 				<p className="my-6 max-w-xl text-center text-base leading-relaxed md:text-lg md:leading-relaxed">
-					YieldEdu transforms education into a transparent, on-chain
-					experience—where learners grow through verified progress and investors
-					track real impact.
+					YieldEdu transforms education into a transparent, on-chain experience
+					where learners grow through verified progress and investors track real
+					impact.
 				</p>
-				<div className="flex gap-5 relative">
+				<div className="flex items-center gap-5 relative">
 					<motion.button
 						disabled
 						style={{

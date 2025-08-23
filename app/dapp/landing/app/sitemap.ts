@@ -13,11 +13,13 @@ type changeFrequency =
 
 export default function sitemap(): MetadataRoute.Sitemap {
 	const changeFrequency = "monthly" as changeFrequency;
-	const routes = ["", "/about", "/features", "/support"].map((route) => ({
-		url: `${NEXT_PUBLIC_WEBSITE_URL}${route}`,
-		lastModified: new Date(),
-		changeFrequency,
-		priority: 1,
-	}));
+	const routes = ["", "/about", "/yuzu", "/features", "/support"].map(
+		(route) => ({
+			url: `${NEXT_PUBLIC_WEBSITE_URL}${route}`,
+			lastModified: new Date(),
+			changeFrequency,
+			priority: 1,
+		})
+	);
 	return [...routes];
 }

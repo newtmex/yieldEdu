@@ -6,7 +6,6 @@ import { Hero } from "@/components/hero";
 import Navigation from "@/components/navbar";
 import { TextRotate } from "@/components/text-rotate";
 import { Button } from "@/components/ui/button";
-import { IconBrandTelegram, IconBrandX } from "@tabler/icons-react";
 import { LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import React from "react";
@@ -73,7 +72,7 @@ const CTAsection = () => {
 						<p className="mb-8 max-w-xl text-muted-foreground lg:text-lg">
 							Whether you're here to fund the next generation or unlock
 							knowledge for yourself, YieldEdu gives you the tools to make every
-							credential count—on-chain, transparent, and rewarding.
+							credential count on-chain, transparent, and rewarding.
 						</p>
 						<div className="flex w-full flex-col justify-center gap-2 sm:flex-row lg:justify-start">
 							<Button asChild>

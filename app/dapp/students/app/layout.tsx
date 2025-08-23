@@ -1,0 +1,77 @@
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
+import NextTopLoader from "nextjs-toploader";
+import { ThemeProvider } from "next-themes";
+import OCConnectWrapper from "@/components/oc-connect-wrapper";
+import { yieldEduMetadata } from "@/metadata";
+import WagmiContextProvider from "@/components/wagmi-provider";
+import { headers } from "next/headers";
+
+const geistSans = Geist({
+	variable: "--font-geist-sans",
+	subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+	variable: "--font-geist-mono",
+	subsets: ["latin"],
+});
+
+export const metadata: Metadata = yieldEduMetadata;
+
+export default async function RootLayout({
+	children,
+}: Readonly<{
+	children: React.ReactNode;
+}>) {
+	const opts = {
+		clientId: process.env.NEXT_PUBLIC_OCID_CLIENT_ID!,
+		redirectUri: (() => {
+			const baseUrl = process.env.BETTER_AUTH_URL;
+			if (baseUrl) {
+				return `${baseUrl}/redirect`;
+			}
+			return "http://localhost:3000/redirect";
+		})(),
+		referralCode: "PARTNER6",
+	};
+	const headersObj = await headers();
+
+	const cookies = headersObj.get("cookie");
+
+	return (
+		<html lang="en" suppressHydrationWarning>
+			<body
+				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+			>
+				<NextTopLoader
+					showSpinner={false}
+					color="#84cc16"
+					initialPosition={0.04}
+					crawlSpeed={300}
+					height={2}
+					crawl={true}
+					easing="ease"
+					speed={350}
+					shadow="0 0 10px #84cc16,0 0 5px #84cc16"
+					zIndex={9999}
+				/>
+				<OCConnectWrapper opts={opts} sandboxMode={false}>
+					<ThemeProvider
+						attribute="class"
+						defaultTheme="system"
+						enableSystem
+						disableTransitionOnChange
+					>
+						<WagmiContextProvider cookies={cookies}>
+							{children}
+						</WagmiContextProvider>
+					</ThemeProvider>
+				</OCConnectWrapper>
+				<Toaster richColors closeButton />
+			</body>
+		</html>
+	);
+}

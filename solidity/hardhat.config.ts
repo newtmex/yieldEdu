@@ -20,10 +20,10 @@ const config: HardhatUserConfig = {
 			url: "http://127.0.0.1:8545/",
 			chainId: 31337,
 		},
-		educhain: {
-			url: process.env.EDUCHAIN_RPC,
-			accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
-		},
+		// educhain: {
+		// 	url: process.env.EDUCHAIN_RPC,
+		// 	accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
+		// },
 	},
 };
 

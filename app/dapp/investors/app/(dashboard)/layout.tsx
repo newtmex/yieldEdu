@@ -43,7 +43,7 @@ export default async function Layout({
 					<SidebarInset>
 						<DashboardHeader />
 						<div className="flex flex-1 flex-col">
-							<main className="@container/main flex flex-1 flex-col gap-2">
+							<main className="@container/main flex flex-1 flex-col gap-2 max-w-7xl">
 								<SyncUserToDb />
 								{children}
 							</main>

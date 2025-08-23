@@ -33,7 +33,7 @@ const Navigation = () => {
 
 	const backgroundImage = useMotionTemplate`radial-gradient(120% 120% at 50% 0%, rgba(2,6,23,0.7) 60%, ${color} 100%)`;
 
-	const navLinks = ["About", "Features", "Support"];
+	const navLinks = ["About", "Yuzu", "Features", "Support"];
 
 	return (
 		<div className="fixed top-5 left-0 right-0 z-50">

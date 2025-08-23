@@ -1,0 +1,1 @@
+alter table "session" add column "role" text not null;
