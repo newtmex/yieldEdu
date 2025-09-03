@@ -4,7 +4,7 @@
 	"author": "YieldEDU Team",
 	"private": true,
 	"workspaces": [
-		"apps/*",
+		"app/*",
 		"solidity",
 		"packages/*"
 	],
