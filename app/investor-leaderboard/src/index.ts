@@ -51,7 +51,7 @@ ponder.on(
     // Ensure sender is tracked in DB with an accurate baseline balance
     if (!isAddressEqual(from, zeroAddress)) {
       const existing = await db.find(userPoints, { id: from });
-      if (!existing) {
+      if (!Boolean(existing?.shares)) {
         const currentBal = await client.readContract({
           ...YLDToken,
           functionName: "balanceOf",

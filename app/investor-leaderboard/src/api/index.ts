@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "ponder:api";
 import schema, { userPoints } from "ponder:schema";
-import { and, client, count, desc, graphql, ne, sql } from "ponder";
+import { and, client, desc, eq, graphql, ne, sql } from "ponder";
 import { yuzuAddition } from "../helpers/TextFileStore";
 import { API_KEY } from "../../ponder.config";
 import { formatEther, parseUnits } from "viem";
@@ -150,14 +150,95 @@ app.get("/leaderboard", async (c) => {
             maxPoints: formatEther(maxPoints),
             pointsAccrued: formatEther(pointsAccrued),
             pointsAvailable: formatEther(pointsAvailable),
-            pointsDistributed: enriched.reduce(
-                (a, c) => a + c.pendingPoints,
-                0
-            ),
             result: enriched,
         });
     } catch (err) {
         console.error("Error in /leaderboard", err);
+        return c.json({ error: "Internal server error" }, 500);
+    }
+});
+
+/**
+ * GET /wallet/:address
+ * Returns stats about a specific wallet address.
+ */
+app.get("/wallet/:address", async (c) => {
+    try {
+        const address = c.req.param("address")?.toLowerCase();
+        if (!address || !address.startsWith("0x") || address.length !== 42) {
+            return c.json({ error: "Invalid wallet address" }, 400);
+        }
+
+        // Load global state
+        const global = await db.query.pointSupply.findFirst();
+        if (!global) {
+            return c.json({ error: "point_supply not initialized" }, 500);
+        }
+
+        const { pointsPerShare, pointsAccrued } = global;
+        const maxPoints = (global.maxPoints * 9n) / 10n;
+        const pointsAvailable = maxPoints - pointsAccrued;
+
+        // Load user row
+        const [user] = await db
+            .select({
+                pendingPoints: pointsAccruedExpr(pointsPerShare),
+                shares: userPoints.shares,
+                pointPerShare: userPoints.pointPerShare,
+            })
+            .from(userPoints)
+            .where(eq(userPoints.id, address));
+
+        if (!user) {
+            return c.json({
+                global: {
+                    totalDeposits: formatEther(global.totalDeposits),
+                    maxPoints: formatEther(maxPoints),
+                    pointsAccrued: formatEther(pointsAccrued),
+                    pointsAvailable: formatEther(pointsAvailable),
+                },
+                user: {
+                    walletAddress: address,
+                    shares: "0",
+                    pendingPoints: 0,
+                    userPosition: null,
+                },
+            });
+        }
+
+        const pendingPoints = normalizePoints(user.pendingPoints);
+
+        // Compute leaderboard rank with drizzle
+        const [{ rank }] = await db
+            .select({
+                rank: sql<number>`COUNT(*) + 1`,
+            })
+            .from(userPoints)
+            .where(
+                and(
+                    ne(userPoints.shares, 0n),
+                    sql`((${userPoints.shares} * (${pointsPerShare} - ${userPoints.pointPerShare})) / ${Q128}) > ${user.pendingPoints}`
+                )
+            );
+
+        const userPosition = rank ?? null;
+
+        return c.json({
+            global: {
+                totalDeposits: formatEther(global.totalDeposits),
+                maxPoints: formatEther(maxPoints),
+                pointsAccrued: formatEther(pointsAccrued),
+                pointsAvailable: formatEther(pointsAvailable),
+            },
+            user: {
+                walletAddress: address,
+                shares: formatEther(user.shares),
+                pendingPoints,
+                userPosition,
+            },
+        });
+    } catch (err) {
+        console.error("Error in /wallet/:address", err);
         return c.json({ error: "Internal server error" }, 500);
     }
 });
