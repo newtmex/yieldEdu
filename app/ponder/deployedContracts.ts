@@ -4,9 +4,9 @@
  */
 
 export const deployedContracts = {
-  "31337": {
+  "41923": {
     YLDToken: {
-      address: "0xB82008565FdC7e44609fA118A4a681E92581e680",
+      address: "0x145D410f1c831F185B5815fe4fD76308c76240f9",
       abi: [
         {
           inputs: [],
@@ -1334,7 +1334,7 @@ export const deployedContracts = {
       ],
     },
     MockDEDU: {
-      address: "0x1881d02D05a44713a69d6eDDE3e7167792A636d6",
+      address: "0x597FFfA69e133Ee9b310bA13734782605C3549b7",
       abi: [
         {
           inputs: [],
@@ -1766,7 +1766,7 @@ export const deployedContracts = {
       ],
     },
     SToken: {
-      address: "0xb9bEECD1A582768711dE1EE7B0A1d582D9d72a6C",
+      address: "0x520357d4cB2F4C13420ac440d480CF423Caf8bBD",
       abi: [
         {
           inputs: [],
@@ -2842,7 +2842,7 @@ export const deployedContracts = {
       ],
     },
     Staking: {
-      address: "0xF32D39ff9f6Aa7a7A64d7a4F00a54826Ef791a55",
+      address: "0x22b295bD528F08D89Eec7Cf9E11e20d95FD35929",
       abi: [
         {
           inputs: [],
@@ -3289,7 +3289,7 @@ export const deployedContracts = {
       ],
     },
     WEDU: {
-      address: "0x8A93d247134d91e0de6f96547cB0204e5BE8e5D8",
+      address: "0xd02E8c38a8E3db71f8b2ae30B8186d7874934e12",
       abi: [
         {
           anonymous: false,

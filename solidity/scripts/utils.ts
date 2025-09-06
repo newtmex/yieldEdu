@@ -84,18 +84,22 @@ export async function exportDeployments(
         // Load existing deployments if file exists
         let existing: Record<string, any> = {};
         if (fs.existsSync(outFile)) {
-            const fileContent = fs.readFileSync(outFile, "utf-8");
-            const match = fileContent.match(
-                /export const deployedContracts\s*=\s*({[\s\S]*})\s*as const;/
-            );
-            if (match) {
-                try {
-                    existing = JSON.parse(match[1]);
-                } catch {
-                    existing = {};
+            try {
+                // Dynamically import the module
+                const mod = await import(outFile);
+                if (mod.deployedContracts) {
+                    existing = mod.deployedContracts;
                 }
+            } catch (err) {
+                console.error(
+                    "❌ Failed to import deployedContracts:",
+                    (err as Error).message
+                );
+                existing = {};
             }
         }
+
+        console.log({ existing });
 
         // Merge current network
         existing[networkId] = contracts;
