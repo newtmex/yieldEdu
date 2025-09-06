@@ -1,69 +1,29 @@
-// import { HardhatUserConfig } from "hardhat/config";
+// import "dotenv/config";
+
+import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import "solidity-coverage";
-import "@nomicfoundation/hardhat-verify";
+import "@nomicfoundation/hardhat-ethers";
 import "@openzeppelin/hardhat-upgrades";
+import "hardhat-deploy";
+import "hardhat-deploy-ethers";
 
-import { vars } from "hardhat/config";
-const ACCOUNT_PRIVATE_KEY = vars.get("ACCOUNT_PRIVATE_KEY");
-const ETHERSCAN_API_KEY = vars.get("ETHERSCAN_API_KEY");
+import "./scripts/yieldAccrualUpgrade";
+import "./scripts/accrueYield";
+import "./scripts/stake";
 
-if (!ACCOUNT_PRIVATE_KEY) {
-	throw new Error(
-		`ACCOUNT_PRIVATE_KEY is not set. "use npx hardhat vars set ACCOUNT_PRIVATE_KEY"`
-	);
-}
+// import "@nomicfoundation/hardhat-foundry"; remove for now, as it causes issues with hardhat compile command
 
-if (!ETHERSCAN_API_KEY) {
-	throw new Error(
-		`ETHERSCAN_API_KEY is not set. "use npx hardhat vars set ETHERSCAN_API_KEY"`
-	);
-}
-
-const config = {
-	gasReporter: {
-		enabled: false,
-		outputFile: "gas-report.txt",
-		noColors: true,
-	},
-	solidity: {
-		version: "0.8.28",
-		settings: {
-			optimizer: {
-				enabled: true,
-				runs: 200,
-			},
-		},
-	},
+const config: HardhatUserConfig = {
+	solidity: "0.8.28",
 	networks: {
-		"edu-testnet": {
-			url: "https://rpc.open-campus-codex.gelato.digital",
-			accounts: [ACCOUNT_PRIVATE_KEY],
-			// gas: 600000000, // Set the gas limit here
-			// gasPrice: "auto",
+		localhost: {
+			url: "http://127.0.0.1:8545/",
+			chainId: 31337,
 		},
-	},
-
-	etherscan: {
-		apiKey: {
-			"edu-testnet": ETHERSCAN_API_KEY,
-		},
-		customChains: [
-			{
-				chainId: 656476,
-				network: "edu-testnet",
-				urls: {
-					apiURL: "https://edu-chain-testnet.blockscout.com/api",
-					browserURL: "https://edu-chain-testnet.blockscout.com",
-				},
-				gas: 600000000, // Set the gas limit here
-				gasPrice: "auto",
-			},
-		],
-	},
-
-	sourcify: {
-		enabled: false,
+		// educhain: {
+		// 	url: process.env.EDUCHAIN_RPC,
+		// 	accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
+		// },
 	},
 };
 

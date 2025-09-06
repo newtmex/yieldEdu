@@ -1,182 +1,157 @@
-# 🌟 EDU Fixed Yield Protocol
+## 📘 YieldEDU Smart Contracts – Integration Guide for Front-End Developers
 
-A decentralized fixed-yield protocol built on EDU Chain that enables users to earn guaranteed yields through staking and participating in educational activities. Stack your knowledge with your tokens - learn, earn, and earn FYT tokens on your EDU holdings through staking rewards and educational achievements.
+This guide walks you through deploying and integrating the YieldEDU staking protocol in a production frontend environment. It covers core contract deployment, staking/unstaking flows, and contract roles.
 
-![EDU](https://github.com/user-attachments/assets/6e7cd216-f018-4f28-8485-1ab3669e9927)
+run
 
-## 🔧 Prerequisites
+```ts
+ npx hardhat node //in another terminal
+ npx hardhat run scripts/deploy.ts --network localhost  //to generate abis and addresses remember to have ponder running
 
-- Node.js v18+
-- pnpm
-- Git
-- EDU testnet wallet
-- IDE (VS Code recommended)
-
-## 🚀 Quick Start
-
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/Bruh-Codes/EDU-chain-hackathon.git
-cd EDU-chain-hackathon
 ```
 
-1. **Install dependencies for hardhat**
+---
 
-```bash
-# Install root dependencies
-pnpm install
+### 🧱 Contracts Overview
 
-# Install frontend dependencies
-cd frontend
-pnpm install
+| Contract   | Purpose                                                                    |
+| ---------- | -------------------------------------------------------------------------- |
+| `Staking`  | Main gateway for staking ETH, WEDU, or dEDU to earn yield and mint sTokens |
+| `YLDToken` | Yield-bearing ERC-20 token, minted on stake, burned on un-stake            |
+| `sToken`   | ERC-1155 semi-fungible tokens representing course-bound staking access     |
+| `WEDU`     | Wrapped ETH implementation used as staking input                           |
+| `MockDEDU` | Mock dEDU yield-bearing token (replace with GainzSwap’s in production)     |
+
+---
+
+### 🛠️ Deployment
+
+Ensure you have **Hardhat**, **ethers**, and **@openzeppelin/hardhat-upgrades** installed.
+
+#### 1. Deploy `YLDToken` and `MockDEDU`
+
+```ts
+const { yldToken, mockAsset: dEDUToken } = await deployYLDToken();
 ```
 
-1. **Set up environment variables**
+#### 2. Deploy `sToken`
 
-```bash
-cd .. # // from frontend
-
-# In the root directory
-npx hardhat vars set ACCOUNT_PRIVATE_KEY
-# Enter your wallet's private key when prompted
+```ts
+const { sToken } = await deploySToken();
 ```
 
-1. **Compile Smart Contracts**
+#### 3. Deploy `WEDU` and `Staking` with constructor dependencies
 
-```bash
-# In the root directory
-npx hardhat compile
-
-# //it has already been deploy so there is no need. you can skip this step
-npx hardhat deploy
+```ts
+const { staking, wedu } = await deployStakingContract({
+	yldAddress: yldToken.getAddress(),
+	sTokenAddress: sToken.getAddress(),
+});
 ```
 
-1. **Run Tests**
+#### 4. Grant Roles to Staking Contract
+
+```ts
+await yldToken.grantRole(await yldToken.MINTER_ROLE(), staking.getAddress());
+await sToken.grantRole(await sToken.MINTER_ROLE(), staking.getAddress());
+```
+
+---
+
+### 🧾 Staking APIs
+
+#### stakeEDU
+
+```ts
+await staking.connect(user).stakeEDU(courseId, { value: amount });
+```
+
+- Stakes native ETH
+- Mints `YLD` (ERC-20) and `sToken` (ERC-1155)
+
+#### stakeWEDU
+
+```ts
+await wedu.connect(user).deposit({ value: amount });
+await wedu.connect(user).approve(staking, amount);
+await staking.connect(user).stakeWEDU(courseId, amount);
+```
+
+- Stakes `WEDU` tokens
+
+#### stakeDEDU
+
+```ts
+await dEDUToken.connect(user).mint(user.address, amount);
+await dEDUToken.connect(user).approve(staking, amount);
+await staking.connect(user).stakeDEDU(courseId, amount);
+```
+
+- Stakes dEDU (e.g., aLSDAI or stETH in production)
+
+---
+
+### 🔁 Unstaking & Yield Redemption
+
+After simulated or real yield has been accrued to `YLDToken`, users can unstake:
+
+```ts
+await yldToken.connect(user).approve(staking, shares);
+await staking.connect(user).unStake(tokenId, shares);
+```
+
+- Burns `YLD`, transfers base token + yield to user
+- Can trigger fee logic and share distribution
+
+---
+
+### 🧪 Test & Verify
+
+Tests cover:
+
+- ✅ ETH/WEDU/dEDU staking
+- ✅ Correct minting of YLD/sToken
+- ✅ Yield accrual
+- ✅ Unstake + yield redemption
+
+Run with:
 
 ```bash
 npx hardhat test
 ```
 
-```bash
-# Run all tests with gas reporting
+---
 
-REPORT_GAS=true npx hardhat test
+### 📦 Frontend Integration Notes
 
-# Run coverage to see test coverages
-npx hardhat coverage
-```
-
-1. **Start Frontend Development Server**
-
-```bash
-# In the frontend directory
-cd frontend
-pnpm install
-pnpm run dev
-```
-
-1. **Access the Application**
-   Open `http://localhost:3000` in your browser
-
-## 📝 Contract Addresses (EDU Testnet)
-
-YieldToken: `0x235a61846Cc52410948E37B1d426Cb82F41f940e`
-YieldPool: `0xCbe4C05520F526FEFd0e0FC133bfA24a033546B8`
-
-## 📝 Verified Contract URL
-
-[YieldToken](https://edu-chain-testnet.blockscout.com/address/0x235a61846Cc52410948E37B1d426Cb82F41f940e#code)
-[YieldPool](https://edu-chain-testnet.blockscout.com/address/0xCbe4C05520F526FEFd0e0FC133bfA24a033546B8#code)
-
-## 🔍 Features
-
-- **Fixed Yield Generation**
-
-  - 10% APY on all deposits
-  - Automatic yield calculation
-  - No impermanent loss risk
-
-- **Flexible Staking Options**
-
-  - Lock periods from 1 to 365 days
-  - Early unstaking with 10% penalty
-  - Multiple active positions per wallet
-
-- **Learn & Earn System**
-
-  - Answer educational questions
-  - Earn rewards for correct answers
-  - Progressive difficulty levels
-  - Track learning progress
-
-- **Security & Transparency**
-
-  - Non-custodial protocol
-  - Fully audited smart contracts
-  - Real-time position tracking
-
-- **User Experience**
-  - Interactive analytics dashboard
-  - Position management interface
-  - Faucet for testnet tokens
-  - Mobile-responsive design
-
-## 🛠 Tech Stack
-
-- **Frontend**: Next.js, TailwindCSS, shadcn/ui
-- **Web3**: Reown AppKit, wagmi, viem
-- **Smart Contracts**: Solidity, Hardhat
-- **Testing**: Hardhat, Chai
-
-## 📈 Local Development
-
-1. **Start Local Hardhat Node**
-
-```bash
-npx hardhat node
-```
-
-1. **Deploy Contracts Locally**
-
-```bash
-npx hardhat ignition deploy ./ignition/modules/YieldPool.ts --['your network']
-```
-
-1. **Configure Frontend**
-
-- Update contract addresses in `frontend/lib/utils.ts`
-- Ensure your wallet is connected to localhost network or your preferred network.
-
-1. **Handling Metamask Errors**
-   Metamask currently has a bug so sometimes transactions will fail in cases like minting and switching addresses. This is because metamask tracks blocks which is not in sync with the local network and will sometimes throw errors like Internal JSON-RPC Error. to fix these errors
-
-1. **Handling Connection Errors**
-   sometimes connections to your metamask will not be detected. This is a reown library problem. to resolve this issue,
-
-- Click on your metamask
-- Click on the green dot on the top-right beside your options menu
-- Disconnect and try again connecting on th site.
-
-- Click on Metamask and go to settings
-- Click on Advanced
-- Click on Clear Activity Tab Data
-- Click on Clear
-
-NOTE: to switch your account address you must do that in you metamask wallet.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-## 📄 License
-
-MIT License - see the [LICENSE](LICENSE) file for details.
+- **Contract Addresses**: Persist deployed addresses via `.env` or frontend config
+- **ABI Imports**: Export ABI JSON from `artifacts/` and load with `ethers.Contract`
+- **Events**: Listen for `Staked`, `Unstaked` to trigger UI updates
+- **Course Selection**: Use the `courseId` argument to represent different SFT types
+- **Wallets**: Must support sending native ETH and ERC-20 approvals
 
 ---
 
-Built by [Kamasah Dickson](https://kamasahdickson.vercel.app)
+### 🧩 Example Frontend Call (ETH Staking)
+
+```ts
+const staking = new ethers.Contract(STAKING_ADDRESS, stakingABI, signer);
+await staking.stakeEDU(0, { value: ethers.utils.parseEther("1") });
+```
+
+---
+
+### 🔐 Roles to Set in Production
+
+| Contract | Role          | Grantee          |
+| -------- | ------------- | ---------------- |
+| YLDToken | `MINTER_ROLE` | Staking contract |
+| sToken   | `MINTER_ROLE` | Staking contract |
+
+---
+
+### 🚀 Next Steps
+
+- Replace `MockDEDU` with real yield-bearing assets via GainzSwap
+- Implement on-chain course metadata for sToken
+- Add frontend UI for staking flows, claim history, yield stats
