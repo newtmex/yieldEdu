@@ -1,5 +1,6 @@
 import { createConfig } from "ponder";
 import { deployedContracts as _deployedContracts } from "./abis/deployedContracts";
+import { createPublicClient, http } from "viem";
 
 // ---------------------------------------------------------------------------
 // 🔒 Environment variable helpers
@@ -30,7 +31,9 @@ const startBlock = requireIntEnv("START_BLOCK");
 const chainID = requireEnv("CHAIN_ID") as keyof typeof _deployedContracts;
 const rpc = requireEnv("RPC_URL");
 
-const deployedContracts = _deployedContracts[chainID];
+export const publicClient = createPublicClient({ transport: http(rpc) });
+
+export const deployedContracts = _deployedContracts[chainID];
 if (!deployedContracts) {
     throw new Error(`No deployedContracts found for chain ID: ${chainID}`);
 }
@@ -43,6 +46,7 @@ export default createConfig({
         eduChain: {
             id: Number(chainID), // ensures numeric ID
             rpc,
+            disableCache: chainID === "31337",
         },
     },
     contracts: {

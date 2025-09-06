@@ -4,40 +4,65 @@ import { seasonYuzuStartAmount } from "./src/points/compute/constants";
 /**
  * Table: user_points
  * -------------------
- * Tracks per-user balances and reward-per-share snapshots.
+ * Stores per-user state for share balances and reward tracking.
  */
 export const userPoints = onchainTable("user_points", (t) => ({
-  /** User address (EVM hex string) */
-  id: t.varchar().primaryKey(),
+    /**
+     * Unique user identifier (EVM address in hex format).
+     */
+    id: t.varchar().primaryKey(),
 
-  /** User’s last recorded global points-per-share value */
-  pointPerShare: t.bigint().notNull().default(0n),
+    /**
+     * Last recorded global `pointsPerShare` at which the user’s rewards were updated.
+     * Used to calculate pending rewards.
+     */
+    pointPerShare: t.bigint().notNull().default(0n),
 
-  /** Number of shares (deposits) held by the user */
-  shares: t.bigint().notNull().default(0n),
+    /**
+     * Current number of shares (deposits) held by the user.
+     */
+    shares: t.bigint().notNull().default(0n),
 }));
 
 /**
  * Table: point_supply
  * -------------------
- * Singleton table (id = "supply") tracking global accrual state.
+ * Singleton table (id = "supply") tracking global reward accrual state.
  */
 export const pointSupply = onchainTable("point_supply", (t) => ({
-  /** Singleton row: always use key = "supply" */
-  id: t.varchar().primaryKey().default("supply"),
+    /**
+     * Singleton identifier (always set to "supply").
+     */
+    id: t.varchar().primaryKey().default("supply"),
 
-  /** Total active deposits (basis for point accrual and PPS denominator) */
-  totalDeposits: t.bigint().notNull().default(0n),
+    /**
+     * Total active shares across all users.
+     * Used as the denominator for points-per-share calculations.
+     */
+    totalDeposits: t.bigint().notNull().default(0n),
 
-  /** Maximum number of points that can ever be distributed */
-  maxPoints: t.bigint().notNull().default(seasonYuzuStartAmount),
+    /**
+     * Maximum number of points that can be distributed for the season.
+     */
+    maxPoints: t.bigint().notNull().default(seasonYuzuStartAmount),
 
-  /** Global points-per-share accumulator (scaled by Q128 for precision) */
-  pointsPerShare: t.bigint().notNull().default(0n),
+    /**
+     * Global accumulator of distributed points, scaled by Q128 for precision.
+     */
+    pointsPerShare: t.bigint().notNull().default(0n),
 
-  /** Points currently reserved but not yet distributed */
-  pointReserve: t.bigint().notNull().default(0n),
+    /**
+     * Cumulative number of points distributed so far.
+     */
+    pointsAccrued: t.bigint().notNull().default(0n),
 
-  /** Last timestamp (in seconds) when the state was updated */
-  updatedAt: t.bigint().notNull().default(0n),
+    /**
+     * Points reserved (allocated but not yet distributed).
+     */
+    pointsReserve: t.bigint().notNull().default(0n),
+
+    /**
+     * Current emission rate of points (points per second).
+     */
+    pointsPerSec: t.bigint().notNull().default(0n),
 }));

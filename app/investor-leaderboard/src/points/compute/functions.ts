@@ -2,16 +2,26 @@ import { Context } from "ponder:registry";
 import {
     POINTS_PER_SECOND,
     Q128,
-    seasonStart,
+    seasonDeadline,
     seasonYuzuStartAmount,
 } from "./constants";
 import { pointSupply, userPoints } from "ponder:schema";
+import { Hex, isAddressEqual, zeroAddress } from "viem";
 
 /** ------------------------------------------------------------------------
  * Utility logging (replace with a real logger in production)
  * ---------------------------------------------------------------------- */
-function logEvent(event: string, data: Record<string, unknown>) {
+export function logEvent(event: string, data: Record<string, unknown>) {
+    // if (
+    //     !Object.values(data).some(
+    //         (a) =>
+    //             isAddress(a) &&
+    //             isAddressEqual(a, "0xdf37f81daad2b0327a0a50003740e1c935c70913")
+    //     )
+    // )
+    //     return;
     // Swap this for a structured logger (e.g., pino, winston) in production
+    // if (event != 'Balance check') return;
     console.log(`[${event}]`, data);
 }
 
@@ -23,21 +33,19 @@ function logEvent(event: string, data: Record<string, unknown>) {
  * Ensures the `point_supply` singleton row exists and returns it.
  * Initializes the table on first request with default values.
  */
-export async function getOrInitPointSupply(
-    db: Context["db"]
-): Promise<typeof pointSupply.$inferSelect> {
+export async function getOrInitPointSupply(db: Context["db"]) {
     let row = await db.find(pointSupply, { id: "supply" });
 
     if (!row) {
-        row = {
+        row = await db.insert(pointSupply).values({
             id: "supply",
             totalDeposits: 0n,
             maxPoints: seasonYuzuStartAmount,
             pointsPerShare: 0n,
-            pointReserve: 0n,
-            updatedAt: seasonStart,
-        };
-        await db.insert(pointSupply).values(row);
+            pointsReserve: 0n,
+            pointsPerSec: 0n,
+            pointsAccrued: 0n,
+        });
     }
 
     return row;
@@ -48,76 +56,110 @@ export async function getOrInitPointSupply(
  * in points-per-share (PPS), ensuring total points remain within
  * the configured maximum cap.
  */
-export async function computeAccumulatedPoints(
-    currentTimestamp: bigint,
-    {
-        totalDeposits,
-        updatedAt = currentTimestamp,
-        maxPoints,
-        pointReserve,
-    }: typeof pointSupply.$inferSelect
-): Promise<{ points: bigint; ppsIncrease: bigint }> {
-    const maxPointsToDistribute = (maxPoints * 90n) / 100n; // 90% hard cap
+function computeReserveUpdate({
+    timestamp,
+    value,
+}: {
+    timestamp: bigint;
+    value: bigint;
+}) {
+    // Scaled emission rate: value * POINTS_PER_SECOND / 1e18
+    const pointsRateDelta = (value * POINTS_PER_SECOND) / 10n ** 18n;
 
-    if (totalDeposits === 0n || currentTimestamp <= updatedAt!) {
-        return { points: 0n, ppsIncrease: 0n };
-    }
+    const timeRemaining = seasonDeadline - timestamp;
+    const reserveDelta = pointsRateDelta * timeRemaining;
 
-    const timeElapsed = currentTimestamp - updatedAt!;
-    let points = totalDeposits * POINTS_PER_SECOND * timeElapsed;
-
-    // Enforce cap relative to current reserve
-    if (pointReserve + points > maxPointsToDistribute) {
-        points = maxPointsToDistribute - pointReserve;
-        if (points < 0n) points = 0n; // guard against negative case
-    }
-
-    const ppsIncrease = (points * Q128) / totalDeposits; // mulDiv equivalent
-    return { points, ppsIncrease };
+    return { reserveDelta, pointsRateDelta };
 }
 
 /**
- * Updates the global point accounting by incorporating newly
- * accumulated points into the reserve and points-per-share (PPS).
+ * Computes the capped points accrued and updated points-per-share (PPS).
+ *
+ * - Caps accrual at 90% of maxPoints
+ * - Calculates PPS increase from undistributed points
+ * - Returns both capped pointsAccrued and updated PPS
  */
-export async function updatePoints(
-    db: Context["db"],
-    currentTimestamp: bigint
-): Promise<{ points: bigint; ppsIncrease: bigint; updatedPPS: bigint }> {
-    const row = await getOrInitPointSupply(db);
+function computePointsUpdate(
+    global: typeof pointSupply.$inferSelect,
+    pointsAccrued: bigint
+) {
+    if (global.totalDeposits <= 0n) {
+        return {
+            pointsAccrued: global.pointsAccrued,
+            updatedPPS: global.pointsPerShare,
+        };
+    }
 
-    const { points, ppsIncrease } = await computeAccumulatedPoints(
-        currentTimestamp,
-        row
+    // Cap accrual at 90% of maxPoints
+    const maxAccruable = (global.maxPoints * 9n) / 10n;
+    const cappedAccrued =
+        pointsAccrued > maxAccruable ? maxAccruable : pointsAccrued;
+
+    // Only consider positive undistributed points
+    const undistributed =
+        cappedAccrued > global.pointsAccrued
+            ? cappedAccrued - global.pointsAccrued
+            : 0n;
+
+    const ppsIncrease = (undistributed * Q128) / global.totalDeposits;
+    const updatedPPS = global.pointsPerShare + ppsIncrease;
+
+    return { pointsAccrued: cappedAccrued, updatedPPS };
+}
+
+/**
+ * Updates the global point accounting system.
+ *
+ * - Recalculates the reserve and points-per-second rate (PPS rate).
+ * - Adjusts totals depending on whether points are minted or burned.
+ * - Computes new points-per-share (PPS) value based on unclaimed accrual.
+ *
+ * @param db        Database context
+ * @param timestamp Current timestamp (bigint)
+ * @param value     Amount to apply (bigint)
+ * @param direction Whether the update is from "mint" or "burn"
+ */
+export async function mineGlobalPoints(
+    db: Context["db"],
+    timestamp: bigint,
+    value: bigint,
+    direction: "mint" | "burn"
+) {
+    const global = await getOrInitPointSupply(db);
+
+    // Compute rate/reserve delta
+    let { reserveDelta, pointsRateDelta } = computeReserveUpdate({
+        timestamp,
+        value,
+    });
+    if (direction === "burn") {
+        reserveDelta = -reserveDelta;
+        pointsRateDelta = -pointsRateDelta;
+    }
+
+    const updatedReserve = global.pointsReserve + reserveDelta;
+    const updatedRate = (global.pointsPerSec ?? 0n) + pointsRateDelta;
+    const timeRemaining = seasonDeadline - timestamp;
+
+    // Estimate accrued points from reserve dynamics
+    const projectedAccrued = updatedReserve - updatedRate * timeRemaining;
+
+    const { pointsAccrued, updatedPPS } = computePointsUpdate(
+        global,
+        projectedAccrued
     );
 
-    if (points === 0n) {
-        return { points: 0n, ppsIncrease: 0n, updatedPPS: row.pointsPerShare };
-    }
-
-    const updatedReserve = row.pointReserve + points;
-    const updatedPPS = row.pointsPerShare + ppsIncrease;
-
-    if (updatedReserve > row.maxPoints) {
-        throw new Error("pointReserve would exceed maxPoints");
-    }
-    if (updatedReserve < row.pointReserve) {
-        throw new Error("pointReserve cannot decrease");
-    }
-
     await db.update(pointSupply, { id: "supply" }).set({
-        pointReserve: updatedReserve,
+        pointsReserve: updatedReserve,
+        pointsPerSec: updatedRate,
         pointsPerShare: updatedPPS,
-        updatedAt: currentTimestamp,
+        pointsAccrued,
     });
 
     logEvent("PointsUpdated", {
-        points: points.toString(),
-        ppsIncrease: ppsIncrease.toString(),
-        newPointsPerShare: updatedPPS.toString(),
+        pointsAccrued: pointsAccrued.toString(),
+        updatedPPS: updatedPPS.toString(),
     });
-
-    return { points, ppsIncrease, updatedPPS };
 }
 
 /** ------------------------------------------------------------------------
@@ -147,7 +189,7 @@ function weightedAverageRoundUp(
 /**
  * Sets the reward-per-share (RPS) snapshot for a user.
  */
-async function setUserRps(
+export async function setUserRps(
     db: Context["db"],
     from: string,
     to: string,
@@ -158,8 +200,8 @@ async function setUserRps(
 
     await db
         .insert(userPoints)
-        .values({ id: to, pointPerShare: rps, shares })
-        .onConflictDoUpdate({ pointPerShare: rps, shares });
+        .values({ id: to, pointPerShare: rps })
+        .onConflictDoUpdate({ pointPerShare: rps });
 
     logEvent("UserRewardPerShareUpdate", {
         from,
@@ -187,16 +229,24 @@ export async function update({
     value: bigint;
     currentTimestamp: bigint;
 }): Promise<void> {
-    await updatePoints(db, currentTimestamp);
+    const isMint = isAddressEqual(from as Hex, zeroAddress);
+    const isBurn = isAddressEqual(to as Hex, zeroAddress);
+    const isTransfer = !isBurn && !isMint;
 
-    if (to !== "0x0000000000000000000000000000000000000000" && value > 0n) {
+    await mineGlobalPoints(
+        db,
+        currentTimestamp,
+        !isTransfer ? value : 0n,
+        isBurn ? "burn" : "mint"
+    );
+
+    if (!isBurn && value > 0n) {
         const global = await getOrInitPointSupply(db);
 
         const fromUser = await db.find(userPoints, { id: from });
-        const prevailingRps =
-            from === "0x0000000000000000000000000000000000000000"
-                ? global.pointsPerShare
-                : fromUser?.pointPerShare ?? 0n;
+        const prevailingRps = isMint
+            ? global.pointsPerShare
+            : fromUser?.pointPerShare ?? 0n;
 
         const toUser = await db.find(userPoints, { id: to });
         const sharesOfTo = toUser?.shares ?? 0n;
@@ -225,14 +275,18 @@ export async function applyTransfer(
 ): Promise<void> {
     if (value === 0n) return;
 
+    const global = await getOrInitPointSupply(db);
+
     if (from === "0x0000000000000000000000000000000000000000") {
-        await db.update(pointSupply, { id: "supply" }).set((row) => ({
-            totalDeposits: row.totalDeposits + value,
-        }));
+        await db.update(pointSupply, { id: "supply" }).set({
+            totalDeposits: global.totalDeposits + value,
+        });
     } else {
         const fromUser = await db.find(userPoints, { id: from });
         if (!fromUser || fromUser.shares < value) {
-            throw new Error(`Insufficient balance for ${from}`);
+            throw new Error(
+                `Insufficient balance for ${from}, value: ${value}, shares: ${fromUser?.shares}`
+            );
         }
         await db.update(userPoints, { id: from }).set((row) => ({
             shares: row.shares - value,
@@ -240,9 +294,9 @@ export async function applyTransfer(
     }
 
     if (to === "0x0000000000000000000000000000000000000000") {
-        await db.update(pointSupply, { id: "supply" }).set((row) => ({
-            totalDeposits: row.totalDeposits - value,
-        }));
+        await db.update(pointSupply, { id: "supply" }).set({
+            totalDeposits: global.totalDeposits - value,
+        });
     } else {
         const toUser = await db.find(userPoints, { id: to });
         if (toUser) {
@@ -285,15 +339,15 @@ export async function getClaimablePointsForUser(
     const global = await getOrInitPointSupply(db);
     const userRow = await db.find(userPoints, { id: userAddress });
 
-    if (!userRow?.shares) {
+    if (!userRow) {
         return { shares: 0n, claimable: 0n };
     }
 
-    if (shares > userRow.shares) {
-        throw new Error(
-            `Invalid share amount: requested ${shares}, user has only ${userRow.shares}`
-        );
-    }
+    // if (shares > userRow.shares) {
+    //     throw new Error(
+    //         `Invalid share amount: requested ${shares}, user ${userAddress} has only ${userRow.shares}`
+    //     );
+    // }
 
     const globalRps = global.pointsPerShare + ppsIncrease;
     const userRps = userRow.pointPerShare;

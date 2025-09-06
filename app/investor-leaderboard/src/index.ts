@@ -1,123 +1,126 @@
 import { ponder } from "ponder:registry";
 import {
-    update,
-    updatePoints,
-    getClaimablePointsForUser,
-    getOrInitPointSupply,
+  update,
+  logEvent,
+  mineGlobalPoints,
+  getClaimablePointsForUser,
 } from "./points/compute/functions";
 import { isAddressEqual, zeroAddress } from "viem";
 import { pointSupply, userPoints } from "ponder:schema";
 import { yuzuAddition } from "./helpers/TextFileStore";
-import { seasonStart } from "./points/compute/constants";
-
-/** ------------------------------------------------------------------------
- * Event Handlers
- * ---------------------------------------------------------------------- */
+import { seasonDeadline, seasonStart } from "./points/compute/constants";
 
 /**
- * Handles YLDToken Transfer events and updates point accounting.
+ * Checks whether the given timestamp falls within the current season window.
+ */
+export function isWithinSeason(timestamp: bigint): boolean {
+  return timestamp >= seasonStart && timestamp <= seasonDeadline;
+}
+
+/* --------------------------------------------------------------------------
+ * Event Handlers
+ * -------------------------------------------------------------------------- */
+
+/**
+ * Handles `YLDToken.Transfer` events and updates both global and user state.
+ * 
+ * Flow:
+ * - Skip if event is outside the active season.
+ * - Ensure sender’s state exists (backfill with on-chain balance if needed).
+ * - Handle burns specially (deduct claimable points).
+ * - Apply standard accounting via `update()`.
  */
 ponder.on(
-    "YLDToken:Transfer",
-    async ({
-        event,
-        context: {
-            db,
-            client,
-            contracts: { YLDToken },
-        },
-    }) => {
-        const { from, to, value } = event.args;
-        const timestamp = event.block.timestamp;
+  "YLDToken:Transfer",
+  async ({
+    event,
+    context: {
+      db,
+      client,
+      contracts: { YLDToken },
+    },
+  }) => {
+    const timestamp = event.block.timestamp;
+    if (!isWithinSeason(timestamp)) return;
 
-        // Skip any transfers before the configured season start
-        if (timestamp < seasonStart) return;
+    const { from, to, value } = event.args;
+    logEvent("Transfer event", { from, to, value, block: event.block.number });
 
-        // Ensure both sender and recipient are initialized in userPoints table
-        await Promise.all(
-            [from, to].map(async (userAddr) => {
-                if (!isAddressEqual(userAddr, zeroAddress)) {
-                    const existing = await db.find(userPoints, {
-                        id: userAddr,
-                    });
-                    if (!existing) {
-                        const bal = await client.readContract({
-                            abi: YLDToken.abi,
-                            address: YLDToken.address,
-                            functionName: "balanceOf",
-                            args: [userAddr],
-                            blockNumber: event.block.number - 1n, // snapshot balance before tx
-                        });
+    const isBurn = isAddressEqual(to, zeroAddress);
 
-                        await update({
-                            db,
-                            from: zeroAddress,
-                            to: userAddr,
-                            currentTimestamp: timestamp,
-                            value: bal,
-                        });
-                    }
-                }
-            })
-        );
+    // Ensure sender is tracked in DB with an accurate baseline balance
+    if (!isAddressEqual(from, zeroAddress)) {
+      const existing = await db.find(userPoints, { id: from });
+      if (!existing) {
+        const currentBal = await client.readContract({
+          ...YLDToken,
+          functionName: "balanceOf",
+          args: [from],
+          blockNumber: event.block.number,
+        });
 
-        // Handle burn case: tokens transferred to zero address
-        if (isAddressEqual(to, zeroAddress)) {
-            await updatePoints(db, timestamp);
-
-            const { claimable } = await getClaimablePointsForUser({
-                db,
-                ppsIncrease: 0n,
-                shares: value,
-                userAddress: from,
-            });
-
-            if (claimable > 0n) {
-                const global = await getOrInitPointSupply(db);
-
-                if (global.pointReserve < claimable) {
-                    throw new Error(
-                        `Invariant violation: reserve (${global.pointReserve}) < claimable (${claimable})`
-                    );
-                }
-
-                await db.update(pointSupply, { id: "supply" }).set((row) => ({
-                    pointReserve: row.pointReserve - claimable,
-                    updatedAt: timestamp,
-                }));
-            } else {
-                console.warn("Burn with no claimable points", {
-                    from,
-                    to,
-                    value,
-                });
-            }
-        }
-
-        // Always apply global + per-user balance updates
-        await update({ db, currentTimestamp: timestamp, from, to, value });
+        // Initialise sender with on-chain balance + outgoing transfer
+        await update({
+          db,
+          from: zeroAddress,
+          to: from,
+          value: currentBal + value,
+          currentTimestamp: timestamp,
+        });
+      }
     }
+
+    // Burn logic: mint global points and calculate claimable for sender
+    let claimablePoints = 0n;
+    if (isBurn) {
+      await mineGlobalPoints(db, timestamp, 0n, "mint");
+
+      claimablePoints = (
+        await getClaimablePointsForUser({
+          db,
+          ppsIncrease: 0n,
+          shares: value,
+          userAddress: from,
+        })
+      ).claimable;
+    }
+
+    // Always update state (global + per-user)
+    await update({ db, currentTimestamp: timestamp, from, to, value });
+
+    // Adjust accrued points if burn consumed claimables
+    if (isBurn && claimablePoints > 0n) {
+      await db.update(pointSupply, { id: "supply" }).set((row) => ({
+        pointsAccrued: row.pointsAccrued - claimablePoints,
+        pointsReserve: row.pointsReserve - claimablePoints,
+
+      }));
+    }
+  }
 );
 
 /**
- * Cron job handler triggered every block.
- * - Applies any external Yuzu additions to maxPoints.
- * - Advances global point state.
+ * Cron handler triggered every block.
+ * - Applies pending Yuzu additions to `maxPoints`.
+ * - Mints global points for the elapsed period.
  */
 ponder.on("cron:block", async ({ event, context: { db } }) => {
-    const addedYuzu = await yuzuAddition
-        .read()
-        .then((v) => (!v ? 0n : BigInt(v)));
+  const timestamp = event.block.timestamp;
+  if (!isWithinSeason(timestamp)) return;
 
-    if (addedYuzu > 0n) {
-        await yuzuAddition.set("0");
+  const addedYuzu = await yuzuAddition
+    .read()
+    .then((v) => (v ? BigInt(v) : 0n));
 
-        await db.update(pointSupply, { id: "supply" }).set((row) => ({
-            maxPoints: row.maxPoints + addedYuzu,
-        }));
+  if (addedYuzu > 0n) {
+    await yuzuAddition.set("0");
 
-        console.log("YuzuAdded", { added: addedYuzu.toString() });
-    }
+    await db.update(pointSupply, { id: "supply" }).set((row) => ({
+      maxPoints: row.maxPoints + addedYuzu,
+    }));
 
-    await updatePoints(db, event.block.timestamp);
+    console.log("Yuzu addition applied", { added: addedYuzu.toString() });
+  }
+
+  await mineGlobalPoints(db, timestamp, 0n, "mint");
 });
