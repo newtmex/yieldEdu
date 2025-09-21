@@ -33,15 +33,11 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     /// @param tokenId The ID of the sToken being burned.
     /// @param shares The number of shares burned (both sToken and YLD).
     /// @param withdrawnAmount Total amount of dEDU redeemed and withdrawn.
-    /// @param userAccrual The amount sent to the user (principal + 30% of yield).
-    /// @param protocolPloughBack The yield amount retained by the protocol (70%).
     event Unstaked(
         address indexed user,
         uint256 indexed tokenId,
         uint256 shares,
-        uint256 withdrawnAmount,
-        uint256 userAccrual,
-        uint256 protocolPloughBack
+        uint256 withdrawnAmount
     );
 
     /// @notice Emitted when a user stakes ETH, WEDU, or dEDU and receives sToken and YLD tokens.
@@ -256,23 +252,15 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
         // Burn the sToken and YLD tokens
         $.sToken.sTokenBurn(owner, tokenId, shares);
-        $.yldToken.redeem(shares, address(this), owner);
+        amount = $.yldToken.redeem(shares, address(this), owner);
 
-        // Redeem dEDU held by the protocol
-        amount = $.dEDUToken.balanceOf(address(this));
         _assertSufficientDEDU(amount);
 
-        uint256 yield = amount - shares;
-        uint256 ploughBack = (70 * yield) / 100;
-        uint256 accrual = amount - ploughBack;
-
         // Transfer to user and protocol
-        $.dEDUToken.transfer(owner, accrual);
-        if (ploughBack > 0)
-            $.dEDUToken.transfer(address($.yldToken), ploughBack);
+        $.dEDUToken.transfer(owner, amount);
 
         // Emit unstake event
-        emit Unstaked(owner, tokenId, shares, amount, accrual, ploughBack);
+        emit Unstaked(owner, tokenId, shares, amount);
     }
 
     // -------------------------------------------------------------
