@@ -3035,18 +3035,6 @@ export const deployedContracts = {
               name: "withdrawnAmount",
               type: "uint256",
             },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "userAccrual",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "protocolPloughBack",
-              type: "uint256",
-            },
           ],
           name: "Unstaked",
           type: "event",

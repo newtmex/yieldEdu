@@ -1,4 +1,4 @@
-// import "dotenv/config";
+import "dotenv/config";
 
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
@@ -9,6 +9,7 @@ import "hardhat-deploy-ethers";
 
 import "./scripts/yieldAccrualUpgrade";
 import "./scripts/accrueYield";
+import "./scripts/stakingUpgrade";
 import "./scripts/stake";
 
 // import "@nomicfoundation/hardhat-foundry"; remove for now, as it causes issues with hardhat compile command
@@ -20,10 +21,10 @@ const config: HardhatUserConfig = {
 			url: "http://127.0.0.1:8545/",
 			chainId: 31337,
 		},
-		// educhain: {
-		// 	url: process.env.EDUCHAIN_RPC,
-		// 	accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
-		// },
+		educhain: {
+			url: process.env.EDUCHAIN_RPC!,
+			accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
+		},
 	},
 };
 
