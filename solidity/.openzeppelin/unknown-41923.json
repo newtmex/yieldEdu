@@ -17,11 +17,11 @@
       "kind": "uups"
     },
     {
-      "address": "0x145D410f1c831F185B5815fe4fD76308c76240f9",
+      "address": "0x22b295bD528F08D89Eec7Cf9E11e20d95FD35929",
       "kind": "uups"
     },
     {
-      "address": "0x22b295bD528F08D89Eec7Cf9E11e20d95FD35929",
+      "address": "0x145D410f1c831F185B5815fe4fD76308c76240f9",
       "kind": "uups"
     }
   ],
@@ -1524,6 +1524,7 @@
       },
       "allAddresses": [
         "0x684F8D34df68877F1fF7547DD6920027Ce1d4da9",
+        "0x834a31288421B3f47d9f99953d22452643bcB468",
         "0x509a1eba3Da433a285aEEE986eb560ec97df48BA"
       ]
     },
