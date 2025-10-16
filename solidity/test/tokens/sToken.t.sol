@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import {SToken, ISToken} from "../../contracts/tokens/SToken.sol";
-
 import {STokenFixture} from "./STokenFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -161,6 +160,130 @@ contract STokenTest is STokenFixture {
         );
     }
 
+    /**
+     * @notice Tests splitting a single SFT into multiple new ones and transferring to recipients.
+     */
+    function testSafeSplitTransferFrom_SuccessfulSplit() public {
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
+
+        vm.startPrank(minter);
+        uint256 tokenId = sToken.sTokenMint(user, 100, attr);
+        vm.stopPrank();
+
+        address alice = makeAddr("alice");
+        address bob = makeAddr("bob");
+
+        address[] memory recipients = _addressArrayPrefilled(alice, 2);
+        recipients[1] = bob;
+
+        uint256[] memory values = _uint256ArrayPrefilled(30, 2);
+        values[1] = 50;
+
+        vm.startPrank(user);
+        sToken.safeSplitTransferFrom(user, tokenId, recipients, values);
+        vm.stopPrank();
+
+        // total 80 transferred, 20 should remain
+        assertEq(sToken.balanceOf(user, tokenId), 20);
+        assertEq(sToken.balanceOf(alice, tokenId + 1), 30);
+        assertEq(sToken.balanceOf(bob, tokenId + 2), 50);
+    }
+
+    /**
+     * @notice Reverts if the split transfer exceeds user's available balance.
+     */
+    function testSafeSplitTransferFrom_RevertIfOverBalance() public {
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
+
+        vm.startPrank(minter);
+        uint256 tokenId = sToken.sTokenMint(user, 50, attr);
+        vm.stopPrank();
+
+        address a = makeAddr("a");
+        address b = makeAddr("b");
+
+        address[] memory recipients = _addressArrayPrefilled(a, 2);
+        recipients[1] = b;
+
+        uint256[] memory values = _uint256ArrayPrefilled(30, 2);
+        values[1] = 40; // exceeds balance
+
+        vm.startPrank(user);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "ERC1155InsufficientBalance(address,uint256,uint256,uint256)",
+                user,
+                20, // this amount remains at this time
+                40,
+                tokenId
+            )
+        );
+        sToken.safeSplitTransferFrom(user, tokenId, recipients, values);
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Reverts if recipients and values arrays have mismatched lengths.
+     */
+    function testSafeSplitTransferFrom_RevertIfInvalidArrayLength() public {
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
+
+        vm.startPrank(minter);
+        uint256 tokenId = sToken.sTokenMint(user, 100, attr);
+        vm.stopPrank();
+
+        address a = makeAddr("a");
+        address b = makeAddr("b");
+
+        address[] memory recipients = _addressArrayPrefilled(a, 2);
+        recipients[1] = b;
+
+        uint256[] memory values = _uint256ArrayPrefilled(50, 1); // mismatched length
+
+        vm.startPrank(user);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "ERC1155InvalidArrayLength(uint256,uint256)",
+                2,
+                1
+            )
+        );
+        sToken.safeSplitTransferFrom(user, tokenId, recipients, values);
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Reverts if an unauthorised caller attempts a split transfer.
+     */
+    function testSafeSplitTransferFrom_RevertIfUnauthorizedCaller() public {
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
+
+        vm.startPrank(minter);
+        uint256 tokenId = sToken.sTokenMint(user, 100, attr);
+        vm.stopPrank();
+
+        address stranger = makeAddr("stranger");
+        address a = makeAddr("a");
+
+        address[] memory recipients = _addressArrayPrefilled(a, 1);
+        uint256[] memory values = _uint256ArrayPrefilled(50, 1);
+
+        vm.startPrank(stranger);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "ERC1155MissingApprovalForAll(address,address)",
+                stranger,
+                user
+            )
+        );
+        sToken.safeSplitTransferFrom(user, tokenId, recipients, values);
+        vm.stopPrank();
+    }
+
     function testOwnerIsAdmin() public view {
         assertTrue(sToken.hasRole(sToken.DEFAULT_ADMIN_ROLE(), owner));
     }
@@ -168,5 +291,66 @@ contract STokenTest is STokenFixture {
     function testCannotReinitialize() public {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
         sToken.initialize("Again", "AGAIN", owner);
+    }
+
+    function _uint256ArrayPrefilled(
+        uint256 first,
+        uint256 length
+    ) internal pure returns (uint256[] memory arr) {
+        assembly {
+            let size := add(0x20, mul(length, 0x20))
+            arr := mload(0x40)
+            mstore(arr, length)
+            let dataStart := add(arr, 0x20)
+
+            if gt(length, 0) {
+                mstore(dataStart, first)
+            }
+
+            let ptr := add(dataStart, 0x20)
+            let end := add(dataStart, mul(length, 0x20))
+            for {
+
+            } lt(ptr, end) {
+                ptr := add(ptr, 0x20)
+            } {
+                mstore(ptr, 0)
+            }
+
+            mstore(0x40, add(arr, size))
+        }
+    }
+
+    function _addressArrayPrefilled(
+        address first,
+        uint256 length
+    ) internal pure returns (address[] memory arr) {
+        assembly {
+            // allocate memory
+            let size := add(0x20, mul(length, 0x20))
+            arr := mload(0x40)
+            mstore(arr, length) // store array length
+            let dataStart := add(arr, 0x20)
+
+            // set first element
+            if gt(length, 0) {
+                mstore(dataStart, first)
+            }
+
+            // zero out remaining slots
+            // start from second element (index 1)
+            let ptr := add(dataStart, 0x20)
+            let end := add(dataStart, mul(length, 0x20))
+            for {
+
+            } lt(ptr, end) {
+                ptr := add(ptr, 0x20)
+            } {
+                mstore(ptr, 0)
+            }
+
+            // update free memory pointer
+            mstore(0x40, add(arr, size))
+        }
     }
 }

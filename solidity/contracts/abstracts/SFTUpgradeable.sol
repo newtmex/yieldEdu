@@ -21,6 +21,13 @@ abstract contract SFTUpgradeable is
     using EnumerableSet for EnumerableSet.UintSet;
 
     // ================================
+    // ========== Events ==============
+    // ================================
+
+    /// @notice Emitted when attributes are updated for a token nonce.
+    event TokenAttributesUpdated(uint256 indexed nonce, bytes newAttributes);
+
+    // ================================
     // ========== Errors ==============
     // ================================
 
@@ -113,6 +120,113 @@ abstract contract SFTUpgradeable is
     }
 
     // ================================
+    // ========== Public Actions ======
+    // ================================
+
+    /**
+     * @notice Splits a Semi-Fungible Token (SFT) into multiple parts and transfers them
+     *         safely to a list of recipients.
+     * @dev This function performs proportional splitting of an existing SFT and
+     *      mints new sub-SFTs for each recipient. Each new SFT inherits or derives
+     *      attribute data from the original token through `_intoParts()`.
+     *
+     *      The function ensures:
+     *        - Only authorized senders (owners or approved operators) can initiate the split.
+     *        - Recipients and values arrays are of equal length.
+     *        - The sum of split values does not exceed the sender’s balance.
+     *        - Remaining attributes are proportionally adjusted or retained for the residual token.
+     *
+     * @param from The address of the current owner of the SFT being split.
+     * @param id The unique identifier (nonce) of the original SFT to be split.
+     * @param recipients An array of addresses receiving the split SFTs.
+     * @param values An array of token amounts corresponding to each recipient.
+     *
+     * @custom:events Emits standard ERC1155 `TransferSingle` events for each split transfer.
+     * @custom:reverts ERC1155MissingApprovalForAll If the caller is not authorized to manage the SFT.
+     * @custom:reverts ERC1155InvalidArrayLength If `recipients.length != values.length`.
+     * @custom:reverts ERC1155InsufficientBalance If the total split amount exceeds the sender’s balance.
+     * @custom:reverts UnAuthorizedSFTTransfer If `_ensureCanTransfer()` fails during internal transfer logic.
+     */
+    function safeSplitTransferFrom(
+        address from,
+        uint256 id,
+        address[] calldata recipients,
+        uint256[] calldata values
+    ) external {
+        address operator = _msgSender();
+
+        // --- Authorization ---
+        if (from != operator && !isApprovedForAll(from, operator)) {
+            revert ERC1155MissingApprovalForAll(operator, from);
+        }
+
+        // --- Input validation ---
+        uint256 len = recipients.length;
+        if (len != values.length) {
+            revert ERC1155InvalidArrayLength(len, values.length);
+        }
+
+        // --- Load state ---
+        uint256 fromBalance = balanceOf(from, id);
+        bytes memory fromTokenAttr = _getRawTokenAttributes(id);
+        uint256 totalUsed;
+
+        // --- Split logic ---
+        for (uint256 i = 0; i < len; ++i) {
+            uint256 value = values[i];
+            require(value > 0, "Invalid Split Amount");
+
+            // Ensure not overspending
+            if (value > fromBalance) {
+                revert ERC1155InsufficientBalance(from, fromBalance, value, id);
+            }
+
+            // Derive new attributes for the split portion
+            bytes memory newAttr = _intoParts(
+                value,
+                fromBalance,
+                fromTokenAttr
+            );
+
+            // Adjust remaining attributes proportionally
+            fromBalance -= value;
+            totalUsed += value;
+            fromTokenAttr = _intoParts(
+                fromBalance,
+                fromBalance + value,
+                fromTokenAttr
+            );
+
+            // Mint a new sub-SFT for the recipient
+            uint256 newNonce = _mintSFT(from, value, newAttr);
+
+            // Safely transfer it to the recipient
+            _safeTransferFrom(from, recipients[i], newNonce, value, "");
+        }
+
+        // --- Update residual state ---
+        SFTStorage storage $ = _getSFTStorage();
+        if (fromBalance > 0) {
+            // Update attributes for remaining balance
+            _setRawTokenAttributes($, id, fromTokenAttr);
+        } else {
+            // Remove nonce record if fully depleted
+            $.addressToNonces[from].remove(id);
+            delete $.tokenAttributes[id];
+        }
+
+        // --- Burn original token (partially or fully) ---
+        {
+            uint256[] memory burnIds = new uint256[](1);
+            uint256[] memory burnValues = new uint256[](1);
+            burnIds[0] = id;
+            burnValues[0] = totalUsed;
+
+            super._update(from, address(0), burnIds, burnValues);
+        }
+    }
+
+    // ================================
     // ========== Public Views ========
     // ================================
 
@@ -188,8 +302,9 @@ abstract contract SFTUpgradeable is
     }
 
     // ================================
-    // ========== Minting =============
+    // ========== Internal Writes =====
     // ================================
+
     /**
      * @dev Mints a new Semi-Fungible Token (SFT) with specified attributes to a given address.
      *
@@ -217,10 +332,82 @@ abstract contract SFTUpgradeable is
         SFTStorage storage $ = _getSFTStorage();
 
         nonce = ++$.nonceCounter;
-        $.tokenAttributes[nonce] = attributes;
+        _setRawTokenAttributes($, nonce, attributes);
 
         _mint(to, nonce, amount, "");
     }
+
+    /**
+     * @notice Sets or updates the raw attribute data of a specific SFT nonce.
+     * @dev This function writes arbitrary bytes to storage. It does not perform
+     *      validation on the format of `attr`; it is assumed the caller ensures
+     *      the structure is consistent with the protocol's expectations.
+     *
+     * @param $ The SFTStorage reference obtained from `_getSFTStorage()`.
+     * @param nonce The unique token nonce or ID whose attributes are being updated.
+     * @param attr The raw byte-encoded attributes to associate with this token.
+     *
+     * @custom:security Use internally only. Never expose publicly to prevent
+     *                  arbitrary attribute tampering.
+     * @custom:events No event is emitted by default; inheriting contracts
+     *                 may override to emit `TokenAttributesUpdated` or similar.
+     */
+    function _setRawTokenAttributes(
+        SFTStorage storage $,
+        uint256 nonce,
+        bytes memory attr
+    ) internal virtual {
+        require(attr.length > 0, "SFT: empty attributes not allowed");
+        $.tokenAttributes[nonce] = attr;
+        emit TokenAttributesUpdated(nonce, attr);
+    }
+
+    /**
+     * @notice Derives new token attribute data when an SFT is split into smaller parts.
+     * @dev
+     * Called internally during a split or fractional transfer operation to
+     * generate proportional metadata for each resulting token part.
+     *
+     * This function must be implemented by inheriting contracts to define how
+     * the original token's attributes are transformed or divided between the
+     * new parts. It is intentionally left abstract here to allow flexible
+     * encoding schemes and proportional logic per token type.
+     *
+     * Common use cases include:
+     *  - Scaling yield weights or reward multipliers relative to the split ratio.
+     *  - Cloning learner progress or credential metadata for sub-allocations.
+     *  - Deriving partial vesting data, ownership shares, or course access rights.
+     *
+     * @param value The amount being extracted into the new part.
+     * @param fullValue The full balance or amount of the original token before splitting.
+     * @param attributes The byte-encoded attributes of the original token being divided.
+     *
+     * @return newAttributes The newly derived byte-encoded attributes for the split part.
+     *
+     * @custom:requirements
+     * Implementations MUST ensure that any invariant properties within the
+     * attribute encoding (e.g. total yield weight = 100%) remain consistent
+     * across the split and the remainder.
+     *
+     * @custom:example
+     * ```
+     * // Example: proportional yield distribution
+     * function _intoParts(
+     *     uint256 value,
+     *     uint256 fullValue,
+     *     bytes memory attributes
+     * ) internal override returns (bytes memory) {
+     *     uint256 yieldShare = abi.decode(attributes, (uint256));
+     *     uint256 proportionalShare = (yieldShare * value) / fullValue;
+     *     return abi.encode(proportionalShare);
+     * }
+     * ```
+     */
+    function _intoParts(
+        uint256 value,
+        uint256 fullValue,
+        bytes memory attributes
+    ) internal virtual returns (bytes memory);
 
     // ================================
     // ========== Overrides ===========
@@ -260,50 +447,54 @@ abstract contract SFTUpgradeable is
 
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 id = ids[i];
-            uint256 amount = values[i];
-            _ensureCanTransfer(id, from, to, $.tokenAttributes[id]);
+            uint256 value = values[i];
+            bytes memory attr = $.tokenAttributes[id];
 
-            // When not minting
-            if (from != address(0)) {
-                uint256 balance = balanceOf(from, id);
-                if (balance != amount) {
-                    revert MustTransferAllSFTAmount(balance);
+            if (from == address(0)) {
+                $.totalSupply += value;
+            } else {
+                uint256 fromBalance = balanceOf(from, id);
+                if (fromBalance != value) {
+                    revert MustTransferAllSFTAmount(fromBalance);
                 }
                 $.addressToNonces[from].remove(id);
             }
 
-            if (to != address(0)) {
+            if (to == address(0)) {
+                $.totalSupply -= value;
+                delete $.tokenAttributes[id];
+            } else {
                 $.addressToNonces[to].add(id);
             }
 
-            if (from == address(0) && to != address(0)) {
-                // Minting
-                $.totalSupply += amount;
-            } else if (from != address(0) && to == address(0)) {
-                // Burning
-                $.totalSupply -= amount;
-            }
+            _ensureCanTransfer(id, from, to, attr);
         }
 
         super._update(from, to, ids, values);
     }
 
     /**
-     * @dev must be overridden by inheriting contracts to ensure that the caller is authorized to perform update actions on the SFT.
-     * @param nonce The unique identifier of the SFT being updated.
-     * @param from The address of the SFT owner.
-     * @param to The address of the SFT receipient.
-     * @notice This function is called internally to enforce access control for SFT updates.
-     * @custom:error UnAuthorizedSFTTransfer Thrown when the caller is not authorized to update the SFT.
+     * @notice Ensures that the caller is authorized to perform a transfer or update
+     *         on the specified Semi-Fungible Token (SFT).
+     * @dev Must be implemented by inheriting contracts to define custom access control logic.
+     *
+     *      Example: Override this function to restrict transfers to approved operators,
+     *      authorized educators, or platform contracts in your implementation.
+     *
+     * @param nonce The unique identifier of the SFT being transferred or updated.
+     * @param from The address of the current owner of the SFT.
+     * @param to The address of the recipient or new owner of the SFT.
+     * @param attributes The byte-encoded attribute data associated with the SFT.
+     *
+     * @custom:error UnAuthorizedSFTTransfer Thrown when the caller is not authorized
+     *               to perform the transfer or update.
      */
     function _ensureCanTransfer(
         uint256 nonce,
         address from,
         address to,
-        bytes memory /* attributes */
-    ) internal view virtual {
-        if (true) revert UnAuthorizedSFTTransfer(nonce, from, to, _msgSender());
-    }
+        bytes memory attributes
+    ) internal view virtual;
 
     function totalSupply() external view returns (uint256) {
         return _getSFTStorage().totalSupply;

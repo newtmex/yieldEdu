@@ -130,6 +130,14 @@ contract SToken is
         }
     }
 
+    function _intoParts(
+        uint256 value,
+        uint256 fullValue,
+        bytes memory attributes
+    ) internal override returns (bytes memory) {
+        return attributes;
+    }
+
     /**
      * @dev Authorizes contract upgrades via the UUPS pattern.
      * Only callable by the contract owner.
