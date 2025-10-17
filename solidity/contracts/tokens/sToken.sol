@@ -131,10 +131,10 @@ contract SToken is
     }
 
     function _intoParts(
-        uint256 value,
-        uint256 fullValue,
+        uint256 /** value */,
+        uint256 /** fullValue */,
         bytes memory attributes
-    ) internal override returns (bytes memory) {
+    ) internal pure override returns (bytes memory) {
         return attributes;
     }
 
