@@ -8,14 +8,240 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 contract STokenTest is STokenFixture {
     address public minter;
     address public user;
+    address public otherUser;
+
+    event TokensMerged(
+        address indexed operator,
+        address indexed from,
+        address indexed to,
+        uint256[] mergedIds,
+        uint256 newId,
+        uint256 totalAmount
+    );
 
     function setUp() public {
         minter = makeAddr("minter");
         user = makeAddr("user");
+        otherUser = makeAddr("otherUser");
 
-        // Grant MINTER_ROLE to minter
         vm.startPrank(owner);
         sToken.grantRole(sToken.MINTER_ROLE(), minter);
+        vm.stopPrank();
+    }
+
+    // --- Utilities ---
+
+    function _mintScholarToken(
+        address to,
+        uint256 amount
+    ) internal returns (uint256 nonce) {
+        vm.startPrank(minter);
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Scholar;
+        nonce = sToken.sTokenMint(to, amount, attr);
+        vm.stopPrank();
+    }
+
+    function _mintLearnerToken(
+        address to,
+        uint256 amount
+    ) internal returns (uint256 nonce) {
+        vm.startPrank(minter);
+        ISToken.TokenAttributes memory attr;
+        attr.tokenType = ISToken.TokenType.Learner;
+        nonce = sToken.sTokenMint(to, amount, attr);
+        vm.stopPrank();
+    }
+
+    function _expectTransferRevert(uint256 amount) internal {
+        vm.expectRevert(
+            abi.encodeWithSignature("MustTransferAllSFTAmount(uint256)", amount)
+        );
+    }
+
+    function _uint256ArrayPrefilled(
+        uint256 first,
+        uint256 length
+    ) internal pure returns (uint256[] memory arr) {
+        assembly {
+            let size := add(0x20, mul(length, 0x20))
+            arr := mload(0x40)
+            mstore(arr, length)
+            let dataStart := add(arr, 0x20)
+            if gt(length, 0) {
+                mstore(dataStart, first)
+            }
+            let ptr := add(dataStart, 0x20)
+            let end := add(dataStart, mul(length, 0x20))
+            for {
+
+            } lt(ptr, end) {
+                ptr := add(ptr, 0x20)
+            } {
+                mstore(ptr, 0)
+            }
+            mstore(0x40, add(arr, size))
+        }
+    }
+
+    function _addressArrayPrefilled(
+        address first,
+        uint256 length
+    ) internal pure returns (address[] memory arr) {
+        assembly {
+            let size := add(0x20, mul(length, 0x20))
+            arr := mload(0x40)
+            mstore(arr, length)
+            let dataStart := add(arr, 0x20)
+            if gt(length, 0) {
+                mstore(dataStart, first)
+            }
+            let ptr := add(dataStart, 0x20)
+            let end := add(dataStart, mul(length, 0x20))
+            for {
+
+            } lt(ptr, end) {
+                ptr := add(ptr, 0x20)
+            } {
+                mstore(ptr, 0)
+            }
+            mstore(0x40, add(arr, size))
+        }
+    }
+
+    // =============================================================
+    //                   mergeTransferFrom TESTS
+    // =============================================================
+
+    /// @notice should revert when array is empty
+    function test_RevertOnEmptyMergeArray() public {
+        uint256[] memory ids;
+
+        vm.expectRevert(bytes("EmptyMergeArray"));
+        sToken.mergeTransferFrom(user, otherUser, ids);
+    }
+
+    /// @notice should revert when recipient is zero
+    function test_RevertOnInvalidRecipient() public {
+        uint256 id = _mintLearnerToken(user, 10);
+        uint256[] memory ids = _uint256ArrayPrefilled(id, 1);
+
+        vm.startPrank(user);
+        vm.expectRevert(bytes("InvalidRecipient"));
+        sToken.mergeTransferFrom(user, address(0), ids);
+        vm.stopPrank();
+    }
+
+    /// @notice should revert when caller not owner or approved
+    function test_RevertOnUnauthorizedOperator() public {
+        uint256 id = _mintLearnerToken(user, 10);
+        uint256[] memory ids = _uint256ArrayPrefilled(id, 1);
+
+        // `otherUser` tries without approval
+        vm.startPrank(otherUser);
+        vm.expectRevert();
+        sToken.mergeTransferFrom(user, otherUser, ids);
+        vm.stopPrank();
+    }
+
+    /// @notice should revert when one of tokens has zero balance
+    function test_RevertOnZeroBalanceToken() public {
+        uint256 id1 = _mintLearnerToken(user, 10);
+        uint256 id2 = id1 + 1; // simulate nonexistent / zero balance token
+
+        uint256[] memory ids = _uint256ArrayPrefilled(id1, 2);
+        ids[1] = id2;
+
+        vm.startPrank(user);
+        vm.expectRevert(bytes("ZeroBalanceToken"));
+        sToken.mergeTransferFrom(user, otherUser, ids);
+        vm.stopPrank();
+    }
+
+    /// @notice single token merge (degenerate merge)
+    function test_SingleTokenMerge() public {
+        uint256 id = _mintLearnerToken(user, 100);
+        uint256[] memory ids = _uint256ArrayPrefilled(id, 1);
+
+        vm.startPrank(user);
+        vm.expectEmit(true, true, true, true);
+        emit TokensMerged(user, user, otherUser, ids, id + 1, 100);
+        uint256 newNonce = sToken.mergeTransferFrom(user, otherUser, ids);
+        vm.stopPrank();
+
+        assertEq(sToken.balanceOf(user, id), 0, "Old token burned");
+        assertEq(
+            sToken.balanceOf(otherUser, newNonce),
+            100,
+            "New token minted"
+        );
+    }
+
+    /// @notice multi-token merge of compatible tokens
+    function test_MultiTokenMerge() public {
+        uint256 id1 = _mintLearnerToken(user, 50);
+        uint256 id2 = _mintLearnerToken(user, 70);
+
+        uint256[] memory ids = _uint256ArrayPrefilled(id1, 2);
+        ids[1] = id2;
+
+        vm.startPrank(user);
+        uint256 newNonce = sToken.mergeTransferFrom(user, otherUser, ids);
+        vm.stopPrank();
+
+        assertEq(sToken.balanceOf(user, id1), 0, "id1 burned");
+        assertEq(sToken.balanceOf(user, id2), 0, "id2 burned");
+        assertEq(sToken.balanceOf(otherUser, newNonce), 120, "merged total");
+    }
+
+    /// @notice operator with approval merges successfully
+    function test_AuthorizedOperatorMerge() public {
+        uint256 id1 = _mintLearnerToken(user, 30);
+        uint256 id2 = _mintLearnerToken(user, 20);
+
+        uint256[] memory ids = _uint256ArrayPrefilled(id1, 2);
+        ids[1] = id2;
+
+        vm.startPrank(user);
+        sToken.setApprovalForAll(otherUser, true);
+        vm.stopPrank();
+
+        vm.startPrank(otherUser);
+        uint256 newNonce = sToken.mergeTransferFrom(user, otherUser, ids);
+        vm.stopPrank();
+
+        assertEq(sToken.balanceOf(user, id1), 0);
+        assertEq(sToken.balanceOf(user, id2), 0);
+        assertEq(sToken.balanceOf(otherUser, newNonce), 50);
+    }
+
+    /// @notice merging tokens to self (consolidation)
+    function test_MergeToSelf() public {
+        uint256 id1 = _mintLearnerToken(user, 10);
+        uint256 id2 = _mintLearnerToken(user, 15);
+
+        uint256[] memory ids = _uint256ArrayPrefilled(id1, 2);
+        ids[1] = id2;
+
+        vm.startPrank(user);
+        uint256 newNonce = sToken.mergeTransferFrom(user, user, ids);
+        vm.stopPrank();
+
+        assertEq(sToken.balanceOf(user, id1), 0);
+        assertEq(sToken.balanceOf(user, id2), 0);
+        assertEq(sToken.balanceOf(user, newNonce), 25);
+    }
+
+    /// @notice duplicate IDs in array should revert or handle gracefully (define spec)
+    function test_RevertOnDuplicateIDs() public {
+        uint256 id1 = _mintLearnerToken(user, 10);
+        uint256[] memory ids = _uint256ArrayPrefilled(id1, 2);
+        ids[1] = id1;
+
+        vm.startPrank(user);
+        // Depending on your spec, expect revert or handle sum
+        vm.expectRevert();
+        sToken.mergeTransferFrom(user, otherUser, ids);
         vm.stopPrank();
     }
 
@@ -35,14 +261,10 @@ contract STokenTest is STokenFixture {
     }
 
     function testMintScholarToken() public {
-        ISToken.TokenAttributes memory attr;
-        attr.tokenType = ISToken.TokenType.Scholar;
-
         address userWithTransferRole = makeAddr("userWithTransferRole");
         sToken.grantRole(sToken.TRANSFER_ROLE(), userWithTransferRole);
 
-        vm.prank(minter);
-        uint256 tokenId = sToken.sTokenMint(user, 5, attr);
+        uint256 tokenId = _mintScholarToken(user, 5);
 
         assertEq(sToken.balanceOf(user, tokenId), 5);
 
@@ -56,11 +278,12 @@ contract STokenTest is STokenFixture {
         address randomUser = makeAddr("randomUser");
         vm.expectRevert(
             abi.encodeWithSignature(
-                "UnAuthorizedSFTTransfer(uint256,address,address,address)",
+                "UnAuthorizedSFTTransfer(uint256,address,address,address,string)",
                 tokenId,
                 user,
                 randomUser,
-                user
+                user,
+                ""
             )
         );
         sToken.safeTransferFrom(user, randomUser, tokenId, 5, "");
@@ -154,16 +377,10 @@ contract STokenTest is STokenFixture {
         vm.stopPrank();
     }
 
-    function _expectTransferRevert(uint256 amount) internal {
-        vm.expectRevert(
-            abi.encodeWithSignature("MustTransferAllSFTAmount(uint256)", amount)
-        );
-    }
-
     /**
      * @notice Tests splitting a single SFT into multiple new ones and transferring to recipients.
      */
-    function testSafeSplitTransferFrom_SuccessfulSplit() public {
+    function testsplitTransferFrom_SuccessfulSplit() public {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
@@ -181,7 +398,7 @@ contract STokenTest is STokenFixture {
         values[1] = 50;
 
         vm.startPrank(user);
-        sToken.safeSplitTransferFrom(user, tokenId, recipients, values);
+        sToken.splitTransferFrom(user, tokenId, recipients, values);
         vm.stopPrank();
 
         // total 80 transferred, 20 should remain
@@ -193,12 +410,14 @@ contract STokenTest is STokenFixture {
     /**
      * @notice Reverts if the split transfer exceeds user's available balance.
      */
-    function testSafeSplitTransferFrom_RevertIfOverBalance() public {
+    function testsplitTransferFrom_RevertIfOverBalance() public {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
+        uint256 initialMint = 50;
+
         vm.startPrank(minter);
-        uint256 tokenId = sToken.sTokenMint(user, 50, attr);
+        uint256 tokenId = sToken.sTokenMint(user, initialMint, attr);
         vm.stopPrank();
 
         address a = makeAddr("a");
@@ -208,26 +427,26 @@ contract STokenTest is STokenFixture {
         recipients[1] = b;
 
         uint256[] memory values = _uint256ArrayPrefilled(30, 2);
-        values[1] = 40; // exceeds balance
+        values[1] = 40;
 
         vm.startPrank(user);
         vm.expectRevert(
             abi.encodeWithSignature(
                 "ERC1155InsufficientBalance(address,uint256,uint256,uint256)",
                 user,
-                20, // this amount remains at this time
-                40,
+                initialMint,
+                70,
                 tokenId
             )
         );
-        sToken.safeSplitTransferFrom(user, tokenId, recipients, values);
+        sToken.splitTransferFrom(user, tokenId, recipients, values);
         vm.stopPrank();
     }
 
     /**
      * @notice Reverts if recipients and values arrays have mismatched lengths.
      */
-    function testSafeSplitTransferFrom_RevertIfInvalidArrayLength() public {
+    function testsplitTransferFrom_RevertIfInvalidArrayLength() public {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
@@ -251,14 +470,14 @@ contract STokenTest is STokenFixture {
                 1
             )
         );
-        sToken.safeSplitTransferFrom(user, tokenId, recipients, values);
+        sToken.splitTransferFrom(user, tokenId, recipients, values);
         vm.stopPrank();
     }
 
     /**
      * @notice Reverts if an unauthorised caller attempts a split transfer.
      */
-    function testSafeSplitTransferFrom_RevertIfUnauthorizedCaller() public {
+    function testsplitTransferFrom_RevertIfUnauthorizedCaller() public {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
@@ -280,7 +499,7 @@ contract STokenTest is STokenFixture {
                 user
             )
         );
-        sToken.safeSplitTransferFrom(user, tokenId, recipients, values);
+        sToken.splitTransferFrom(user, tokenId, recipients, values);
         vm.stopPrank();
     }
 
@@ -291,66 +510,5 @@ contract STokenTest is STokenFixture {
     function testCannotReinitialize() public {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
         sToken.initialize("Again", "AGAIN", owner);
-    }
-
-    function _uint256ArrayPrefilled(
-        uint256 first,
-        uint256 length
-    ) internal pure returns (uint256[] memory arr) {
-        assembly {
-            let size := add(0x20, mul(length, 0x20))
-            arr := mload(0x40)
-            mstore(arr, length)
-            let dataStart := add(arr, 0x20)
-
-            if gt(length, 0) {
-                mstore(dataStart, first)
-            }
-
-            let ptr := add(dataStart, 0x20)
-            let end := add(dataStart, mul(length, 0x20))
-            for {
-
-            } lt(ptr, end) {
-                ptr := add(ptr, 0x20)
-            } {
-                mstore(ptr, 0)
-            }
-
-            mstore(0x40, add(arr, size))
-        }
-    }
-
-    function _addressArrayPrefilled(
-        address first,
-        uint256 length
-    ) internal pure returns (address[] memory arr) {
-        assembly {
-            // allocate memory
-            let size := add(0x20, mul(length, 0x20))
-            arr := mload(0x40)
-            mstore(arr, length) // store array length
-            let dataStart := add(arr, 0x20)
-
-            // set first element
-            if gt(length, 0) {
-                mstore(dataStart, first)
-            }
-
-            // zero out remaining slots
-            // start from second element (index 1)
-            let ptr := add(dataStart, 0x20)
-            let end := add(dataStart, mul(length, 0x20))
-            for {
-
-            } lt(ptr, end) {
-                ptr := add(ptr, 0x20)
-            } {
-                mstore(ptr, 0)
-            }
-
-            // update free memory pointer
-            mstore(0x40, add(arr, size))
-        }
     }
 }

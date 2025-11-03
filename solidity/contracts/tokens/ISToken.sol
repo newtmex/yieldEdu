@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {ISFTUpgradeable} from "../abstracts/ISFTUpgradeable.sol";
+import {sTokenAttrLib} from "./sTokenAttrLib.sol";
 
 /// @title ISToken
 /// @notice Interface for the YieldEDU Semi-Fungible Token (sToken) contract.
@@ -23,7 +24,8 @@ interface ISToken is ISFTUpgradeable {
      */
     struct TokenAttributes {
         TokenType tokenType;
-        uint256[50] __gap; // Reserved for future variables
+        sTokenAttrLib.Binding binding;
+        uint256[47] __gap; // Reserved for future variables
     }
 
     /// @notice Mints a new sToken with specified attributes to a given address.

@@ -2,9 +2,23 @@
 pragma solidity ^0.8.20;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {SFTUpgradeable} from "../abstracts/SFTUpgradeable.sol";
 import {ISToken} from "./ISToken.sol";
+import {sTokenAttrLib} from "./sTokenAttrLib.sol";
+
+function weightedAverageRoundUp(
+    uint256 a,
+    uint256 wa,
+    uint256 b,
+    uint256 wb
+) pure returns (uint256) {
+    uint256 numerator = (a * wa) + (b * wb);
+    uint256 denominator = wa + wb;
+    // Use mulDiv with rounding up
+    return Math.ceilDiv(numerator, denominator);
+}
 
 /**
  * @title sToken
@@ -28,6 +42,8 @@ contract SToken is
     OwnableUpgradeable,
     UUPSUpgradeable
 {
+    using sTokenAttrLib for sTokenAttrLib.Binding;
+
     /**
      * @dev Constructor that disables initializers to prevent the implementation contract from being initialized.
      * This is a security measure to ensure that the implementation contract cannot be misused.
@@ -101,9 +117,9 @@ contract SToken is
         _burn(from, nonce, amount);
     }
 
-    /// @dev Token Transfer Authorization
-    /// @notice Ensures that only authorized transfers of non-Learner tokens are permitted.
-    /// @dev This function overrides a base implementation to enforce custom transfer rules based on token type and roles.
+    /**
+     * @dev See SFTUpgradeable._ensureCanTransfer for compatibility requirements.
+     */
     function _ensureCanTransfer(
         uint256 nonce,
         address from,
@@ -115,8 +131,10 @@ contract SToken is
             (ISToken.TokenAttributes)
         );
 
-        // All learner tokens are updatable without permission, but others require authorization.
-        if (tokenAttributes.tokenType != ISToken.TokenType.Learner) {
+        if (
+            tokenAttributes.tokenType != ISToken.TokenType.Learner ||
+            tokenAttributes.binding.isBound()
+        ) {
             address caller = _msgSender();
 
             bool callerAuthorized = hasRole(MINTER_ROLE, caller) ||
@@ -125,11 +143,96 @@ contract SToken is
                 hasRole(TRANSFER_ROLE, to);
 
             if (!callerAuthorized && !recipientAuthorized) {
-                revert UnAuthorizedSFTTransfer(nonce, from, to, caller);
+                revert UnAuthorizedSFTTransfer(nonce, from, to, caller, "");
             }
         }
     }
 
+    /**
+     * @dev See SFTUpgradeable._ensureCanMerge for compatibility requirements.
+     */
+    function _ensureCanMerge(
+        bytes memory firstAttr,
+        bytes memory secondAttr
+    ) internal pure override {
+        // Allow first iteration when `mergedAttributes` is empty (during initial loop merge)
+        if (firstAttr.length == 0 || secondAttr.length == 0)
+            revert("Empty attributes");
+
+        ISToken.TokenAttributes memory a = abi.decode(
+            firstAttr,
+            (ISToken.TokenAttributes)
+        );
+        ISToken.TokenAttributes memory b = abi.decode(
+            secondAttr,
+            (ISToken.TokenAttributes)
+        );
+
+        // Must be the same token type (Learner, Scholar, etc.)
+        if (a.tokenType != b.tokenType) {
+            revert UnAuthorizedSFTMerge(
+                firstAttr,
+                secondAttr,
+                "TokenType mismatch"
+            );
+        }
+
+        // Must be unbound
+        if (a.binding.isBound() || b.binding.isBound()) {
+            revert UnAuthorizedSFTMerge(
+                firstAttr,
+                secondAttr,
+                "sToken is bound to a course"
+            );
+        }
+    }
+
+    /**
+     * @dev See SFTUpgradeable._mergeAttr for compatibility requirements.
+     */
+    function _mergeAttr(
+        bytes memory firstAttr,
+        uint256 /** firstValue */,
+        bytes memory secondAttr,
+        uint256 /* secondValue */
+    ) internal pure override returns (bytes memory mergedAttributes) {
+        // If this is the first merge (starting point), return the second's attributes directly.
+        if (firstAttr.length == 0) {
+            return secondAttr;
+        }
+        return firstAttr;
+
+        // ISToken.TokenAttributes memory a = abi.decode(
+        //     firstAttr,
+        //     (ISToken.TokenAttributes)
+        // );
+        // ISToken.TokenAttributes memory b = abi.decode(
+        //     secondAttr,
+        //     (ISToken.TokenAttributes)
+        // );
+
+        // uint256 total = firstValue + secondValue;
+
+        // // Compute weighted average of numeric fields like yield weight or multiplier.
+        // uint256 weightedYield = ((a.yieldWeight * firstValue) +
+        //     (b.yieldWeight * secondValue)) / total;
+
+        // // Merge binding data (course stays the same since _ensureCanMerge enforces it)
+        // ISToken.Binding memory mergedBinding = a.binding;
+
+        // ISToken.TokenAttributes memory merged = ISToken.TokenAttributes({
+        //     tokenType: a.tokenType,
+        //     yieldWeight: weightedYield,
+        //     binding: mergedBinding,
+        //     ownerHint: a.ownerHint != address(0) ? a.ownerHint : b.ownerHint
+        // });
+
+        // mergedAttributes = abi.encode(merged);
+    }
+
+    /**
+     * @dev See SFTUpgradeable._intoParts for compatibility requirements.
+     */
     function _intoParts(
         uint256 /** value */,
         uint256 /** fullValue */,
