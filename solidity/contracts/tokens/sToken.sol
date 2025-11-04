@@ -6,7 +6,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {SFTUpgradeable} from "../abstracts/SFTUpgradeable.sol";
 import {ISToken} from "./ISToken.sol";
-import {sTokenAttrLib} from "./sTokenAttrLib.sol";
+import {sTokenLib} from "./sTokenLib.sol";
 
 function weightedAverageRoundUp(
     uint256 a,
@@ -42,7 +42,11 @@ contract SToken is
     OwnableUpgradeable,
     UUPSUpgradeable
 {
-    using sTokenAttrLib for sTokenAttrLib.Binding;
+    using sTokenLib for Binding;
+    using sTokenLib for bytes;
+
+    bytes32 public constant BINDING_UPDATE_ROLE =
+        keccak256("BINDING_UPDATE_ROLE");
 
     /**
      * @dev Constructor that disables initializers to prevent the implementation contract from being initialized.
@@ -117,6 +121,26 @@ contract SToken is
         _burn(from, nonce, amount);
     }
 
+    function updateBinding(
+        address user,
+        uint256 nonce,
+        Binding memory binding
+    ) external onlyRole(BINDING_UPDATE_ROLE) {
+        address operator = _msgSender();
+        if (user != operator && !isApprovedForAll(user, operator)) {
+            revert ERC1155MissingApprovalForAll(operator, user);
+        }
+
+        ISToken.TokenAttributes memory tokenAttr = _getRawTokenAttributes(nonce)
+            .decode();
+        if (binding.isBound() == tokenAttr.binding.isBound()) {
+            revert("sToken: invalid binding update");
+        }
+
+        tokenAttr.binding = tokenAttr.binding.setBinding(binding);
+        _updateTokenAttributes(user, nonce, abi.encode(tokenAttr));
+    }
+
     /**
      * @dev See SFTUpgradeable._ensureCanTransfer for compatibility requirements.
      */
@@ -131,10 +155,7 @@ contract SToken is
             (ISToken.TokenAttributes)
         );
 
-        if (
-            tokenAttributes.tokenType != ISToken.TokenType.Learner ||
-            tokenAttributes.binding.isBound()
-        ) {
+        if (tokenAttributes.binding.isBound()) {
             address caller = _msgSender();
 
             bool callerAuthorized = hasRole(MINTER_ROLE, caller) ||

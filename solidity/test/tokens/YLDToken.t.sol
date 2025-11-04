@@ -7,17 +7,11 @@ import {YLDTokenFixture} from "./YLDTokenFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract YLDTokenTest is YLDTokenFixture {
-    address public minter;
     address public user;
 
     function setUp() public {
-        minter = makeAddr("minter");
         user = makeAddr("user");
 
-        // Grant MINTER_ROLE to minter
-        vm.startPrank(owner);
-        yld.grantRole(yld.MINTER_ROLE(), minter);
-        vm.stopPrank();
     }
 
     function testNameAndSymbol() public view {
@@ -42,12 +36,12 @@ contract YLDTokenTest is YLDTokenFixture {
         );
         yld.deposit(mintAmount, user);
 
-        // Get dEDU for minter from user and approve yld to spend it
-        dedu.receiveForSpender{value: shares}(minter, address(yld));
+        // Get dEDU for yldMinter from user and approve yld to spend it
+        dedu.receiveForSpender{value: shares}(yldMinter, address(yld));
         vm.stopPrank();
 
-        // Mint with authorized minter
-        vm.startPrank(minter);
+        // Mint with authorized yldMinter
+        vm.startPrank(yldMinter);
         yld.mint(mintAmount, user);
         yld.deposit(mintAmount, user);
         vm.stopPrank();
@@ -63,7 +57,7 @@ contract YLDTokenTest is YLDTokenFixture {
 
         // Try withdrawing with unauthorized user
         vm.startPrank(user);
-        yld.approve(minter, shares + yield);
+        yld.approve(yldMinter, shares + yield);
         vm.expectPartialRevert(
             IAccessControl.AccessControlUnauthorizedAccount.selector
         );
@@ -74,8 +68,8 @@ contract YLDTokenTest is YLDTokenFixture {
         yld.redeem(shares, user, user);
         vm.stopPrank();
 
-        // Withdraw with authorized minter
-        vm.startPrank(minter);
+        // Withdraw with authorized yldMinter
+        vm.startPrank(yldMinter);
         yld.redeem(shares, user, user);
         vm.expectPartialRevert(
             ERC4626Upgradeable.ERC4626ExceededMaxWithdraw.selector
@@ -95,7 +89,7 @@ contract YLDTokenTest is YLDTokenFixture {
     }
 
     function testMinterRoleAssignedCorrectly() public view {
-        assertTrue(yld.hasRole(yld.MINTER_ROLE(), minter));
+        assertTrue(yld.hasRole(yld.MINTER_ROLE(), yldMinter));
     }
 
     function testCannotReinitialize() public {

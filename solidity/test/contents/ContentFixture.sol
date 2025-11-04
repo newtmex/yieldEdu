@@ -6,27 +6,14 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {GeneralFixture} from "../GeneralFixture.sol";
 import {Content} from "../../contracts/contents/Content.sol";
 
-/// @dev Simple mintable ERC20 for testing
-contract MockERC20 is ERC20 {
-    constructor(
-        string memory name_,
-        string memory symbol_
-    ) ERC20(name_, symbol_) {}
+import {YLDTokenFixture} from "../tokens/YLDTokenFixture.sol";
+import {STokenFixture} from "../tokens/STokenFixture.sol";
 
-    function mint(address to, uint256 amount) external {
-        _mint(to, amount);
-    }
-}
-
-contract ContentFixture is GeneralFixture {
+contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
     Content public content;
-    MockERC20 public mockYLD;
+    bytes notAllowedError = abi.encodeWithSignature("NotAllowed()");
 
     constructor() {
-        // Deploy mock YLD token
-        mockYLD = new MockERC20("YieldEDU", "YLD");
-        mockYLD.mint(owner, 1_000_000 ether);
-
         // Deploy Content implementation
         Content implementation = new Content();
 
@@ -41,7 +28,8 @@ contract ContentFixture is GeneralFixture {
             contentId,
             title,
             description,
-            address(mockYLD),
+            address(yld),
+            address(sToken),
             owner
         );
 
@@ -53,5 +41,126 @@ contract ContentFixture is GeneralFixture {
 
         // Cast to Content
         content = Content(address(proxy));
+
+        // Grant MINTER_ROLE to this contract
+        yld.grantRole(yld.MINTER_ROLE(), address(this));
+        sToken.grantRole(sToken.MINTER_ROLE(), address(this));
+    }
+
+    function _assertContentSTokenID(uint256 id) internal view {
+        (, , , uint256 sTokenId) = content.getContentInfo();
+
+        assertEq(id, sTokenId, "Expected sTokenId does not match");
+    }
+
+    function _assertUnauthorizedMintAndDeposit(
+        address investor,
+        uint256 shares,
+        uint256 yield
+    ) internal {
+        vm.startPrank(investor);
+        vm.expectRevert(notAllowedError);
+        content.mint(shares, investor);
+
+        vm.expectRevert(notAllowedError);
+        content.deposit(yield, investor);
+        vm.stopPrank();
+    }
+
+    function _simulateAuthorizedSTokenTransfer(
+        address investor,
+        uint256 tokenId,
+        uint256 shares
+    ) internal {
+        vm.startPrank(investor);
+        sToken.safeTransferFrom(
+            investor,
+            address(content),
+            tokenId,
+            shares,
+            ""
+        );
+        vm.stopPrank();
+    }
+
+    function _assertPostMintVaultState(
+        address investor,
+        uint256 shares
+    ) internal view {
+        (, , , uint256 sTokenId) = content.getContentInfo();
+
+        assertEq(
+            content.balanceOf(investor),
+            shares,
+            "Expected Content shares minted for scholar"
+        );
+
+        assertGe(
+            content.totalSupply(),
+            sToken.balanceOf(address(content), sTokenId),
+            "Vault should be balanced after mint"
+        );
+    }
+
+    function _simulateYieldAndUnauthorizedWithdraw(
+        address investor,
+        uint256 yield,
+        uint256 shares
+    ) internal {
+        // Simulate yield accumulation
+        _mintYLDToken(address(content), yield);
+
+        // Investor cannot withdraw/redeem directly
+        vm.startPrank(investor);
+        vm.expectRevert(notAllowedError);
+        content.withdraw(yield, investor, investor);
+
+        vm.expectRevert(notAllowedError);
+        content.redeem(shares, investor, investor);
+        vm.stopPrank();
+    }
+
+    function _simulateAuthorizedWithdraw(
+        address investor,
+        uint256 yield,
+        uint256 shares
+    ) internal {
+        vm.startPrank(address(content));
+        content.redeem(shares, investor, investor);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(
+                    keccak256("ERC4626ExceededMaxWithdraw(uint256,uint256)")
+                ),
+                yield,
+                content.totalAssets()
+            )
+        );
+        content.withdraw(yield, investor, investor);
+        vm.stopPrank();
+    }
+
+    function _assertFinalVaultState(
+        address investor,
+        uint256 shares,
+        uint256 yield
+    ) internal view {
+        assertEq(
+            content.balanceOf(investor),
+            0,
+            "Investor Content balance should be cleared after redeem"
+        );
+        assertEq(content.totalSupply(), 0, "Vault should have no supply left");
+        assertGt(
+            dedu.balanceOf(investor),
+            shares,
+            "Investor should receive yield-boosted dEDU"
+        );
+        assertEq(
+            dedu.balanceOf(investor),
+            shares + yield - content.totalAssets()
+        );
+        _assertContentSTokenID(0);
     }
 }

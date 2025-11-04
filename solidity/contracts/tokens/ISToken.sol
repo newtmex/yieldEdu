@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ISFTUpgradeable} from "../abstracts/ISFTUpgradeable.sol";
-import {sTokenAttrLib} from "./sTokenAttrLib.sol";
+import {ISFT} from "../abstracts/ISFT.sol";
+import {sTokenLib} from "./sTokenLib.sol";
 
 /// @title ISToken
 /// @notice Interface for the YieldEDU Semi-Fungible Token (sToken) contract.
 /// @dev Extends the ERC-1155 standard with role-based minting and token attribute management.
-interface ISToken is ISFTUpgradeable {
+interface ISToken is ISFT {
     /**
      * @dev Enum representing the type of the token.
      * - `Learner`: Represents a token awarded to learners.
@@ -24,8 +24,14 @@ interface ISToken is ISFTUpgradeable {
      */
     struct TokenAttributes {
         TokenType tokenType;
-        sTokenAttrLib.Binding binding;
+        Binding binding;
         uint256[47] __gap; // Reserved for future variables
+    }
+
+    struct Binding {
+        address course;
+        uint256 enrolledAt;
+        uint256 completeBy;
     }
 
     /// @notice Mints a new sToken with specified attributes to a given address.
@@ -41,4 +47,14 @@ interface ISToken is ISFTUpgradeable {
     ) external returns (uint256 nonce);
 
     function sTokenBurn(address from, uint256 nonce, uint256 amount) external;
+
+    function updateBinding(
+        address user,
+        uint256 nonce,
+        Binding memory binding
+    ) external;
+
+    // function getTokenAttributes(
+    //     uint256 nonce
+    // ) external view returns (TokenAttributes memory);
 }

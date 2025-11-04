@@ -6,7 +6,6 @@ import {STokenFixture} from "./STokenFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract STokenTest is STokenFixture {
-    address public minter;
     address public user;
     address public otherUser;
 
@@ -20,38 +19,11 @@ contract STokenTest is STokenFixture {
     );
 
     function setUp() public {
-        minter = makeAddr("minter");
         user = makeAddr("user");
         otherUser = makeAddr("otherUser");
-
-        vm.startPrank(owner);
-        sToken.grantRole(sToken.MINTER_ROLE(), minter);
-        vm.stopPrank();
     }
 
     // --- Utilities ---
-
-    function _mintScholarToken(
-        address to,
-        uint256 amount
-    ) internal returns (uint256 nonce) {
-        vm.startPrank(minter);
-        ISToken.TokenAttributes memory attr;
-        attr.tokenType = ISToken.TokenType.Scholar;
-        nonce = sToken.sTokenMint(to, amount, attr);
-        vm.stopPrank();
-    }
-
-    function _mintLearnerToken(
-        address to,
-        uint256 amount
-    ) internal returns (uint256 nonce) {
-        vm.startPrank(minter);
-        ISToken.TokenAttributes memory attr;
-        attr.tokenType = ISToken.TokenType.Learner;
-        nonce = sToken.sTokenMint(to, amount, attr);
-        vm.stopPrank();
-    }
 
     function _expectTransferRevert(uint256 amount) internal {
         vm.expectRevert(
@@ -165,7 +137,7 @@ contract STokenTest is STokenFixture {
 
         vm.startPrank(user);
         vm.expectEmit(true, true, true, true);
-        emit TokensMerged(user, user, otherUser, ids, id + 1, 100);
+        emit TokensMerged(user, user, otherUser, ids, id, 100);
         uint256 newNonce = sToken.mergeTransferFrom(user, otherUser, ids);
         vm.stopPrank();
 
@@ -227,8 +199,8 @@ contract STokenTest is STokenFixture {
         uint256 newNonce = sToken.mergeTransferFrom(user, user, ids);
         vm.stopPrank();
 
-        assertEq(sToken.balanceOf(user, id1), 0);
         assertEq(sToken.balanceOf(user, id2), 0);
+        assertEq(newNonce, id1, "Tokens should merge to first nonce");
         assertEq(sToken.balanceOf(user, newNonce), 25);
     }
 
@@ -254,7 +226,7 @@ contract STokenTest is STokenFixture {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
-        vm.prank(minter);
+        vm.prank(sTokenMinter);
         uint256 tokenId = sToken.sTokenMint(user, 10, attr);
 
         assertEq(sToken.balanceOf(user, tokenId), 10);
@@ -273,6 +245,13 @@ contract STokenTest is STokenFixture {
 
         vm.prank(userWithTransferRole);
         sToken.safeTransferFrom(userWithTransferRole, user, tokenId, 5, "");
+
+        // Bind token to prevent unauthorised transfer
+        vm.prank(user);
+        sToken.setApprovalForAll(address(this), true);
+        ISToken.Binding memory binding;
+        binding.course = address(this);
+        sToken.updateBinding(user, tokenId, binding);
 
         vm.prank(user);
         address randomUser = makeAddr("randomUser");
@@ -311,7 +290,7 @@ contract STokenTest is STokenFixture {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
-        vm.prank(minter);
+        vm.prank(sTokenMinter);
         uint256 tokenId = sToken.sTokenMint(user, 10, attr);
 
         vm.expectPartialRevert(
@@ -327,7 +306,7 @@ contract STokenTest is STokenFixture {
         );
         sToken.sTokenBurn(user, tokenId, 10);
 
-        vm.prank(minter);
+        vm.prank(sTokenMinter);
         sToken.sTokenBurn(user, tokenId, 10);
         assertEq(sToken.balanceOf(user, tokenId), 0);
     }
@@ -343,7 +322,7 @@ contract STokenTest is STokenFixture {
         sToken.grantRole(sToken.TRANSFER_ROLE(), userWithTransferRole);
         address someAddr = makeAddr("someAddr");
 
-        vm.startPrank(minter);
+        vm.startPrank(sTokenMinter);
         uint256 learnerId = sToken.sTokenMint(user, 10, learnerAttr);
         uint256 scholarId = sToken.sTokenMint(user, 5, scholarAttr);
         vm.stopPrank();
@@ -384,7 +363,7 @@ contract STokenTest is STokenFixture {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
-        vm.startPrank(minter);
+        vm.startPrank(sTokenMinter);
         uint256 tokenId = sToken.sTokenMint(user, 100, attr);
         vm.stopPrank();
 
@@ -416,7 +395,7 @@ contract STokenTest is STokenFixture {
 
         uint256 initialMint = 50;
 
-        vm.startPrank(minter);
+        vm.startPrank(sTokenMinter);
         uint256 tokenId = sToken.sTokenMint(user, initialMint, attr);
         vm.stopPrank();
 
@@ -450,7 +429,7 @@ contract STokenTest is STokenFixture {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
-        vm.startPrank(minter);
+        vm.startPrank(sTokenMinter);
         uint256 tokenId = sToken.sTokenMint(user, 100, attr);
         vm.stopPrank();
 
@@ -481,7 +460,7 @@ contract STokenTest is STokenFixture {
         ISToken.TokenAttributes memory attr;
         attr.tokenType = ISToken.TokenType.Learner;
 
-        vm.startPrank(minter);
+        vm.startPrank(sTokenMinter);
         uint256 tokenId = sToken.sTokenMint(user, 100, attr);
         vm.stopPrank();
 

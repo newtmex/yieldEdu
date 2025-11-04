@@ -7,7 +7,8 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {ISFTUpgradeable} from "../abstracts/ISFTUpgradeable.sol";
+import {ISFT} from "../abstracts/ISFT.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /**
  * @title SFTUpgradeable
@@ -15,70 +16,12 @@ import {ISFTUpgradeable} from "../abstracts/ISFTUpgradeable.sol";
  *      Inherits from ERC1155Upgradeable and AccessControlUpgradeable.
  */
 abstract contract SFTUpgradeable is
-    ISFTUpgradeable,
     Initializable,
     ERC1155Upgradeable,
-    AccessControlUpgradeable
+    AccessControlUpgradeable,
+    ISFT
 {
     using EnumerableSet for EnumerableSet.UintSet;
-
-    // ================================
-    // ========== Events ==============
-    // ================================
-
-    /// @notice Emitted when attributes are updated for a token nonce.
-    event TokenAttributesUpdated(uint256 indexed nonce, bytes newAttributes);
-
-    /**
-     * @dev Emitted when multiple SFTs are merged into a new one.
-     * @param operator The address that initiated the merge.
-     * @param from The address whose tokens were merged.
-     * @param to The recipient of the new merged SFT.
-     * @param mergedIds The token IDs that were merged.
-     * @param newId The ID (nonce) of the newly minted merged SFT.
-     * @param totalAmount The total amount combined in the merged SFT.
-     */
-    event TokensMerged(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256[] mergedIds,
-        uint256 newId,
-        uint256 totalAmount
-    );
-
-    // Event: emitted when splitting a token into multiple parts
-    event TokensSplit(
-        address indexed operator,
-        address indexed from,
-        uint256 indexed originalId,
-        address[] recipients,
-        uint256[] values,
-        uint256 totalSplit
-    );
-
-    // ================================
-    // ========== Errors ==============
-    // ================================
-
-    /// @dev Thrown when attempting to transfer a partial amount of an SFT, which is not allowed.
-    error MustTransferAllSFTAmount(uint256 amount);
-
-    /// @dev Thrown when a merge attempt between two SFTs is unauthorized or invalid.
-    error UnAuthorizedSFTMerge(
-        bytes firstAttr,
-        bytes secondAttr,
-        string reason
-    );
-
-    /// @dev Thrown when an unauthorized user attempts to perform an update action on an SFT.
-    error UnAuthorizedSFTTransfer(
-        uint256 nonce,
-        address from,
-        address to,
-        address caller,
-        string reason
-    );
 
     // ================================
     // ========== Roles ===============
@@ -179,10 +122,11 @@ abstract contract SFTUpgradeable is
         address from,
         uint256 id,
         uint256 totalSplit,
-        uint256 remaining,
         uint256 fullBalance,
         bytes memory originalAttr
-    ) internal {
+    ) private returns (uint256) {
+        uint256 remaining = fullBalance - totalSplit;
+
         SFTStorage storage $ = _getSFTStorage();
 
         if (remaining > 0) {
@@ -193,60 +137,21 @@ abstract contract SFTUpgradeable is
                 originalAttr
             );
             _setRawTokenAttributes($, id, residualAttr);
-            _burnSFTValue(from, id, totalSplit);
+            _removeSFTValueForMergeSplit(from, id, totalSplit);
+
+            return id;
         } else {
             // Fully split token; remove metadata and nonce reference
             $.addressToNonces[from].remove(id);
             delete $.tokenAttributes[id];
-            _burnSFTValue(from, id, totalSplit);
+            _removeSFTValueForMergeSplit(from, id, totalSplit);
+
+            return 0;
         }
     }
 
     /**
-     * @notice Splits an existing Semi-Fungible Token (SFT) into multiple new sub-tokens
-     *         and transfers each resulting part to a list of recipients.
-     *
-     * @dev
-     * Performs a proportional split of the caller’s token balance for a given SFT ID.
-     * Each resulting sub-token inherits derived attributes from the original token
-     * using `_intoParts()`. The function mints these sub-SFTs directly to recipients,
-     * burns the proportional amount from the sender, and updates or removes the
-     * residual attributes accordingly.
-     *
-     * Key guarantees:
-     *  - Only the token owner or an approved operator can perform a split.
-     *  - The total split value cannot exceed the sender’s full balance.
-     *  - Each new sub-SFT inherits metadata that remains invariant under the split.
-     *  - Any remaining balance retains consistent and proportional attributes.
-     *
-     * @param from The address of the token owner initiating the split.
-     * @param id The unique identifier (nonce) of the original SFT being split.
-     * @param recipients The list of recipient addresses receiving the split SFTs.
-     * @param values The list of token amounts corresponding to each recipient.
-     *
-     * @custom:events
-     * - Emits `TransferSingle` (per ERC-1155) for each minted sub-SFT.
-     * - Emits `TokensSplit` summarizing the entire split operation.
-     *
-     * @custom:reverts
-     * - `ERC1155MissingApprovalForAll` if the caller lacks transfer permission.
-     * - `ERC1155InvalidArrayLength` if `recipients.length != values.length`.
-     * - `ERC1155InsufficientBalance` if the total split exceeds available balance.
-     * - `"InvalidSplitAmount"` if any split portion is zero.
-     * - `"EmptySplitArray"` if no recipients are provided.
-     *
-     * @custom:security
-     * - Protected by `nonReentrant` to prevent reentrancy via mint/transfer hooks.
-     *
-     * @custom:example
-     * ```solidity
-     * // Splitting a 100-unit token into two 40/60 sub-tokens:
-     * splitTransferFrom(
-     *     msg.sender,
-     *     1, // original token ID
-     *     [address(learnerA), address(learnerB)],
-     *     [40, 60]
-     * );
+     * @notice
      * ```
      */
     function splitTransferFrom(
@@ -254,7 +159,7 @@ abstract contract SFTUpgradeable is
         uint256 id,
         address[] calldata recipients,
         uint256[] calldata values
-    ) external {
+    ) external returns (uint256 finalNonce) {
         address operator = _msgSender();
         _validateSplitInputs(from, operator, recipients, values);
 
@@ -264,7 +169,6 @@ abstract contract SFTUpgradeable is
 
         bytes memory originalAttr = _getRawTokenAttributes(id);
         uint256 totalSplit;
-        uint256 remaining = fullBalance;
 
         for (uint256 i; i < len; ) {
             uint256 value = values[i];
@@ -292,69 +196,25 @@ abstract contract SFTUpgradeable is
             }
         }
 
-        remaining = fullBalance - totalSplit;
-        _updateResidualAfterSplit(
+        finalNonce = _updateResidualAfterSplit(
             from,
             id,
             totalSplit,
-            remaining,
             fullBalance,
             originalAttr
         );
+
         emit TokensSplit(operator, from, id, recipients, values, totalSplit);
     }
 
     /**
-     * @notice Merges multiple Semi-Fungible Tokens (SFTs) of the same type
-     *         into a single new SFT and transfers it to a specified recipient.
-     *
-     * @dev
-     * Combines several existing SFT instances owned by `from` into one unified
-     * token. The resulting SFT inherits composite attribute data derived
-     * through `_mergeAttr()`. This function supports flexible merge logic,
-     * allowing token attributes to encode cumulative rewards, access tiers,
-     * or progressive learner credentials.
-     *
-     * The function ensures:
-     *  - Only the token owner or an approved operator can initiate the merge.
-     *  - All source tokens must have a non-zero balance.
-     *  - Attributes are validated for merge compatibility using `_ensureCanMerge()`.
-     *  - Each original token is fully burned before minting the merged SFT.
-     *
-     * @param from The current owner of the SFTs being merged.
-     * @param to The address that will receive the newly merged SFT.
-     * @param ids The list of SFT IDs (nonces) to merge.
-     *
-     * @return newNonce The unique identifier (nonce) of the newly minted merged SFT.
-     *
-     * @custom:events
-     * - Emits `TokensMerged` summarizing the merge operation with all merged IDs.
-     *
-     * @custom:reverts
-     * - `ERC1155MissingApprovalForAll` if the caller lacks merge permission.
-     * - `"EmptyMergeArray"` if no token IDs are provided.
-     * - `"InvalidRecipient"` if the `to` address is zero.
-     * - `"ZeroBalanceToken"` if any source SFT has zero balance.
-     * - `UnAuthorizedSFTMerge` if merge compatibility fails in `_ensureCanMerge()`.
-     *
-     * @custom:security
-     * - Protected by `nonReentrant` to prevent reentrancy via burn/mint hooks.
-     *
-     * @custom:example
-     * ```solidity
-     * // Merging two progress-based course SFTs into a single learner credential:
-     * mergeTransferFrom(
-     *     msg.sender,
-     *     msg.sender,
-     *     [courseSFT_A, courseSFT_B]
-     * );
-     * ```
+     * @notice
      */
     function mergeTransferFrom(
         address from,
         address to,
         uint256[] calldata ids
-    ) external returns (uint256 newNonce) {
+    ) external returns (uint256 nonce) {
         address operator = _msgSender();
 
         // --- Validation ---
@@ -364,16 +224,19 @@ abstract contract SFTUpgradeable is
             revert ERC1155MissingApprovalForAll(operator, from);
         }
 
+        SFTStorage storage $ = _getSFTStorage();
+
         bytes memory mergedAttributes;
         uint256 totalAmount;
 
-        for (uint256 i = 0; i < ids.length; ++i) {
-            uint256 id = ids[i];
-            uint256 value = balanceOf(from, id);
+        for (uint256 i = ids.length; i > 0; ) {
+            nonce = ids[i - 1];
+
+            uint256 value = balanceOf(from, nonce);
             if (value == 0) revert("ZeroBalanceToken");
 
-            bytes memory attr = _getRawTokenAttributes(id);
-            _ensureCanTransfer(id, from, to, attr);
+            bytes memory attr = _getRawTokenAttributes(nonce);
+            _ensureCanTransfer(nonce, from, to, attr);
 
             if (totalAmount == 0) {
                 // seed mergedAttributes with the first token's attributes
@@ -393,13 +256,21 @@ abstract contract SFTUpgradeable is
             totalAmount += value;
 
             // burn each source SFT from 'from' (we remove their balance)
-            _burnSFTValue(from, id, value);
+            $.addressToNonces[from].remove(nonce);
+            delete $.tokenAttributes[nonce];
+            _removeSFTValueForMergeSplit(from, nonce, value);
+
+            unchecked {
+                --i;
+            }
         }
 
-        // mint merged SFT to recipient
-        newNonce = _mintSFT(to, totalAmount, mergedAttributes);
+        // update merged SFT for recipient
+        $.addressToNonces[to].add(nonce);
+        _setRawTokenAttributes($, nonce, mergedAttributes);
+        _addSFTValueForMergeSplit(to, nonce, totalAmount);
 
-        emit TokensMerged(operator, from, to, ids, newNonce, totalAmount);
+        emit TokensMerged(operator, from, to, ids, nonce, totalAmount);
     }
 
     // ================================
@@ -513,7 +384,34 @@ abstract contract SFTUpgradeable is
         _mint(to, nonce, amount, "");
     }
 
-    function _burnSFTValue(address from, uint256 nonce, uint256 amount) internal {
+    /**
+     * @dev Internally adds SFT value to `to` during a merge or split operation.
+     *      This does not mint new tokens or increase total supply.
+     *      Should only be used within merge/split logic to reflect balance redistribution.
+     */
+    function _addSFTValueForMergeSplit(
+        address to,
+        uint256 nonce,
+        uint256 amount
+    ) private {
+        uint256[] memory ids = new uint256[](1);
+        uint256[] memory values = new uint256[](1);
+        ids[0] = nonce;
+        values[0] = amount;
+
+        super._update(address(0), to, ids, values);
+    }
+
+    /**
+     * @dev Internally removes SFT value from `from` during a merge or split operation.
+     *      This does not burn tokens or decrease total supply.
+     *      Should only be used within merge/split logic to reflect balance redistribution.
+     */
+    function _removeSFTValueForMergeSplit(
+        address from,
+        uint256 nonce,
+        uint256 amount
+    ) private {
         uint256[] memory ids = new uint256[](1);
         uint256[] memory values = new uint256[](1);
         ids[0] = nonce;
@@ -541,10 +439,21 @@ abstract contract SFTUpgradeable is
         SFTStorage storage $,
         uint256 nonce,
         bytes memory attr
-    ) internal virtual {
+    ) private {
         require(attr.length > 0, "SFT: empty attributes not allowed");
         $.tokenAttributes[nonce] = attr;
         emit TokenAttributesUpdated(nonce, attr);
+    }
+
+    function _updateTokenAttributes(
+        address user,
+        uint256 nonce,
+        bytes memory attr
+    ) internal {
+        uint256 balance = balanceOf(user, nonce);
+        if (balance == 0) revert("SFT: No balance found at nonce");
+
+        _setRawTokenAttributes(_getSFTStorage(), nonce, attr);
     }
 
     /**
@@ -655,7 +564,7 @@ abstract contract SFTUpgradeable is
         public
         view
         virtual
-        override(ERC1155Upgradeable, AccessControlUpgradeable)
+        override(ERC1155Upgradeable, AccessControlUpgradeable, IERC165)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

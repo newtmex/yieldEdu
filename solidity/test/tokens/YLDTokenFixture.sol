@@ -7,6 +7,7 @@ import {YLDToken} from "../../contracts/tokens/YLDToken.sol";
 import {MockDEDU} from "../../contracts/external/mocks/MockDEDU.sol";
 
 contract YLDTokenFixture is GeneralFixture {
+    address public yldMinter = makeAddr("yldMinter");
     YLDToken public yld;
     MockDEDU public dedu;
 
@@ -30,5 +31,14 @@ contract YLDTokenFixture is GeneralFixture {
 
         // Cast the proxy address to YLDToken
         yld = YLDToken(address(proxy));
+
+        // Grant MINTER_ROLE to minter
+        vm.prank(owner);
+        yld.grantRole(yld.MINTER_ROLE(), yldMinter);
+    }
+
+    function _mintYLDToken(address to, uint256 amount) internal {
+        vm.prank(yldMinter);
+        yld.mint(amount, to);
     }
 }
