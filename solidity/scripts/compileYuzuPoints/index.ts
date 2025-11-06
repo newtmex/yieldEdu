@@ -99,9 +99,9 @@ task("compileYuzuPoints", "Compile and generate Yuzu point distributions")
         });
 
         // --- Write CSV Outputs ---
-        const sortedRecords = Object.values(pointsRecord).sort(
-            (a, b) => b.amount - a.amount
-        );
+        const sortedRecords = Object.values(pointsRecord)
+            .sort((a, b) => b.amount - a.amount)
+            .filter((y) => y.amount > 0);
         const csvOutputs = [
             {
                 filename: `yuzu_distribution_sem${SEM}.csv`,
