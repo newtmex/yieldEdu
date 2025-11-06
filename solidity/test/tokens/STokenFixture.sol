@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {
+    ERC1967Proxy
+} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {GeneralFixture} from "../GeneralFixture.sol";
 import {SToken, ISToken} from "../../contracts/tokens/SToken.sol";
 
@@ -56,5 +58,51 @@ contract STokenFixture is GeneralFixture {
         attr.tokenType = ISToken.TokenType.Learner;
         nonce = sToken.sTokenMint(to, amount, attr);
         vm.stopPrank();
+    }
+
+    function _uint256ArrayPrefilled(
+        uint256 first,
+        uint256 length
+    ) internal pure returns (uint256[] memory arr) {
+        assembly {
+            let size := add(0x20, mul(length, 0x20))
+            arr := mload(0x40)
+            mstore(arr, length)
+            let dataStart := add(arr, 0x20)
+            if gt(length, 0) {
+                mstore(dataStart, first)
+            }
+            let ptr := add(dataStart, 0x20)
+            let end := add(dataStart, mul(length, 0x20))
+            for {} lt(ptr, end) {
+                ptr := add(ptr, 0x20)
+            } {
+                mstore(ptr, 0)
+            }
+            mstore(0x40, add(arr, size))
+        }
+    }
+
+    function _addressArrayPrefilled(
+        address first,
+        uint256 length
+    ) internal pure returns (address[] memory arr) {
+        assembly {
+            let size := add(0x20, mul(length, 0x20))
+            arr := mload(0x40)
+            mstore(arr, length)
+            let dataStart := add(arr, 0x20)
+            if gt(length, 0) {
+                mstore(dataStart, first)
+            }
+            let ptr := add(dataStart, 0x20)
+            let end := add(dataStart, mul(length, 0x20))
+            for {} lt(ptr, end) {
+                ptr := add(ptr, 0x20)
+            } {
+                mstore(ptr, 0)
+            }
+            mstore(0x40, add(arr, size))
+        }
     }
 }

@@ -1,15 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+// ──────────────────────────────────────────────
+// OpenZeppelin Upgradeable Contracts
+// ──────────────────────────────────────────────
+import {
+    AccessControlUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    ERC4626Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+// ──────────────────────────────────────────────
+// OpenZeppelin Standard Interfaces
+// ──────────────────────────────────────────────
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
-import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
+// ──────────────────────────────────────────────
+// Project-Specific Imports
+// ──────────────────────────────────────────────
 import {ISToken} from "../tokens/ISToken.sol";
-import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {
+    sTokenHandlerUpgradeable
+} from "../abstracts/sTokenHandlerUpgradeable.sol";
 import {ContentLib} from "./ContentLib.sol";
 
 /**
@@ -30,7 +46,7 @@ import {ContentLib} from "./ContentLib.sol";
 contract Content is
     Initializable,
     AccessControlUpgradeable,
-    ERC1155HolderUpgradeable,
+    sTokenHandlerUpgradeable,
     ERC4626Upgradeable
 {
     /*//////////////////////////////////////////////////////////////
@@ -49,8 +65,6 @@ contract Content is
         uint256 contentId;
         /// @notice Latest sToken ID representing this content's aggregated holdings
         uint256 sTokenId;
-        /// @notice sToken contract reference used for learner/course bindings
-        ISToken sToken;
         /// @notice ERC-20 reward token distributed for this content (e.g., YLD)
         IERC20 rewardToken;
         /// @notice Human-readable title of the content
@@ -93,7 +107,7 @@ contract Content is
         address _admin
     ) public initializer {
         __AccessControl_init();
-        __ERC1155Holder_init();
+        __sTokenHandler_init(ISToken(_sToken));
 
         __ERC20_init(_title, ContentLib.generateSymbol(_title, _contentId));
         __ERC4626_init(IERC20(_rewardToken));
@@ -103,7 +117,6 @@ contract Content is
         $.title = _title;
         $.description = _description;
         $.rewardToken = IERC20(_rewardToken);
-        $.sToken = ISToken(_sToken);
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ADMIN_ROLE, _admin);
@@ -171,7 +184,7 @@ contract Content is
         public
         view
         virtual
-        override(ERC1155HolderUpgradeable, AccessControlUpgradeable)
+        override(sTokenHandlerUpgradeable, AccessControlUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -201,35 +214,23 @@ contract Content is
         }
     }
 
-    function onERC1155Received(
+    function _onERC1155Received(
         address /* operator */,
         address from,
         uint256 tokenId,
-        uint256 /* value */,
+        uint256 value,
         bytes memory /* data */
-    ) public override returns (bytes4) {
+    ) internal override returns (bytes4) {
         ContentStorage storage $ = _getContentStorage();
 
         uint256 currentTokenId = $.sTokenId;
+        ISToken sToken_ = sToken();
 
-        ISToken sToken = $.sToken;
-        uint256 depositAmount = sToken.balanceOf(address(this), tokenId);
-
-        $.sTokenId = _mergeHeldScholarTokens(sToken, currentTokenId, tokenId);
+        $.sTokenId = _mergeHeldScholarTokens(sToken_, currentTokenId, tokenId);
 
         // Mint shares representing the sToken position for the sender
-        _mint(from, depositAmount);
+        _mint(from, value);
 
         return this.onERC1155Received.selector;
-    }
-
-    function onERC1155BatchReceived(
-        address,
-        address,
-        uint256[] memory,
-        uint256[] memory,
-        bytes memory
-    ) public pure override returns (bytes4) {
-        revert("BATCH_NOT_SUPPORTED");
     }
 }
