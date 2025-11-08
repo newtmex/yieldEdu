@@ -101,6 +101,10 @@ interface ISFT is IERC1155 {
      */
     function getNonces(address owner) external view returns (uint256[] memory);
 
+    function getRawTokenAttributes(
+        uint256 tokenId
+    ) external view returns (bytes memory);
+
     /**
      * @dev Returns the total supply of all tokens.
      * @return The total supply.
@@ -159,7 +163,7 @@ interface ISFT is IERC1155 {
         uint256 id,
         address[] calldata recipients,
         uint256[] calldata values
-    ) external returns (uint256 finalNonce);
+    ) external returns (uint256 finalNonce, uint256[] memory splitIds);
 
     /**
      * @notice Merges multiple Semi-Fungible Tokens (SFTs) of the same type

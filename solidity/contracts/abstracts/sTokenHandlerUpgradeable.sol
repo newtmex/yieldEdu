@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {
-    Initializable
-} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {
-    ERC1155HolderUpgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import {ISToken} from "../tokens/ISToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -89,6 +85,26 @@ abstract contract sTokenHandlerUpgradeable is
         uint256 value,
         bytes memory data
     ) internal virtual returns (bytes4);
+
+    /**
+     * @dev Returns a single-element uint256 array and a single-element address array.
+     */
+    function _asSingletonArrays(
+        uint256 uintElement,
+        address addrElement
+    )
+        internal
+        pure
+        returns (uint256[] memory uintArray, address[] memory addrArray)
+    {
+        // Allocate and assign the uint256 array
+        uintArray = new uint256[](1);
+        uintArray[0] = uintElement;
+
+        // Allocate and assign the address array
+        addrArray = new address[](1);
+        addrArray[0] = addrElement;
+    }
 
     /**
      * @notice Called when the contract receives a single ERC1155 token.

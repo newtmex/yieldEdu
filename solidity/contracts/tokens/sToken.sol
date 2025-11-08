@@ -131,7 +131,7 @@ contract SToken is
             revert ERC1155MissingApprovalForAll(operator, user);
         }
 
-        ISToken.TokenAttributes memory tokenAttr = _getRawTokenAttributes(nonce)
+        ISToken.TokenAttributes memory tokenAttr = getRawTokenAttributes(nonce)
             .decode();
         if (binding.isBound() == tokenAttr.binding.isBound()) {
             revert("sToken: invalid binding update");

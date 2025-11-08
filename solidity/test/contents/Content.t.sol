@@ -3,10 +3,16 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {ContentFixture} from "./ContentFixture.sol";
 import {Content} from "../../contracts/contents/Content.sol";
+import {ISToken} from "../../contracts/tokens/ISToken.sol";
+import {sTokenLib} from "../../contracts/tokens/sTokenLib.sol";
 
-contract ContentTest is ContentFixture {
+contract ContentTest is ContentFixture, ERC1155Holder {
+    using sTokenLib for bytes;
+    using sTokenLib for ISToken.Binding;
+
     address verifier = makeAddr("verifier");
     address randomUser = makeAddr("randomUser");
 
@@ -104,12 +110,44 @@ contract ContentTest is ContentFixture {
         );
         shares += shares;
         _assertPostMintVaultState(investor, shares);
-        
+
         _assertContentSTokenID(firstId);
 
         // _simulateYieldAndUnauthorizedWithdraw(investor, yield, shares);
         // _simulateAuthorizedWithdraw(investor, yield, shares);
 
         // _assertFinalVaultState(investor, shares, yield);
+    }
+
+    function test_ContentReceivesLearnerTokensAndSplitsIt() public {
+        // Arrange
+        uint256 mintAmount = 200 ether;
+        uint256 learnerTokenId = _mintLearnerToken(randomUser, mintAmount);
+
+        // Act
+        vm.startPrank(randomUser);
+        sToken.safeTransferFrom(
+            randomUser,
+            address(content),
+            learnerTokenId,
+            mintAmount,
+            ""
+        );
+        vm.stopPrank();
+
+        // Assert
+        uint256 remainingBalance = sToken.balanceOf(randomUser, learnerTokenId);
+        assertTrue(
+            remainingBalance > 0 && remainingBalance < mintAmount,
+            "Expected a portion of the tokens to be transferred for binding"
+        );
+
+        ISToken.TokenAttributes memory remainingAttributes = sToken
+            .getRawTokenAttributes(learnerTokenId)
+            .decode();
+        assertTrue(
+            !remainingAttributes.binding.isBound(),
+            "Remaining token should be unbound; binding applies only to split portion"
+        );
     }
 }

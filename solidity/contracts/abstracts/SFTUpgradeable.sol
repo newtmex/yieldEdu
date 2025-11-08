@@ -118,6 +118,59 @@ abstract contract SFTUpgradeable is
         if (len > 50) revert("SplitArrayTooLarge");
     }
 
+    /**
+     * @dev Handles the main loop logic for splitting a token into multiple parts.
+     * @param from The address the tokens are being split from.
+     * @param id The token ID being split.
+     * @param recipients The list of recipient addresses for each split.
+     * @param values The corresponding split values.
+     * @param fullBalance The sender’s full token balance for the given ID.
+     * @return totalSplit The total amount successfully split.
+     * @return splitIds The list of new token IDs created from the split.
+     */
+    function _processTokenSplits(
+        address from,
+        uint256 id,
+        address[] calldata recipients,
+        uint256[] calldata values,
+        uint256 fullBalance,
+        bytes memory originalAttr
+    ) private returns (uint256 totalSplit, uint256[] memory splitIds) {
+        SFTStorage storage $ = _getSFTStorage();
+
+        uint256 len = recipients.length;
+        splitIds = new uint256[](len);
+
+        for (uint256 i; i < len; ) {
+            uint256 value = values[i];
+            if (value == 0) revert("InvalidSplitAmount");
+
+            totalSplit += value;
+            if (totalSplit > fullBalance) {
+                revert ERC1155InsufficientBalance(
+                    from,
+                    fullBalance,
+                    totalSplit,
+                    id
+                );
+            }
+
+            // Increment nonce and assign split attributes
+            uint256 newId = ++$.nonceCounter;
+            _setRawTokenAttributes(
+                $,
+                newId,
+                _intoParts(value, fullBalance, originalAttr)
+            );
+            _addSFTValueForMergeSplit(recipients[i], newId, value);
+            splitIds[i] = newId;
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     function _updateResidualAfterSplit(
         address from,
         uint256 id,
@@ -150,51 +203,29 @@ abstract contract SFTUpgradeable is
         }
     }
 
-    /**
-     * @notice
-     * ```
-     */
     function splitTransferFrom(
         address from,
         uint256 id,
         address[] calldata recipients,
         uint256[] calldata values
-    ) external returns (uint256 finalNonce) {
+    ) external returns (uint256 finalNonce, uint256[] memory splitIds) {
         address operator = _msgSender();
         _validateSplitInputs(from, operator, recipients, values);
 
-        uint256 len = recipients.length;
         uint256 fullBalance = balanceOf(from, id);
         if (fullBalance == 0) revert ERC1155InsufficientBalance(from, 0, 0, id);
 
-        bytes memory originalAttr = _getRawTokenAttributes(id);
+        bytes memory originalAttr = getRawTokenAttributes(id);
+        
         uint256 totalSplit;
-
-        for (uint256 i; i < len; ) {
-            uint256 value = values[i];
-            if (value == 0) revert("InvalidSplitAmount");
-
-            totalSplit += value;
-            if (totalSplit > fullBalance) {
-                revert ERC1155InsufficientBalance(
-                    from,
-                    fullBalance,
-                    totalSplit,
-                    id
-                );
-            }
-
-            // Derive proportional attributes for this split
-            _mintSFT(
-                recipients[i],
-                value,
-                _intoParts(value, fullBalance, originalAttr)
-            );
-
-            unchecked {
-                ++i;
-            }
-        }
+        (totalSplit, splitIds) = _processTokenSplits(
+            from,
+            id,
+            recipients,
+            values,
+            fullBalance,
+            originalAttr
+        );
 
         finalNonce = _updateResidualAfterSplit(
             from,
@@ -235,7 +266,7 @@ abstract contract SFTUpgradeable is
             uint256 value = balanceOf(from, nonce);
             if (value == 0) revert("ZeroBalanceToken");
 
-            bytes memory attr = _getRawTokenAttributes(nonce);
+            bytes memory attr = getRawTokenAttributes(nonce);
             _ensureCanTransfer(nonce, from, to, attr);
 
             if (totalAmount == 0) {
@@ -316,9 +347,9 @@ abstract contract SFTUpgradeable is
      * @param nonce The nonce of the token.
      * @return Attributes in bytes.
      */
-    function _getRawTokenAttributes(
+    function getRawTokenAttributes(
         uint256 nonce
-    ) internal view returns (bytes memory) {
+    ) public view returns (bytes memory) {
         return _getSFTStorage().tokenAttributes[nonce];
     }
 
@@ -335,7 +366,7 @@ abstract contract SFTUpgradeable is
 
         for (uint256 i = 0; i < nonces.length; i++) {
             uint256 nonce = nonces[i];
-            bytes memory attributes = _getRawTokenAttributes(nonce);
+            bytes memory attributes = getRawTokenAttributes(nonce);
             uint256 amount = balanceOf(user, nonce);
 
             balance[i] = SftBalance({
