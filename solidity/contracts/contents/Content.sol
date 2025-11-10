@@ -3,16 +3,23 @@ pragma solidity ^0.8.20;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import {ISToken} from "../tokens/ISToken.sol";
 import {sTokenHandlerUpgradeable} from "../abstracts/sTokenHandlerUpgradeable.sol";
 import {ContentLib} from "./ContentLib.sol";
+import {IContent} from "./IContent.sol";
 import {sTokenLib} from "../tokens/sTokenLib.sol";
 
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+/// @title Content Contract
+/// @notice Handles learner and scholar enrollments for a specific content,
+///         binding semi-fungible tokens (sTokens) to a course controller and minting ERC4626 vault shares.
 contract Content is
+    IContent,
     Initializable,
     OwnableUpgradeable,
     AccessControlUpgradeable,
@@ -20,15 +27,15 @@ contract Content is
     ERC4626Upgradeable
 {
     using sTokenLib for bytes;
+    using ECDSA for bytes32;
+    using MessageHashUtils for bytes32;
 
-    /*//////////////////////////////////////////////////////////////
-                                ROLES
-    //////////////////////////////////////////////////////////////*/
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    /// @notice Minimum binding threshold
+    uint256 public constant MIN_BIND = 10 ether;
 
     /*//////////////////////////////////////////////////////////////
-                              STATE
+                                STATE
     //////////////////////////////////////////////////////////////*/
 
     struct ContentStorage {
@@ -37,10 +44,10 @@ contract Content is
         IERC20 rewardToken;
         string title;
         string description;
-        // ─── New fields ──────────────────────────────
-        address courseController;
+        address contentController;
         uint256 courseDuration; // in seconds
         uint256 minBindAmount;
+        address verifier;
     }
 
     /// @custom:storage-location erc7201:yieldEDU.contents.content.storage
@@ -59,25 +66,7 @@ contract Content is
     }
 
     /*//////////////////////////////////////////////////////////////
-                              CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice The hardcoded minimum threshold for binding (cannot be set below this)
-    uint256 public constant MIN_BIND = 10 ether;
-
-    /*//////////////////////////////////////////////////////////////
-                              EVENTS
-    //////////////////////////////////////////////////////////////*/
-    event VerifierUpdated(address indexed verifier, bool enabled);
-    event CourseControllerUpdated(
-        address indexed oldController,
-        address indexed newController
-    );
-    event CourseDurationUpdated(uint256 oldDuration, uint256 newDuration);
-    event MinBindAmountUpdated(uint256 oldAmount, uint256 newAmount);
-
-    /*//////////////////////////////////////////////////////////////
-                            INITIALIZER
+                             INITIALIZER
     //////////////////////////////////////////////////////////////*/
 
     function initialize(
@@ -110,41 +99,26 @@ contract Content is
     }
 
     /*//////////////////////////////////////////////////////////////
-                            ADMIN LOGIC
+                             ADMIN LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Add or remove verifier permissions
-    function setVerifier(
-        address verifier,
-        bool enabled
-    ) external onlyRole(ADMIN_ROLE) {
-        if (enabled) _grantRole(VERIFIER_ROLE, verifier);
-        else _revokeRole(VERIFIER_ROLE, verifier);
+    function setVerifier(address _verifier) external onlyRole(ADMIN_ROLE) {
+        require(_verifier != address(0), "Invalid verifier");
 
-        emit VerifierUpdated(verifier, enabled);
+        ContentStorage storage $ = _getContentStorage();
+
+        address oldVerifier = $.verifier;
+        $.verifier = _verifier;
+        emit VerifierUpdated(oldVerifier, _verifier);
     }
-
-    // /// @notice Update the course duration
-    // function setCourseDuration(
-    //     uint256 newDuration
-    // ) external onlyRole(ADMIN_ROLE) {
-    //     ContentStorage storage $ = _getContentStorage();
-    //     _setCourseDuration($, newDuration);
-    // }
-
-    // /// @notice Update the minimum bind amount, cannot go below the hard threshold
-    // function setMinBindAmount(uint256 newAmount) external onlyRole(ADMIN_ROLE) {
-    //     ContentStorage storage $ = _getContentStorage();
-    //     _setMinBindAmount($, newAmount);
-    // }
 
     function _setCourseController(
         ContentStorage storage $,
         address newController
     ) internal {
         require(newController != address(0), "Invalid controller");
-        address oldController = $.courseController;
-        $.courseController = newController;
+        address oldController = $.contentController;
+        $.contentController = newController;
         emit CourseControllerUpdated(oldController, newController);
     }
 
@@ -169,25 +143,8 @@ contract Content is
     }
 
     /*//////////////////////////////////////////////////////////////
-                            OVERRIDES (UNCHANGED LOGIC)
+                             ERC4626 OVERRIDES
     //////////////////////////////////////////////////////////////*/
-
-    /// @notice Returns the core metadata of this content
-    function getContentInfo()
-        external
-        view
-        returns (
-            uint256 contentId,
-            string memory name,
-            string memory description,
-            uint256 sTokenId
-        )
-    {
-        ContentStorage storage $ = _getContentStorage();
-        return ($.contentId, $.title, $.description, $.sTokenId);
-    }
-
-    error NotAllowed();
 
     modifier notAllowed() {
         if (msg.sender != address(this)) revert NotAllowed();
@@ -221,12 +178,61 @@ contract Content is
         return super.supportsInterface(interfaceId);
     }
 
+    /// @notice Returns the core metadata of this content
+    function getContentInfo()
+        external
+        view
+        returns (
+            uint256 contentId,
+            string memory name,
+            string memory description,
+            uint256 sTokenId
+        )
+    {
+        ContentStorage storage $ = _getContentStorage();
+        return ($.contentId, $.title, $.description, $.sTokenId);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        STUDENT ENROLLMENT LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Enroll a scholar using a signed authorization from the verifier
+    function enrollScholar(
+        uint256 deadline,
+        bytes calldata signature
+    ) external {
+        ContentStorage storage $ = _getContentStorage();
+        address verifier = $.verifier;
+
+        require(verifier != address(0), "Verifier not set");
+        require(block.timestamp <= deadline, "Expired signature");
+
+        address scholar = msg.sender;
+
+        // Compute the message hash
+        bytes32 messageHash = keccak256(
+            abi.encodePacked(address(this), scholar, deadline)
+        ).toEthSignedMessageHash();
+
+        // Recover the signer
+        address recovered = messageHash.recover(signature);
+        require(recovered == verifier, "Invalid signature");
+
+        _handleScholarEnrollment(sToken(), scholar);
+    }
+
+    /**
+     * @dev Merge a newly received scholar token into the held token of this contract.
+     * Retains existing nonce by merging newTokenId into currentTokenId.
+     */
     function _mergeHeldScholarTokens(
         ISToken sToken,
-        uint256 currentTokenId,
         uint256 newTokenId
-    ) private returns (uint256 mergedTokenId) {
-        // If there’s an existing holding, merge it with the new sToken
+    ) private {
+        ContentStorage storage $ = _getContentStorage();
+        uint256 currentTokenId = $.sTokenId;
+
         if (currentTokenId != 0) {
             uint256[] memory mergeIds = new uint256[](2);
             // Order matters for merging,
@@ -235,24 +241,19 @@ contract Content is
             mergeIds[0] = currentTokenId;
             mergeIds[1] = newTokenId;
 
-            mergedTokenId = sToken.mergeTransferFrom(
+            $.sTokenId = sToken.mergeTransferFrom(
                 address(this),
                 address(this),
                 mergeIds
             );
         } else {
-            mergedTokenId = newTokenId;
+            $.sTokenId = newTokenId;
         }
     }
 
     /**
-     * @dev Splits a learner token to separate the bound portion and refund the remainder.
-     * @param sToken_ The sToken contract interface.
-     * @param from The address sending the token.
-     * @param tokenId The ID of the token being processed.
-     * @param bindAmount The amount to be bound to the course.
-     * @param refund The amount to return to the sender, if any.
-     * @return splitId The ID of the newly created bound token.
+     * @dev Handles splitting of a learner token and refunds excess.
+     * Returns the ID of the bound portion to be transferred to contentController.
      */
     function _splitAndRefund(
         ISToken sToken_,
@@ -260,16 +261,27 @@ contract Content is
         uint256 tokenId,
         uint256 bindAmount,
         uint256 refund
-    ) internal returns (uint256) {
+    ) internal returns (uint256 boundId) {
         if (refund == 0) return tokenId;
 
-        // If part of the token needs to be split for binding
+        boundId = _splitToken(sToken_, tokenId, bindAmount);
+        sToken_.safeTransferFrom(address(this), from, tokenId, refund, "");
+
+        return boundId;
+    }
+
+    /**
+     * @dev Splits a token held by this contract into a bound portion for enrollment.
+     */
+    function _splitToken(
+        ISToken sToken_,
+        uint256 tokenId,
+        uint256 bindAmount
+    ) internal returns (uint256) {
         (
             uint256[] memory values,
             address[] memory recipients
         ) = _asSingletonArrays(bindAmount, address(this));
-
-        // Split token: send bindAmount to `address(this)`
         (, uint256[] memory splitIds) = sToken_.splitTransferFrom(
             address(this),
             tokenId,
@@ -277,12 +289,14 @@ contract Content is
             values
         );
 
-        // Refund any excess to the sender
-        sToken_.safeTransferFrom(address(this), from, tokenId, refund, "");
-
+        if (splitIds.length == 0) revert SplitFailed();
         return splitIds[0];
     }
 
+    /**
+     * @dev Handles ERC1155 receipt for Learner or Scholar sTokens.
+     * Delegates to respective enrollment handlers.
+     */
     function _onERC1155Received(
         address /* operator */,
         address from,
@@ -290,65 +304,103 @@ contract Content is
         uint256 value,
         bytes memory /* data */
     ) internal override returns (bytes4) {
-        ContentStorage storage $ = _getContentStorage();
         ISToken sToken_ = sToken();
-
         ISToken.TokenAttributes memory tokenAttr = sToken_
             .getRawTokenAttributes(tokenId)
             .decode();
 
         if (tokenAttr.tokenType == ISToken.TokenType.Scholar) {
-            // Merge scholar tokens held by this contract
-            $.sTokenId = _mergeHeldScholarTokens(sToken_, $.sTokenId, tokenId);
-
-            // Mint shares representing scholar position
+            _mergeHeldScholarTokens(sToken_, tokenId);
             _mint(from, value);
         } else if (tokenAttr.tokenType == ISToken.TokenType.Learner) {
-            // Retrieve course controller and duration
-            {
-                address courseOwner = owner();
-
-                require(courseOwner != address(0), "Invalid course owner");
-            }
-
-            // Determine required binding amount (based on content config)
-            uint256 bindAmount = $.minBindAmount;
-            require(bindAmount > 0, "Invalid bound amount");
-            require(value >= bindAmount, "Insufficient value for binding");
-
-            // Refund excess if user sent more than required
-            uint256 refund = value - bindAmount;
-            uint256 splitId = _splitAndRefund(
-                sToken_,
-                from,
-                tokenId,
-                bindAmount,
-                refund
-            );
-
-            // Transfer the bound portion to the course controller with binding data
-            address courseController = $.courseController;
-            uint256 courseDuration = $.courseDuration;
-
-            require(
-                courseController != address(0),
-                "Invalid course controller"
-            );
-
-            sToken_.safeTransferFrom(
-                address(this),
-                courseController,
-                splitId,
-                bindAmount,
-                abi.encode(courseDuration)
-            );
-
-            // Mint equivalent representation for the course vault / recipient contract
-            _mint(address(this), bindAmount);
+            _handleLearnerEnrollment(sToken_, from, tokenId, value);
         } else {
-            revert("Unrecognized token type");
+            revert NotScholarNorLearner();
         }
 
         return this.onERC1155Received.selector;
+    }
+
+    /**
+     * @dev Handles learner enrollment by splitting, refunding excess,
+     * binding required amount, and minting vault shares.
+     */
+    function _handleLearnerEnrollment(
+        ISToken sToken_,
+        address from,
+        uint256 tokenId,
+        uint256 value
+    ) internal {
+        ContentStorage storage $ = _getContentStorage();
+
+        uint256 bindAmount = _preEnrollmentChecks($);
+        if (value < bindAmount) revert InsufficientValue();
+        uint256 refund = value - bindAmount;
+
+        uint256 bindId = _splitAndRefund(
+            sToken_,
+            from,
+            tokenId,
+            bindAmount,
+            refund
+        );
+        _enroll($, sToken_, bindAmount, from, bindId);
+    }
+
+    /**
+     * @dev Handles scholar enrollment using the held scholar token.
+     */
+    function _handleScholarEnrollment(
+        ISToken sToken_,
+        address scholar
+    ) internal {
+        ContentStorage storage $ = _getContentStorage();
+
+        uint256 bindAmount = _preEnrollmentChecks($);
+        uint256 bindId = _splitToken(sToken_, $.sTokenId, bindAmount);
+
+        _enroll($, sToken_, bindAmount, scholar, bindId);
+    }
+
+    /**
+     * @dev Validates course setup and returns the minimum bind amount.
+     */
+    function _preEnrollmentChecks(
+        ContentStorage storage $
+    ) internal view returns (uint256 bindAmount) {
+        if (owner() == address(0) || $.contentController == address(0))
+            revert InvalidController();
+        bindAmount = $.minBindAmount;
+        if (bindAmount < MIN_BIND) revert InvalidBindAmount();
+    }
+
+    /**
+     * @dev Transfers the bound token to the content controller and mints vault shares.
+     */
+    function _enroll(
+        ContentStorage storage $,
+        ISToken sToken_,
+        uint256 mintAmount,
+        address student,
+        uint256 tokenId
+    ) private {
+        uint256 courseDuration = $.courseDuration;
+        address contentController = $.contentController;
+
+        if (contentController == address(0)) revert InvalidController();
+
+        sToken_.safeTransferFrom(
+            address(this),
+            contentController,
+            tokenId,
+            mintAmount,
+            abi.encode(
+                EnrollmentBinding({
+                    courseDuration: courseDuration,
+                    student: student
+                })
+            )
+        );
+        _mint(address(this), mintAmount);
     }
 }

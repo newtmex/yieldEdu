@@ -5,18 +5,22 @@ import "forge-std/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {ContentFixture} from "./ContentFixture.sol";
-import {Content} from "../../contracts/contents/Content.sol";
+import {IContent} from "../../contracts/contents/Content.sol";
 import {ISToken} from "../../contracts/tokens/ISToken.sol";
 import {sTokenLib} from "../../contracts/tokens/sTokenLib.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract ContentTest is ContentFixture, ERC1155Holder {
     using sTokenLib for bytes;
     using sTokenLib for ISToken.Binding;
+    using MessageHashUtils for bytes32;
 
-    address verifier = makeAddr("verifier");
+    address verifier;
+    uint256 verifierPKey;
     address randomUser = makeAddr("randomUser");
 
     function setUp() public {
+        (verifier, verifierPKey) = makeAddrAndKey("verifier---");
         vm.label(address(content), "Content");
     }
 
@@ -50,29 +54,12 @@ contract ContentTest is ContentFixture, ERC1155Holder {
         assertTrue(content.hasRole(content.ADMIN_ROLE(), owner));
     }
 
-    function testAdminCanAddVerifier() public {
+    function testAdminCanSetVerifier() public {
         vm.startPrank(owner);
         vm.expectEmit(true, true, true, true);
-        emit Content.VerifierUpdated(verifier, true);
-        content.setVerifier(verifier, true);
+        emit IContent.VerifierUpdated(address(0), verifier);
+        content.setVerifier(verifier);
         vm.stopPrank();
-        assertTrue(content.hasRole(content.VERIFIER_ROLE(), verifier));
-    }
-
-    function testAdminCanRemoveVerifier() public {
-        vm.startPrank(owner);
-        content.setVerifier(verifier, true);
-        vm.stopPrank();
-
-        assertTrue(content.hasRole(content.VERIFIER_ROLE(), verifier));
-
-        vm.startPrank(owner);
-        vm.expectEmit(true, true, true, true);
-        emit Content.VerifierUpdated(verifier, false);
-        content.setVerifier(verifier, false);
-        vm.stopPrank();
-
-        assertFalse(content.hasRole(content.VERIFIER_ROLE(), verifier));
     }
 
     function testNonAdminCannotSetVerifier() public {
@@ -84,7 +71,7 @@ contract ContentTest is ContentFixture, ERC1155Holder {
                 content.ADMIN_ROLE()
             )
         );
-        content.setVerifier(verifier, true);
+        content.setVerifier(verifier);
         vm.stopPrank();
     }
 
@@ -149,5 +136,80 @@ contract ContentTest is ContentFixture, ERC1155Holder {
             !remainingAttributes.binding.isBound(),
             "Remaining token should be unbound; binding applies only to split portion"
         );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        ENROLL SCHOLAR TESTS
+//////////////////////////////////////////////////////////////*/
+
+    function testEnrollScholarWithValidSignature() public {
+        uint256 token = _mintScholarToken(owner, 100 ether);
+
+        vm.startPrank(owner);
+        content.setVerifier(verifier);
+        sToken.safeTransferFrom(owner, address(content), token, 100 ether, "");
+        vm.stopPrank();
+
+        // 2. Prepare EIP-712 signature
+        uint256 deadline = block.timestamp + 1 days;
+
+        bytes32 digest = keccak256(
+            abi.encodePacked(address(content), randomUser, deadline)
+        ).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(verifierPKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v); // note the order here is different from line above.
+
+        vm.startPrank(randomUser); // caller can be anyone
+        content.enrollScholar(deadline, signature);
+        vm.stopPrank();
+    }
+
+    function testEnrollScholarFailsWithInvalidSignature() public {
+        vm.startPrank(owner);
+        content.setVerifier(verifier);
+        vm.stopPrank();
+
+        uint256 deadline = block.timestamp + 1 days;
+
+        // Sign the digest with the verifier key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            verifierPKey,
+            keccak256(abi.encode("Signature"))
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.startPrank(randomUser);
+        vm.expectRevert(bytes("Invalid signature"));
+        content.enrollScholar(deadline, signature);
+        vm.stopPrank();
+
+        (address someUser, uint256 somePKey) = makeAddrAndKey("SomeUser");
+        vm.startPrank(someUser);
+        // Sign the digest with the verifier key
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(
+            somePKey,
+            keccak256(abi.encodePacked(address(content), someUser, deadline))
+                .toEthSignedMessageHash()
+        );
+        bytes memory signature2 = abi.encodePacked(r2, s2, v2);
+        vm.expectRevert(bytes("Invalid signature"));
+        content.enrollScholar(deadline, signature2);
+        vm.stopPrank();
+    }
+
+    function testEnrollScholarFailsAfterDeadline() public {
+        vm.startPrank(owner);
+        content.setVerifier(verifier);
+        vm.stopPrank();
+
+        uint256 deadline = block.timestamp - 1; // expired
+
+        // Any dummy signature
+        bytes memory signature = hex"1234";
+
+        vm.startPrank(randomUser);
+        vm.expectRevert(bytes("Expired signature"));
+        content.enrollScholar(deadline, signature);
+        vm.stopPrank();
     }
 }

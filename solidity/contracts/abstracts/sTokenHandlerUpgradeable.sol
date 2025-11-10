@@ -15,6 +15,11 @@ abstract contract sTokenHandlerUpgradeable is
     Initializable,
     ERC1155HolderUpgradeable
 {
+    struct EnrollmentBinding {
+        address student;
+        uint256 courseDuration;
+    }
+
     /// @custom:storage-location erc7201:yieldEDU.sTokenHandler.storage
     struct STokenHandlerStorage {
         /// @notice Reference to the sToken contract.
