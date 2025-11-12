@@ -219,7 +219,7 @@ contract Content is
         address recovered = messageHash.recover(signature);
         require(recovered == verifier, "Invalid signature");
 
-        _handleScholarEnrollment(sToken(), scholar);
+        _enroll(sToken(), scholar, 0, 0);
     }
 
     /**
@@ -313,7 +313,7 @@ contract Content is
             _mergeHeldScholarTokens(sToken_, tokenId);
             _mint(from, value);
         } else if (tokenAttr.tokenType == ISToken.TokenType.Learner) {
-            _handleLearnerEnrollment(sToken_, from, tokenId, value);
+            _enroll(sToken_, from, tokenId, value);
         } else {
             revert NotScholarNorLearner();
         }
@@ -322,85 +322,65 @@ contract Content is
     }
 
     /**
-     * @dev Handles learner enrollment by splitting, refunding excess,
-     * binding required amount, and minting vault shares.
-     */
-    function _handleLearnerEnrollment(
-        ISToken sToken_,
-        address from,
-        uint256 tokenId,
-        uint256 value
-    ) internal {
-        ContentStorage storage $ = _getContentStorage();
-
-        uint256 bindAmount = _preEnrollmentChecks($);
-        if (value < bindAmount) revert InsufficientValue();
-        uint256 refund = value - bindAmount;
-
-        uint256 bindId = _splitAndRefund(
-            sToken_,
-            from,
-            tokenId,
-            bindAmount,
-            refund
-        );
-        _enroll($, sToken_, bindAmount, from, bindId);
-    }
-
-    /**
-     * @dev Handles scholar enrollment using the held scholar token.
-     */
-    function _handleScholarEnrollment(
-        ISToken sToken_,
-        address scholar
-    ) internal {
-        ContentStorage storage $ = _getContentStorage();
-
-        uint256 bindAmount = _preEnrollmentChecks($);
-        uint256 bindId = _splitToken(sToken_, $.sTokenId, bindAmount);
-
-        _enroll($, sToken_, bindAmount, scholar, bindId);
-    }
-
-    /**
-     * @dev Validates content setup and returns the minimum bind amount.
-     */
-    function _preEnrollmentChecks(
-        ContentStorage storage $
-    ) internal view returns (uint256 bindAmount) {
-        if (owner() == address(0) || $.contentController == address(0))
-            revert InvalidController();
-        bindAmount = $.minBindAmount;
-        if (bindAmount < MIN_BIND) revert InvalidBindAmount();
-    }
-
-    /**
-     * @dev Transfers the bound token to the content controller and mints vault shares.
-     */
+     * @notice Enrolls a student or scholar in a course by transferring a bound sToken
+     *         to the content controller and minting the corresponding vault shares to this content.
+     * @dev This function handles both learner and scholar enrollment scenarios:
+     *      - Learner enrollment (`tokenValue > 0`): splits the token, ensures sufficient value,
+     *        and refunds any excess.
+     *      - Scholar enrollment (`tokenValue == 0`): splits the sToken from the main sToken pool.
+     *      Performs internal storage retrieval and validates the controller, owner, and minimum bind amount.
+     *      After splitting, the bound token is transferred to the content controller for enrollment tracking.
+     *
+     * @param sToken_ The sToken contract instance representing semi-fungible tokens.
+     * @param student The address of the student or scholar being enrolled.
+     * @param tokenId The ID of the sToken to split and enroll.
+     * @param tokenValue The value of the token for enrollment:
+     *                   - `> 0`: indicates learner enrollment; used to check sufficient funds and calculate refunds.
+     *                   - `0`: indicates scholar enrollment; uses default minBindAmount.
+     * */
     function _enroll(
-        ContentStorage storage $,
         ISToken sToken_,
-        uint256 mintAmount,
         address student,
-        uint256 tokenId
+        uint256 tokenId,
+        uint256 tokenValue
     ) private {
-        uint256 courseDuration = $.courseDuration;
-        address contentController = $.contentController;
+        ContentStorage storage $ = _getContentStorage();
 
-        if (contentController == address(0)) revert InvalidController();
+        uint256 duration = $.courseDuration;
+        address controller = $.contentController;
+
+        if (owner() == address(0) || controller == address(0))
+            revert("InvalidControllerOrOwner");
+
+        uint256 mintAmount = $.minBindAmount;
+        if (mintAmount < MIN_BIND) revert InvalidBindAmount();
+
+        uint256 bindId;
+        if (tokenValue > 0) {
+            // Handle as learner enrollment
+            if (tokenValue < mintAmount) revert InsufficientValue();
+            bindId = _splitAndRefund(
+                sToken_,
+                student,
+                tokenId,
+                mintAmount,
+                tokenValue - mintAmount
+            );
+        } else {
+            // handle as scholar enrollment
+            bindId = _splitToken(sToken_, $.sTokenId, mintAmount);
+        }
 
         sToken_.safeTransferFrom(
             address(this),
-            contentController,
-            tokenId,
+            controller,
+            bindId,
             mintAmount,
             abi.encode(
-                EnrollmentBinding({
-                    courseDuration: courseDuration,
-                    student: student
-                })
+                EnrollmentBinding({courseDuration: duration, student: student})
             )
         );
+
         _mint(address(this), mintAmount);
     }
 }
