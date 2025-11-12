@@ -17,7 +17,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 
 /// @title Content Contract
 /// @notice Handles learner and scholar enrollments for a specific content,
-///         binding semi-fungible tokens (sTokens) to a course controller and minting ERC4626 vault shares.
+///         binding semi-fungible tokens (sTokens) to a content controller and minting ERC4626 vault shares.
 contract Content is
     IContent,
     Initializable,
@@ -363,7 +363,7 @@ contract Content is
     }
 
     /**
-     * @dev Validates course setup and returns the minimum bind amount.
+     * @dev Validates content setup and returns the minimum bind amount.
      */
     function _preEnrollmentChecks(
         ContentStorage storage $

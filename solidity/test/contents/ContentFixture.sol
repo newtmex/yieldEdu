@@ -19,7 +19,7 @@ contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
 
         string memory title = "Intro to DeFi";
         string
-            memory description = "A foundational course on decentralized finance concepts.";
+            memory description = "A foundational content on decentralized finance concepts.";
         uint256 contentId = uint256(keccak256(abi.encode(title, description)));
 
         // Encode initializer call

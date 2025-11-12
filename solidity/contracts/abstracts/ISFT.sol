@@ -203,7 +203,7 @@ interface ISFT is IERC1155 {
      *
      * @custom:example
      * ```solidity
-     * // Merging two progress-based course SFTs into a single learner credential:
+     * // Merging two progress-based content SFTs into a single learner credential:
      * mergeTransferFrom(
      *     msg.sender,
      *     msg.sender,

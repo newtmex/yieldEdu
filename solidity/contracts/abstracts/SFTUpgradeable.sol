@@ -498,7 +498,7 @@ abstract contract SFTUpgradeable is
      *
      * Typical use cases:
      *  - Scaling yield weights or reward multipliers according to split ratio.
-     *  - Cloning learner progress or credential data for course-bound sub-allocations.
+     *  - Cloning learner progress or credential data for content-bound sub-allocations.
      *  - Allocating partial vesting or staking positions.
      *
      * @param value The amount assigned to the new split part.
@@ -519,9 +519,9 @@ abstract contract SFTUpgradeable is
      *     uint256 fullValue,
      *     bytes memory attributes
      * ) internal override returns (bytes memory) {
-     *     (uint256 yieldWeight, address course) = abi.decode(attributes, (uint256, address));
+     *     (uint256 yieldWeight, address content) = abi.decode(attributes, (uint256, address));
      *     uint256 newWeight = (yieldWeight * value) / fullValue;
-     *     return abi.encode(newWeight, course);
+     *     return abi.encode(newWeight, content);
      * }
      * ```
      */
@@ -534,14 +534,14 @@ abstract contract SFTUpgradeable is
     /**
      * @notice Merges the attribute data of two SFTs into a new combined representation.
      * @dev
-     * Invoked internally during token merges (e.g., course re-aggregation or portfolio
+     * Invoked internally during token merges (e.g., content re-aggregation or portfolio
      * consolidation) to compute unified attribute metadata for the resulting SFT.
      *
      * Implementations define how encoded attributes and proportional data are aggregated.
      *
      * Typical use cases:
      *  - Weighted averaging of yield multipliers or rewards.
-     *  - Combining progress data for the same course or program.
+     *  - Combining progress data for the same content or program.
      *  - Consolidating vesting or staking positions into a single record.
      *
      * @param firstAttr Byte-encoded attributes of the first token.
@@ -553,7 +553,7 @@ abstract contract SFTUpgradeable is
      *
      * @custom:requirements
      * Implementations MUST ensure schema consistency and should revert if the
-     * attribute data are incompatible (e.g., different course bindings).
+     * attribute data are incompatible (e.g., different content bindings).
      *
      * @custom:example
      * ```
@@ -566,7 +566,7 @@ abstract contract SFTUpgradeable is
      * ) internal override returns (bytes memory) {
      *     (uint256 yieldA, address courseA) = abi.decode(firstAttr, (uint256, address));
      *     (uint256 yieldB, address courseB) = abi.decode(secondAttr, (uint256, address));
-     *     if (courseA != courseB) revert UnAuthorizedSFTMerge(firstAttr, secondAttr, "Different course bindings");
+     *     if (courseA != courseB) revert UnAuthorizedSFTMerge(firstAttr, secondAttr, "Different content bindings");
      *     uint256 totalWeight = firstValue + secondValue;
      *     uint256 mergedYield = (yieldA * firstValue + yieldB * secondValue) / totalWeight;
      *     return abi.encode(mergedYield, courseA);
@@ -668,7 +668,7 @@ abstract contract SFTUpgradeable is
     /**
      * @notice Validates whether two SFTs can be merged based on their attributes.
      * @dev Should be overridden by inheriting contracts to define merge compatibility rules,
-     *      such as matching course bindings, token types, or lifecycle states.
+     *      such as matching content bindings, token types, or lifecycle states.
      *
      * @param firstAttr The byte-encoded attributes of the first SFT.
      * @param secondAttr The byte-encoded attributes of the second SFT.

@@ -135,7 +135,7 @@ contract SToken is
 
         Binding memory tokenBinding = tokenAttr.binding;
         bool tokenWasBound = tokenBinding.isBound();
-        address content = tokenBinding.course;
+        address content = tokenBinding.content;
 
         // Check operator approval if binding for the first time
         if (!tokenWasBound) {
@@ -154,9 +154,9 @@ contract SToken is
         _updateTokenAttributes(user, nonce, abi.encode(tokenAttr));
 
         // Emit event for indexing
-        emit BindingUpdated(user, nonce, binding.isBound(), binding.course);
+        emit BindingUpdated(user, nonce, binding.isBound(), binding.content);
 
-        // If unbinding, return tokens to the course contract
+        // If unbinding, return tokens to the content contract
         if (tokenWasBound) {
             _safeTransferFrom(user, content, nonce, tokenBalance, data);
         }
@@ -224,7 +224,7 @@ contract SToken is
             revert UnAuthorizedSFTMerge(
                 firstAttr,
                 secondAttr,
-                "sToken is bound to a course"
+                "sToken is bound to a content"
             );
         }
     }
@@ -259,7 +259,7 @@ contract SToken is
         // uint256 weightedYield = ((a.yieldWeight * firstValue) +
         //     (b.yieldWeight * secondValue)) / total;
 
-        // // Merge binding data (course stays the same since _ensureCanMerge enforces it)
+        // // Merge binding data (content stays the same since _ensureCanMerge enforces it)
         // ISToken.Binding memory mergedBinding = a.binding;
 
         // ISToken.TokenAttributes memory merged = ISToken.TokenAttributes({

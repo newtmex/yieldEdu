@@ -38,7 +38,7 @@ contract ContentTest is ContentFixture, ERC1155Holder {
 
         string memory expectedTitle = "Intro to DeFi";
         string
-            memory expectedDesc = "A foundational course on decentralized finance concepts.";
+            memory expectedDesc = "A foundational content on decentralized finance concepts.";
 
         assertEq(
             id,

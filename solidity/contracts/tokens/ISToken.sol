@@ -7,7 +7,7 @@ import {sTokenLib} from "./sTokenLib.sol";
 /// @title ISToken
 /// @notice Interface for YieldEDU's Semi-Fungible Token (sToken) contract.
 /// @dev Extends the ERC-1155 standard to represent learner and scholar positions within the YieldEDU ecosystem.
-///      Each sToken can hold on-chain attributes, including its type and binding status to specific course content.
+///      Each sToken can hold on-chain attributes, including its type and binding status to specific content.
 ///      This interface defines the core functionality for minting, burning, and updating token bindings.
 interface ISToken is ISFT {
     // -------------------------------------------------------------------------
@@ -19,13 +19,13 @@ interface ISToken is ISFT {
      * @param user The address whose token binding was updated.
      * @param nonce The token ID (nonce) whose binding state changed.
      * @param bound A boolean indicating the new binding state (`true` if bound, `false` if unbound).
-     * @param course The address of the course contract associated with the new binding.
+     * @param content The address of the content contract associated with the new binding.
      */
     event BindingUpdated(
         address indexed user,
         uint256 indexed nonce,
         bool bound,
-        address course
+        address content
     );
 
     // -------------------------------------------------------------------------
@@ -45,7 +45,7 @@ interface ISToken is ISFT {
 
     /**
      * @notice Represents the metadata and on-chain attributes of an sToken.
-     * @dev Includes the token’s category (`TokenType`) and its binding details to a course.
+     * @dev Includes the token’s category (`TokenType`) and its binding details to a content.
      * @param tokenType The classification of the token (`Learner` or `Scholar`).
      * @param binding The current binding information for the token (if any).
      * @param __gap Reserved storage space for future upgrades (maintains storage layout compatibility).
@@ -57,14 +57,14 @@ interface ISToken is ISFT {
     }
 
     /**
-     * @notice Contains the course binding data associated with an sToken.
-     * @dev Used to record when a token becomes attached to a course and the expected completion timeline.
-     * @param course The address of the course contract this token is bound to.
+     * @notice Contains the content binding data associated with an sToken.
+     * @dev Used to record when a token becomes attached to a content and the expected completion timeline.
+     * @param content The address of the content contract this token is bound to.
      * @param enrolledAt The timestamp when the binding (enrollment) was created.
-     * @param completeBy The expected completion timestamp of the course.
+     * @param completeBy The expected completion timestamp of the content.
      */
     struct Binding {
-        address course;
+        address content;
         uint256 enrolledAt;
         uint256 completeBy;
     }
@@ -90,7 +90,7 @@ interface ISToken is ISFT {
 
     /**
      * @notice Burns a specified amount of an sToken from a given address.
-     * @dev Can only be called by authorized entities (e.g., course or protocol contracts).
+     * @dev Can only be called by authorized entities (e.g., content or protocol contracts).
      *      Burning typically occurs when a learning position is closed or a scholarship cycle ends.
      * @param from The address from which the tokens will be burned.
      * @param nonce The token ID to burn.
@@ -101,13 +101,13 @@ interface ISToken is ISFT {
     /**
      * @notice Updates the binding information for a user’s sToken.
      * @dev This function manages the token’s lifecycle between bound and unbound states.
-     *      - When binding: links a token to a course contract.
+     *      - When binding: links a token to a content contract.
      *      - When unbinding: detaches the token and triggers a return transfer if applicable.
      *      Only callable by entities with the `BINDING_UPDATE_ROLE`.
      * @param user The address that owns the token being updated.
      * @param nonce The token ID (nonce) whose binding will be updated.
      * @param binding The new binding data to assign (or empty struct to unbind).
-     * @param data Additional data passed to hooks or course contracts during unbinding.
+     * @param data Additional data passed to hooks or content contracts during unbinding.
      */
     function updateBinding(
         address user,

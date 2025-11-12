@@ -14,12 +14,12 @@ library sTokenLib {
     ) internal pure returns (bool isNonZero) {
         assembly ("memory-safe") {
             // Load struct fields (3 slots)
-            let course := mload(self)
+            let content := mload(self)
             let enrolledAt := mload(add(self, 0x20))
             let completeBy := mload(add(self, 0x40))
 
             // Return true if any field is non-zero
-            isNonZero := or(course, or(enrolledAt, completeBy))
+            isNonZero := or(content, or(enrolledAt, completeBy))
         }
     }
 
@@ -39,7 +39,7 @@ library sTokenLib {
         ISToken.Binding memory self,
         ISToken.Binding memory newBinding
     ) internal pure returns (ISToken.Binding memory) {
-        self.course = newBinding.course;
+        self.content = newBinding.content;
         self.enrolledAt = newBinding.enrolledAt;
         self.completeBy = newBinding.completeBy;
 
@@ -51,7 +51,7 @@ library sTokenLib {
     function resetBinding(
         ISToken.Binding memory self
     ) internal pure returns (ISToken.Binding memory) {
-        delete self.course;
+        delete self.content;
         delete self.enrolledAt;
         delete self.completeBy;
 

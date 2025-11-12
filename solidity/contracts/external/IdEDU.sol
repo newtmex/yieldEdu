@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * - YieldEDU routes ETH deposits to GainzSwap’s strategy (e.g. LSTs, restaking, or DeFi strategies).
  * - GainzSwap mints and returns dEDU via `receiveFor`, held by the protocol to represent staked positions.
  * - In exchange, users receive:
- *   - `sToken`: A course-gating, semi-fungible position token (ERC-1155).
+ *   - `sToken`: A content-gating, semi-fungible position token (ERC-1155).
  *   - `YLD`: A fungible ERC-20 token representing claimable yield rights.
  * - dEDU accrues staking rewards while held by the protocol.
  * - Upon user exit or protocol-triggered burn of sToken and matching YLD:
@@ -23,7 +23,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *   - The underlying ETH + yield is redeemed.
  *   - Yield portion is extracted and redistributed as ETH rewards to:
  *     - Learners (on milestone completion),
- *     - Educators (based on course performance),
+ *     - Educators (based on content performance),
  *     - Funders (passive yield share),
  *     - YieldEDU Protocol (for protocol sustainability).
  *

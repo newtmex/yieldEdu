@@ -201,7 +201,7 @@ contract STokenTest is STokenFixture {
         vm.prank(user);
         sToken.setApprovalForAll(address(this), true);
         ISToken.Binding memory binding;
-        binding.course = address(this);
+        binding.content = address(this);
         sToken.updateBinding(user, tokenId, binding, "");
 
         vm.prank(user);
@@ -450,7 +450,7 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
     address internal admin = address(0xA1);
     address internal user = address(0xB1);
     address internal operator;
-    address internal course = address(0xD1);
+    address internal content = address(0xD1);
 
     uint256 internal nonce = 1;
     bytes internal emptyData = "";
@@ -469,9 +469,9 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
         // Mint tokens to user for testing
         _mintScholarToken(user, 10);
 
-        // Define a course binding
+        // Define a content binding
         newBinding = ISToken.Binding({
-            course: course,
+            content: content,
             enrolledAt: block.timestamp,
             completeBy: block.timestamp + 30 days
         });
@@ -484,7 +484,7 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
             .getRawTokenAttributes(nonce)
             .decode()
             .binding;
-        assertEq(beforeBind.course, address(0));
+        assertEq(beforeBind.content, address(0));
 
         // Give operator approval
         vm.prank(user);
@@ -498,7 +498,7 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
             .getRawTokenAttributes(nonce)
             .decode()
             .binding;
-        assertEq(afterBind.course, course);
+        assertEq(afterBind.content, content);
         assertTrue(afterBind.isBound());
     }
 
@@ -547,9 +547,9 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
         sToken.updateBinding(user, nonce, emptyBinding, emptyData);
         vm.stopPrank();
 
-        // After unbinding, tokens should move from user → course
+        // After unbinding, tokens should move from user → content
         assertEq(sToken.balanceOf(user, nonce), 0);
-        assertEq(sToken.balanceOf(course, nonce), 10);
+        assertEq(sToken.balanceOf(content, nonce), 10);
     }
 
     // --- 5️⃣ Revert When Invalid ISToken.Binding Update (no tokens) ---
