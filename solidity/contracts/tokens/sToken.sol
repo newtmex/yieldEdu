@@ -124,21 +124,42 @@ contract SToken is
     function updateBinding(
         address user,
         uint256 nonce,
-        Binding memory binding
+        Binding memory binding,
+        bytes memory data
     ) external onlyRole(BINDING_UPDATE_ROLE) {
-        address operator = _msgSender();
-        if (user != operator && !isApprovedForAll(user, operator)) {
-            revert ERC1155MissingApprovalForAll(operator, user);
-        }
+        uint256 tokenBalance = balanceOf(user, nonce);
+        require(tokenBalance > 0, "sToken: no token balance at nonce");
 
         ISToken.TokenAttributes memory tokenAttr = getRawTokenAttributes(nonce)
             .decode();
-        if (binding.isBound() == tokenAttr.binding.isBound()) {
-            revert("sToken: invalid binding update");
+
+        Binding memory tokenBinding = tokenAttr.binding;
+        bool tokenWasBound = tokenBinding.isBound();
+        address content = tokenBinding.course;
+
+        // Check operator approval if binding for the first time
+        if (!tokenWasBound) {
+            address operator = _msgSender();
+            if (user != operator && !isApprovedForAll(user, operator)) {
+                revert ERC1155MissingApprovalForAll(operator, user);
+            }
         }
 
-        tokenAttr.binding = tokenAttr.binding.setBinding(binding);
+        // Ensure binding state change
+        if (binding.isBound() == tokenWasBound) {
+            revert("sToken: binding state unchanged");
+        }
+
+        tokenBinding.setBinding(binding);
         _updateTokenAttributes(user, nonce, abi.encode(tokenAttr));
+
+        // Emit event for indexing
+        emit BindingUpdated(user, nonce, binding.isBound(), binding.course);
+
+        // If unbinding, return tokens to the course contract
+        if (tokenWasBound) {
+            _safeTransferFrom(user, content, nonce, tokenBalance, data);
+        }
     }
 
     /**

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {SToken, ISToken} from "../../contracts/tokens/SToken.sol";
+import {SToken, ISToken, sTokenLib} from "../../contracts/tokens/SToken.sol";
 import {STokenFixture} from "./STokenFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
 contract STokenTest is STokenFixture {
     address public user;
@@ -201,7 +202,7 @@ contract STokenTest is STokenFixture {
         sToken.setApprovalForAll(address(this), true);
         ISToken.Binding memory binding;
         binding.course = address(this);
-        sToken.updateBinding(user, tokenId, binding);
+        sToken.updateBinding(user, tokenId, binding, "");
 
         vm.prank(user);
         address randomUser = makeAddr("randomUser");
@@ -439,5 +440,134 @@ contract STokenTest is STokenFixture {
     function testCannotReinitialize() public {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
         sToken.initialize("Again", "AGAIN", owner);
+    }
+}
+
+contract UpdateBindingTest is STokenFixture, ERC1155Holder {
+    using sTokenLib for ISToken.Binding;
+    using sTokenLib for bytes;
+
+    address internal admin = address(0xA1);
+    address internal user = address(0xB1);
+    address internal operator;
+    address internal course = address(0xD1);
+
+    uint256 internal nonce = 1;
+    bytes internal emptyData = "";
+
+    ISToken.Binding internal newBinding;
+    ISToken.Binding internal emptyBinding;
+
+    bytes32 internal constant BINDING_UPDATE_ROLE =
+        keccak256("BINDING_UPDATE_ROLE");
+
+    function setUp() public {
+        // Give test contract and operator the update role
+        sToken.grantRole(BINDING_UPDATE_ROLE, address(this));
+        operator = address(this);
+
+        // Mint tokens to user for testing
+        _mintScholarToken(user, 10);
+
+        // Define a course binding
+        newBinding = ISToken.Binding({
+            course: course,
+            enrolledAt: block.timestamp,
+            completeBy: block.timestamp + 30 days
+        });
+    }
+
+    // --- 1️⃣ Successful ISToken.Binding (initial bind) ---
+    function test_UpdateBinding_BindsSuccessfully() public {
+        // Before binding
+        ISToken.Binding memory beforeBind = sToken
+            .getRawTokenAttributes(nonce)
+            .decode()
+            .binding;
+        assertEq(beforeBind.course, address(0));
+
+        // Give operator approval
+        vm.prank(user);
+        sToken.setApprovalForAll(operator, true);
+
+        // Perform binding
+        sToken.updateBinding(user, nonce, newBinding, emptyData);
+
+        // After binding
+        ISToken.Binding memory afterBind = sToken
+            .getRawTokenAttributes(nonce)
+            .decode()
+            .binding;
+        assertEq(afterBind.course, course);
+        assertTrue(afterBind.isBound());
+    }
+
+    // --- 2️⃣ Missing Approval ---
+    function test_RevertWhen_NoApprovalOnInitialBinding() public {
+        vm.startPrank(operator);
+        vm.expectRevert(); // ERC1155MissingApprovalForAll
+        sToken.updateBinding(user, nonce, newBinding, emptyData);
+        vm.stopPrank();
+    }
+
+    // --- 3️⃣ Invalid State: rebinding again ---
+    function test_RevertWhen_RebindingSameState() public {
+        // Give operator approval and bind once
+        vm.startPrank(user);
+        sToken.setApprovalForAll(operator, true);
+        vm.stopPrank();
+
+        vm.startPrank(operator);
+        sToken.updateBinding(user, nonce, newBinding, emptyData);
+
+        // Try rebinding again (already bound)
+        vm.expectRevert("sToken: binding state unchanged");
+        sToken.updateBinding(user, nonce, newBinding, emptyData);
+        vm.stopPrank();
+    }
+
+    // --- 4️⃣ Unbinding tokens ---
+    function test_UpdateBinding_UnbindsSuccessfullyAndTransfersToCourse()
+        public
+    {
+        // Bind first
+        vm.startPrank(user);
+        sToken.setApprovalForAll(operator, true);
+        vm.stopPrank();
+
+        vm.startPrank(operator);
+        sToken.updateBinding(user, nonce, newBinding, emptyData);
+        vm.stopPrank();
+
+        // Ensure user owns tokens before unbinding
+        assertEq(sToken.balanceOf(user, nonce), 10);
+
+        // Mock that contract has the role to unbind
+        vm.startPrank(operator);
+        sToken.updateBinding(user, nonce, emptyBinding, emptyData);
+        vm.stopPrank();
+
+        // After unbinding, tokens should move from user → course
+        assertEq(sToken.balanceOf(user, nonce), 0);
+        assertEq(sToken.balanceOf(course, nonce), 10);
+    }
+
+    // --- 5️⃣ Revert When Invalid ISToken.Binding Update (no tokens) ---
+    function test_RevertWhen_NoTokenBalance() public {
+        vm.expectRevert("sToken: no token balance at nonce");
+        sToken.updateBinding(address(0xE1), nonce, newBinding, emptyData);
+    }
+
+    // --- 6️⃣ Role Restriction ---
+    function test_RevertWhen_CallerHasNoUpdateRole() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                user,
+                BINDING_UPDATE_ROLE
+            )
+        );
+        vm.prank(user);
+        sToken.updateBinding(user, nonce, newBinding, emptyData);
     }
 }
