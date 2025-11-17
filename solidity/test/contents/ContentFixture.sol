@@ -12,6 +12,7 @@ import {STokenFixture} from "../tokens/STokenFixture.sol";
 contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
     Content public content;
     bytes notAllowedError = abi.encodeWithSignature("NotAllowed()");
+    address public contentController = makeAddr("contentController");
 
     constructor() {
         // Deploy Content implementation
@@ -34,10 +35,12 @@ contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
         );
 
         // Deploy proxy
+        vm.startPrank(contentController);
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(implementation),
             initData
         );
+        vm.stopPrank();
 
         // Cast to Content
         content = Content(address(proxy));
@@ -100,6 +103,21 @@ contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
             sToken.balanceOf(address(content), sTokenId),
             "Vault should be balanced after mint"
         );
+    }
+
+    function _mintAndEnrollLearner(
+        address to,
+        uint256 amount
+    ) internal returns (uint256 nonce) {
+        nonce = _mintLearnerToken(to, amount);
+
+        vm.startPrank(to);
+        sToken.safeTransferFrom(to, address(content), nonce, amount, "");
+        sToken.setApprovalForAll(contentController, true);
+        vm.stopPrank();
+
+        vm.prank(contentController);
+        sToken.safeTransferFrom(contentController, to, nonce, amount, "");
     }
 
     function _simulateYieldAndUnauthorizedWithdraw(

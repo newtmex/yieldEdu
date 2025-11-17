@@ -5,10 +5,11 @@ import "forge-std/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import {ContentFixture} from "./ContentFixture.sol";
-import {IContent} from "../../contracts/contents/Content.sol";
+import {IContent, STokenHandler} from "../../contracts/contents/Content.sol";
 import {ISToken} from "../../contracts/tokens/ISToken.sol";
 import {sTokenLib} from "../../contracts/tokens/sTokenLib.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ContentTest is ContentFixture, ERC1155Holder {
     using sTokenLib for bytes;
@@ -212,4 +213,192 @@ contract ContentTest is ContentFixture, ERC1155Holder {
         content.enrollScholar(deadline, signature);
         vm.stopPrank();
     }
+
+    function testCompleteContent_Learner_WithReferrer() public {
+        // Arrange
+        address learner = makeAddr("learner");
+        address feeCollector = makeAddr("feeCollector");
+        address referrer = makeAddr("referrer");
+
+        uint256 mintAmount = content.MIN_BIND();
+        uint256 learnerTokenId = _mintAndEnrollLearner(learner, mintAmount);
+
+        // Give the Content vault some yield so previewRedeem() returns > 0
+        uint256 vaultYield = 1000;
+        _mintYLDToken(address(content), vaultYield);
+
+        // Set verifier
+        vm.startPrank(owner);
+        content.setVerifier(verifier);
+        vm.stopPrank();
+
+        // Pack ContentCompleteData in the same order the contract expects
+        bytes memory completionDataEncoded;
+        {
+            // Create signature for completion: signature signs keccak256(abi.encodePacked(address(content), learner, deadline, assessmentPoints))
+            uint256 deadline = block.timestamp + 1 days;
+            uint256 assessmentPoints = 50_00; // 50% grade (example)
+            bytes32 digest = keccak256(
+                abi.encodePacked(
+                    address(content),
+                    learner,
+                    deadline,
+                    assessmentPoints
+                )
+            ).toEthSignedMessageHash();
+
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(verifierPKey, digest);
+            bytes memory signature = abi.encodePacked(r, s, v);
+            completionDataEncoded = abi.encode(
+                STokenHandler.ContentCompleteData({
+                    deadline: deadline,
+                    signature: signature,
+                    assessmentPoints: assessmentPoints,
+                    enrolledAt: block.timestamp,
+                    completeBy: deadline,
+                    feeCollector: feeCollector,
+                    referrer: referrer
+                })
+            );
+        }
+
+        // Pre-check balances
+        IERC20 assetToken = IERC20(content.asset());
+
+        // Act: contentController (operator) sends the sToken to Content with completion data
+        vm.prank(contentController);
+        sToken.safeTransferFrom(
+            learner,
+            address(content),
+            learnerTokenId,
+            mintAmount,
+            completionDataEncoded
+        );
+        vm.stopPrank();
+
+        // Assert token split: learner should have received his split portion (we expect some tokens returned or split)
+        // Confirm reward transfers
+        assertEq(
+            assetToken.balanceOf(learner),
+            420,
+            "learner reward incorrect"
+        );
+
+        assertEq(
+            assetToken.balanceOf(content.owner()),
+            362,
+            "owner reward incorrect"
+        );
+
+        assertEq(
+            assetToken.balanceOf(referrer),
+            72,
+            "referrer reward incorrect"
+        );
+
+        assertEq(
+            assetToken.balanceOf(feeCollector),
+            146,
+            // feeCollectorBalBefore + feeCollectorRewardAmount,
+            "feeCollector reward incorrect"
+        );
+
+        assertEq(
+            sToken.balanceOf(learner, learnerTokenId + 1),
+            (mintAmount * 7) / 10
+        );
+    }
+
+    // function testCompleteContent_Scholar_NoReferrer() public {
+    //     // Arrange
+    //     address scholar = makeAddr("scholar");
+    //     address feeCollector = makeAddr("feeCollector");
+
+    //     uint256 mintAmount = 100 ether;
+    //     uint256 scholarTokenId = _mintScholarToken(scholar, mintAmount);
+
+    //     // Give the Content vault some yield so previewRedeem() returns > 0
+    //     uint256 vaultYield = 500 ether;
+    //     _mintYLDToken(address(content), vaultYield);
+
+    //     // Set verifier
+    //     vm.startPrank(owner);
+    //     content.setVerifier(verifier);
+    //     vm.stopPrank();
+
+    //     uint256 deadline = block.timestamp + 1 days;
+    //     uint256 assessmentPoints = 8_500; // high grade
+    //     bytes32 digest = keccak256(
+    //         abi.encodePacked(
+    //             address(content),
+    //             scholar,
+    //             deadline,
+    //             assessmentPoints
+    //         )
+    //     ).toEthSignedMessageHash();
+
+    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(verifierPKey, digest);
+    //     bytes memory signature = abi.encodePacked(r, s, v);
+
+    //     // referrer = address(0) to test branch without referrer reward
+    //     bytes memory completionDataEncoded = abi.encode(
+    //         deadline,
+    //         signature,
+    //         assessmentPoints,
+    //         feeCollector,
+    //         address(0)
+    //     );
+
+    //     uint256 totalAvailableReward = content.previewRedeem(mintAmount);
+
+    //     uint256 BASIS_POINT = content.BASIS_POINT();
+    //     uint256 a = (60_00 * mintAmount) / BASIS_POINT;
+    //     uint256 b = (15_00 * mintAmount) / BASIS_POINT;
+    //     uint256 linearPart = a + (((b - a) * assessmentPoints) / BASIS_POINT);
+    //     uint256 earnedTokenAmount = mintAmount - linearPart;
+
+    //     uint256 learnerRewardAmount = (earnedTokenAmount *
+    //         totalAvailableReward *
+    //         60_00) / (BASIS_POINT * mintAmount);
+
+    //     uint256 unallocatedReward = totalAvailableReward - learnerRewardAmount;
+    //     uint256 ownerRewardAmount = (unallocatedReward * 62_50) / BASIS_POINT;
+    //     uint256 feeCollectorRewardAmount = unallocatedReward -
+    //         ownerRewardAmount; // no referrer branch
+
+    //     IERC20 assetToken = IERC20(content.asset());
+    //     uint256 scholarBalBefore = assetToken.balanceOf(scholar);
+    //     uint256 ownerBalBefore = assetToken.balanceOf(owner);
+    //     uint256 feeCollectorBalBefore = assetToken.balanceOf(feeCollector);
+
+    //     // Act
+    //     vm.startPrank(contentController);
+    //     sToken.safeTransferFrom(
+    //         scholar,
+    //         address(content),
+    //         scholarTokenId,
+    //         mintAmount,
+    //         completionDataEncoded
+    //     );
+    //     vm.stopPrank();
+
+    //     // Assert reward transfers
+    //     assertEq(
+    //         assetToken.balanceOf(scholar),
+    //         scholarBalBefore + learnerRewardAmount,
+    //         "scholar reward incorrect"
+    //     );
+
+    //     assertEq(
+    //         assetToken.balanceOf(owner),
+    //         ownerBalBefore + ownerRewardAmount,
+    //         "owner reward incorrect"
+    //     );
+
+    //     assertEq(
+    //         assetToken.balanceOf(feeCollector),
+    //         feeCollectorBalBefore + feeCollectorRewardAmount,
+    //         "feeCollector reward incorrect"
+    //     );
+    // }
 }

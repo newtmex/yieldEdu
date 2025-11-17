@@ -38,7 +38,12 @@ contract YLDTokenFixture is GeneralFixture {
     }
 
     function _mintYLDToken(address to, uint256 amount) internal {
-        vm.prank(yldMinter);
+        uint256 deduAmt = yld.previewMint(amount);
+        dedu.mint(yldMinter, deduAmt);
+
+        vm.startPrank(yldMinter);
+        dedu.approve(address(yld), deduAmt);
         yld.mint(amount, to);
+        vm.stopPrank();
     }
 }

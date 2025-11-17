@@ -4,20 +4,26 @@ pragma solidity ^0.8.20;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ERC1155HolderUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 import {ISToken} from "../tokens/ISToken.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title sTokenHandlerUpgradeable
+ * @title STokenHandler
  * @notice Upgradeable handler contract for interacting with sToken (semi-fungible token) positions.
  * @dev Uses ERC7201 namespaced storage and OpenZeppelin upgradeable contract conventions.
  */
-abstract contract sTokenHandlerUpgradeable is
-    Initializable,
-    ERC1155HolderUpgradeable
-{
+abstract contract STokenHandler is Initializable, ERC1155HolderUpgradeable {
     struct EnrollmentBinding {
         address student;
         uint256 courseDuration;
+    }
+
+    struct ContentCompleteData {
+        bytes signature;
+        uint256 deadline;
+        uint256 assessmentPoints;
+        uint256 enrolledAt;
+        uint256 completeBy;
+        address feeCollector;
+        address referrer;
     }
 
     /// @custom:storage-location erc7201:yieldEDU.sTokenHandler.storage
@@ -91,23 +97,21 @@ abstract contract sTokenHandlerUpgradeable is
         bytes memory data
     ) internal virtual returns (bytes4);
 
-    /**
-     * @dev Returns a single-element uint256 array and a single-element address array.
-     */
-    function _asSingletonArrays(
+    function _asArraysOfLength(
         uint256 uintElement,
-        address addrElement
+        address addrElement,
+        uint256 length
     )
         internal
         pure
         returns (uint256[] memory uintArray, address[] memory addrArray)
     {
         // Allocate and assign the uint256 array
-        uintArray = new uint256[](1);
+        uintArray = new uint256[](length);
         uintArray[0] = uintElement;
 
         // Allocate and assign the address array
-        addrArray = new address[](1);
+        addrArray = new address[](length);
         addrArray[0] = addrElement;
     }
 

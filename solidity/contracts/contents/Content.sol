@@ -4,16 +4,37 @@ pragma solidity ^0.8.20;
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ISToken} from "../tokens/ISToken.sol";
-import {sTokenHandlerUpgradeable} from "../abstracts/sTokenHandlerUpgradeable.sol";
+import {STokenHandler} from "../abstracts/STokenHandler.sol";
 import {ContentLib} from "./ContentLib.sol";
 import {IContent} from "./IContent.sol";
 import {sTokenLib} from "../tokens/sTokenLib.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+/// @dev out = (minOut * (maxIn - currentIn) + maxOut * (currentIn - minIn)) / (maxIn - minIn)
+/// 	 https://en.wikipedia.org/wiki/LinearInterpolation
+function linearInterpolation(
+    uint256 minIn,
+    uint256 maxIn,
+    uint256 currentIn,
+    uint256 minOut,
+    uint256 maxOut
+) pure returns (uint256) {
+    if (currentIn < minIn || currentIn > maxIn) {
+        revert("MathLinearInterpolationInvalidValues");
+    }
+
+    uint256 minOutWeighted = minOut * (maxIn - currentIn);
+    uint256 maxOutWeighted = maxOut * (currentIn - minIn);
+    uint256 inDiff = maxIn - minIn;
+
+    return (minOutWeighted + maxOutWeighted) / inDiff;
+}
 
 /// @title Content Contract
 /// @notice Handles learner and scholar enrollments for a specific content,
@@ -23,7 +44,7 @@ contract Content is
     Initializable,
     OwnableUpgradeable,
     AccessControlUpgradeable,
-    sTokenHandlerUpgradeable,
+    STokenHandler,
     ERC4626Upgradeable
 {
     using sTokenLib for bytes;
@@ -33,6 +54,7 @@ contract Content is
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     /// @notice Minimum binding threshold
     uint256 public constant MIN_BIND = 10 ether;
+    uint256 public constant BASIS_POINT = 100_00;
 
     /*//////////////////////////////////////////////////////////////
                                 STATE
@@ -41,7 +63,6 @@ contract Content is
     struct ContentStorage {
         uint256 contentId;
         uint256 sTokenId;
-        IERC20 rewardToken;
         string title;
         string description;
         address contentController;
@@ -88,7 +109,6 @@ contract Content is
         $.contentId = _contentId;
         $.title = _title;
         $.description = _description;
-        $.rewardToken = IERC20(_rewardToken);
 
         _setCourseController($, msg.sender);
         _setCourseDuration($, 7 days);
@@ -172,7 +192,7 @@ contract Content is
         public
         view
         virtual
-        override(sTokenHandlerUpgradeable, AccessControlUpgradeable)
+        override(STokenHandler, AccessControlUpgradeable)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -202,24 +222,33 @@ contract Content is
         uint256 deadline,
         bytes calldata signature
     ) external {
+        address scholar = msg.sender;
+
+        _validateSignedMessage(
+            deadline,
+            signature,
+            abi.encodePacked(address(this), scholar, deadline)
+        );
+
+        __Enroll__(sToken(), scholar, 0, 0);
+    }
+
+    function _validateSignedMessage(
+        uint256 deadline,
+        bytes memory signature,
+        bytes memory message
+    ) internal view {
         ContentStorage storage $ = _getContentStorage();
         address verifier = $.verifier;
 
         require(verifier != address(0), "Verifier not set");
         require(block.timestamp <= deadline, "Expired signature");
 
-        address scholar = msg.sender;
-
-        // Compute the message hash
-        bytes32 messageHash = keccak256(
-            abi.encodePacked(address(this), scholar, deadline)
-        ).toEthSignedMessageHash();
-
         // Recover the signer
-        address recovered = messageHash.recover(signature);
+        address recovered = keccak256(message).toEthSignedMessageHash().recover(
+            signature
+        );
         require(recovered == verifier, "Invalid signature");
-
-        _enroll(sToken(), scholar, 0, 0);
     }
 
     /**
@@ -281,7 +310,7 @@ contract Content is
         (
             uint256[] memory values,
             address[] memory recipients
-        ) = _asSingletonArrays(bindAmount, address(this));
+        ) = _asArraysOfLength(bindAmount, address(this), 1);
         (, uint256[] memory splitIds) = sToken_.splitTransferFrom(
             address(this),
             tokenId,
@@ -298,27 +327,156 @@ contract Content is
      * Delegates to respective enrollment handlers.
      */
     function _onERC1155Received(
-        address /* operator */,
+        address operator,
         address from,
         uint256 tokenId,
         uint256 value,
-        bytes memory /* data */
+        bytes memory data
     ) internal override returns (bytes4) {
         ISToken sToken_ = sToken();
         ISToken.TokenAttributes memory tokenAttr = sToken_
             .getRawTokenAttributes(tokenId)
             .decode();
 
-        if (tokenAttr.tokenType == ISToken.TokenType.Scholar) {
-            _mergeHeldScholarTokens(sToken_, tokenId);
-            _mint(from, value);
+        if (operator == _getContentStorage().contentController) {
+            __CompleteContent__(
+                tokenAttr.tokenType,
+                data,
+                sToken_,
+                from,
+                tokenId,
+                value
+            );
+        } else if (tokenAttr.tokenType == ISToken.TokenType.Scholar) {
+            __AcceptInvestment__(sToken_, from, tokenId, value);
         } else if (tokenAttr.tokenType == ISToken.TokenType.Learner) {
-            _enroll(sToken_, from, tokenId, value);
+            __Enroll__(sToken_, from, tokenId, value);
         } else {
-            revert NotScholarNorLearner();
+            revert("Content: Invalid sToken Action");
         }
 
         return this.onERC1155Received.selector;
+    }
+
+    function __CompleteContent__(
+        ISToken.TokenType sTokenType,
+        bytes memory completionDataEncoded,
+        ISToken sToken,
+        address learner,
+        uint256 sTokenId,
+        uint256 sTokenAmount
+    ) private {
+        uint256 totalAvailableReward = previewRedeem(sTokenAmount);
+
+        ContentCompleteData memory completionData = abi.decode(
+            completionDataEncoded,
+            (ContentCompleteData)
+        );
+
+        _validateSignedMessage(
+            completionData.deadline,
+            completionData.signature,
+            abi.encodePacked(
+                address(this),
+                learner,
+                completionData.deadline,
+                completionData.assessmentPoints
+            )
+        );
+
+        require(
+            completionData.assessmentPoints <= BASIS_POINT,
+            "INVALID assessment grade"
+        );
+
+        uint256 earnedTokenAmount = linearInterpolation(
+            0,
+            BASIS_POINT,
+            completionData.assessmentPoints,
+            (40_00 * sTokenAmount) / BASIS_POINT,
+            sTokenAmount
+        );
+
+        uint256 learnerRewardAmount = (earnedTokenAmount *
+            totalAvailableReward *
+            60_00) / (BASIS_POINT * sTokenAmount);
+
+        _burn(address(this), sTokenAmount);
+
+        if (sTokenType == ISToken.TokenType.Scholar) {
+            _mergeHeldScholarTokens(sToken, sTokenId);
+        } else if (sTokenType == ISToken.TokenType.Learner) {
+            if (earnedTokenAmount < sTokenAmount) {
+                (
+                    uint256[] memory values,
+                    address[] memory recipients
+                ) = _asArraysOfLength(earnedTokenAmount, learner, 2);
+                values[1] = sTokenAmount - earnedTokenAmount;
+                recipients[1] = completionData.feeCollector;
+
+                sToken.splitTransferFrom(
+                    address(this),
+                    sTokenId,
+                    recipients,
+                    values
+                );
+            } else {
+                sToken.safeTransferFrom(
+                    address(this),
+                    learner,
+                    sTokenId,
+                    sTokenAmount,
+                    ""
+                );
+            }
+        } else {
+            revert("Content.__CompleteContent__: Invalid sToken Action");
+        }
+
+        uint256 unallocatedReward = totalAvailableReward - learnerRewardAmount;
+        uint256 feeCollectorRewardAmount = unallocatedReward;
+        IERC20 rewardToken = IERC20(asset());
+
+        SafeERC20.safeTransfer(rewardToken, learner, learnerRewardAmount);
+
+        address contentOwner = owner();
+        if (contentOwner != address(0)) {
+            uint256 ownerRewardAmount = (unallocatedReward * 62_50) /
+                BASIS_POINT;
+
+            SafeERC20.safeTransfer(
+                rewardToken,
+                contentOwner,
+                ownerRewardAmount
+            );
+            feeCollectorRewardAmount -= ownerRewardAmount;
+        }
+        if (completionData.referrer != address(0)) {
+            uint256 referrerRewardAmount = (unallocatedReward * 12_50) /
+                BASIS_POINT;
+            SafeERC20.safeTransfer(
+                rewardToken,
+                completionData.referrer,
+                referrerRewardAmount
+            );
+            feeCollectorRewardAmount -= referrerRewardAmount;
+        }
+
+        SafeERC20.safeTransfer(
+            rewardToken,
+            completionData.feeCollector,
+            feeCollectorRewardAmount
+        );
+    }
+
+    function __AcceptInvestment__(
+        ISToken sToken_,
+        address investor,
+        uint256 tokenId,
+        uint256 tokenValue
+    ) private {
+        _mergeHeldScholarTokens(sToken_, tokenId);
+        _mint(investor, tokenValue);
     }
 
     /**
@@ -338,7 +496,7 @@ contract Content is
      *                   - `> 0`: indicates learner enrollment; used to check sufficient funds and calculate refunds.
      *                   - `0`: indicates scholar enrollment; uses default minBindAmount.
      * */
-    function _enroll(
+    function __Enroll__(
         ISToken sToken_,
         address student,
         uint256 tokenId,

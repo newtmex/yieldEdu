@@ -7,7 +7,7 @@ import {
 import {TestableSTokenHandler} from "./sTokenHandlerFixture.t.sol";
 import {STokenFixture} from "../STokenFixture.sol";
 
-contract sTokenHandlerUpgradeableTest is STokenFixture {
+contract STokenHandlerTest is STokenFixture {
     TestableSTokenHandler public handler;
 
     address public stranger = makeAddr("stranger");

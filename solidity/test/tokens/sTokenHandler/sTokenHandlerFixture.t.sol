@@ -6,12 +6,12 @@ import {
     ERC1967Proxy
 } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {
-    sTokenHandlerUpgradeable
-} from "../../../contracts/abstracts/sTokenHandlerUpgradeable.sol";
+    STokenHandler
+} from "../../../contracts/abstracts/STokenHandler.sol";
 import {ISToken} from "../../../contracts/tokens/ISToken.sol";
 
 /// @notice Concrete implementation of the abstract handler for testing
-contract TestableSTokenHandler is sTokenHandlerUpgradeable {
+contract TestableSTokenHandler is STokenHandler {
     bytes4 internal constant RETURN_MAGIC = this.onERC1155Received.selector;
 
     function initialize(ISToken sToken_) external initializer {

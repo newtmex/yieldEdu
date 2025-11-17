@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {
-    ERC1967Proxy
-} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {GeneralFixture} from "../GeneralFixture.sol";
 import {SToken, ISToken} from "../../contracts/tokens/SToken.sol";
 
@@ -74,7 +72,9 @@ contract STokenFixture is GeneralFixture {
             }
             let ptr := add(dataStart, 0x20)
             let end := add(dataStart, mul(length, 0x20))
-            for {} lt(ptr, end) {
+            for {
+
+            } lt(ptr, end) {
                 ptr := add(ptr, 0x20)
             } {
                 mstore(ptr, 0)
@@ -97,7 +97,9 @@ contract STokenFixture is GeneralFixture {
             }
             let ptr := add(dataStart, 0x20)
             let end := add(dataStart, mul(length, 0x20))
-            for {} lt(ptr, end) {
+            for {
+
+            } lt(ptr, end) {
                 ptr := add(ptr, 0x20)
             } {
                 mstore(ptr, 0)
