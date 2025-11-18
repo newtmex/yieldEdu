@@ -120,7 +120,7 @@ contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
         sToken.safeTransferFrom(contentController, to, nonce, amount, "");
     }
 
-    function _simulateYieldAndUnauthorizedWithdraw(
+    function _simulateYieldWithdraw(
         address investor,
         uint256 yield,
         uint256 shares
@@ -128,57 +128,22 @@ contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
         // Simulate yield accumulation
         _mintYLDToken(address(content), yield);
 
-        // Investor cannot withdraw/redeem directly
         vm.startPrank(investor);
-        vm.expectRevert(notAllowedError);
         content.withdraw(yield, investor, investor);
-
-        vm.expectRevert(notAllowedError);
-        content.redeem(shares, investor, investor);
-        vm.stopPrank();
-    }
-
-    function _simulateAuthorizedWithdraw(
-        address investor,
-        uint256 yield,
-        uint256 shares
-    ) internal {
-        vm.startPrank(address(content));
-        content.redeem(shares, investor, investor);
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 bytes4(
-                    keccak256("ERC4626ExceededMaxWithdraw(uint256,uint256)")
+                    keccak256(
+                        "ERC4626ExceededMaxRedeem(address,uint256,uint256)"
+                    )
                 ),
-                yield,
+                investor,
+                shares,
                 content.totalAssets()
             )
         );
-        content.withdraw(yield, investor, investor);
+        content.redeem(shares, investor, investor);
         vm.stopPrank();
-    }
-
-    function _assertFinalVaultState(
-        address investor,
-        uint256 shares,
-        uint256 yield
-    ) internal view {
-        assertEq(
-            content.balanceOf(investor),
-            0,
-            "Investor Content balance should be cleared after redeem"
-        );
-        assertEq(content.totalSupply(), 0, "Vault should have no supply left");
-        assertGt(
-            dedu.balanceOf(investor),
-            shares,
-            "Investor should receive yield-boosted dEDU"
-        );
-        assertEq(
-            dedu.balanceOf(investor),
-            shares + yield - content.totalAssets()
-        );
-        _assertContentSTokenID(0);
     }
 }

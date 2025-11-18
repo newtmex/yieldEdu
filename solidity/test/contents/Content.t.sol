@@ -101,10 +101,26 @@ contract ContentTest is ContentFixture, ERC1155Holder {
 
         _assertContentSTokenID(firstId);
 
-        // _simulateYieldAndUnauthorizedWithdraw(investor, yield, shares);
-        // _simulateAuthorizedWithdraw(investor, yield, shares);
+        _simulateYieldWithdraw(investor, yield, shares);
 
-        // _assertFinalVaultState(investor, shares, yield);
+        assertEq(
+            content.balanceOf(investor),
+            0,
+            "Investor Content balance should be cleared after redeem"
+        );
+        assertEq(content.totalSupply(), 0, "Vault should have no supply left");
+        assertEq(
+            sToken.balanceOf(investor, firstId + 2),
+            shares,
+            "Investor should receive sTokens back"
+        );
+        assertEq(
+            yld.balanceOf(investor),
+            yield,
+            "Investor should receive yield-boosted dEDU"
+        );
+
+        _assertContentSTokenID(0);
     }
 
     function test_ContentReceivesLearnerTokensAndSplitsIt() public {

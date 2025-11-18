@@ -7,7 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ISToken} from "../tokens/ISToken.sol";
+
 import {STokenHandler} from "../abstracts/STokenHandler.sol";
 import {ContentLib} from "./ContentLib.sol";
 import {IContent} from "./IContent.sol";
@@ -171,6 +173,23 @@ contract Content is
         _;
     }
 
+    function _availableBalanceAndShares(
+        address owner
+    ) internal view returns (uint256 balance, uint256 shares) {
+        uint256 tokenId = _getContentStorage().sTokenId;
+        balance = sToken().balanceOf(address(this), tokenId);
+        shares = balanceOf(owner);
+    }
+
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        return _convertToAssets(maxRedeem(owner), Math.Rounding.Floor);
+    }
+
+    function maxRedeem(address owner) public view override returns (uint256) {
+        (uint256 balance, uint256 shares) = _availableBalanceAndShares(owner);
+        return Math.min(balance, shares);
+    }
+
     function _deposit(
         address,
         address,
@@ -178,13 +197,34 @@ contract Content is
         uint256
     ) internal override notAllowed {}
 
+    /**
+     * @dev Withdraw/redeem common workflow.
+     */
     function _withdraw(
-        address,
-        address,
-        address,
-        uint256,
-        uint256
-    ) internal override notAllowed {}
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+
+        // If asset() is ERC-777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
+        // `tokensReceived` hook. On the other hand, the `tokensToSend` hook, that is triggered before the transfer,
+        // calls the vault, which is assumed not malicious.
+        //
+        // Conclusion: we need to do the transfer after the burn so that any reentrancy would happen after the
+        // shares are burned and after the assets are transferred, which is a valid state.
+        _burn(owner, shares);
+        SafeERC20.safeTransfer(IERC20(asset()), receiver, assets);
+
+        emit Withdraw(caller, receiver, owner, assets, shares);
+
+        ContentStorage storage $ = _getContentStorage();
+        ($.sTokenId, ) = _splitToken(sToken(), $.sTokenId, shares, receiver);
+    }
 
     function supportsInterface(
         bytes4 interfaceId
@@ -281,45 +321,101 @@ contract Content is
     }
 
     /**
-     * @dev Handles splitting of a learner token and refunds excess.
-     * Returns the ID of the bound portion to be transferred to contentController.
+     * @notice Splits a learner's sToken position into a "bound" portion and a
+     *         "refundable" portion, sending the refundable excess back to `recipient`.
+     *
+     * @dev
+     * - If no refund is needed (`refundAmount == 0`), the original token ID is returned.
+     * - Otherwise:
+     *      1. The token is split into:
+     *         - `bindAmount` → kept by this contract (returned as `boundTokenId`)
+     *         - `refundAmount` → transferred back to `recipient`
+     *      2. Returns the tokenId of the newly created bound portion.
+     * - Assumes this contract holds the `tokenId` being split.
+     *
+     * @param sToken_       The sToken contract instance.
+     * @param recipient     Address receiving the refund portion.
+     * @param tokenId       The SFT ID representing the full user position.
+     * @param bindAmount    Amount that must remain bound to the content.
+     * @param refundAmount  Amount of the token that should be returned to the user.
+     *
+     * @return boundTokenId The newly created token ID representing the bound portion.
      */
     function _splitAndRefund(
         ISToken sToken_,
-        address from,
+        address recipient,
         uint256 tokenId,
         uint256 bindAmount,
-        uint256 refund
-    ) internal returns (uint256 boundId) {
-        if (refund == 0) return tokenId;
+        uint256 refundAmount
+    ) internal returns (uint256 boundTokenId) {
+        // No split required — entire token is fully bound.
+        if (refundAmount == 0) {
+            return tokenId;
+        }
 
-        boundId = _splitToken(sToken_, tokenId, bindAmount);
-        sToken_.safeTransferFrom(address(this), from, tokenId, refund, "");
+        // Step 1: Split the bound portion out and keep it in this contract.
+        (, boundTokenId) = _splitToken(
+            sToken_,
+            tokenId,
+            bindAmount,
+            address(this)
+        );
 
-        return boundId;
+        // Step 2: Transfer the refundable portion back to the original recipient.
+        sToken_.safeTransferFrom(
+            address(this),
+            recipient,
+            tokenId,
+            refundAmount,
+            ""
+        );
+
+        return boundTokenId;
     }
 
     /**
-     * @dev Splits a token held by this contract into a bound portion for enrollment.
+     * @notice Splits a semi-fungible token (sToken) into two portions:
+     *         1. The residual portion that remains with the original token ID.
+     *         2. The new token representing the `splitAmount`, sent to a specified recipient.
+     *
+     * @dev
+     * - This contract must own the `tokenId` being split.
+     * - Uses `splitTransferFrom` of the sToken to perform the split.
+     * - Reverts if no new token ID is generated.
+     *
+     * @param sToken_       The sToken contract instance.
+     * @param tokenId       The original token ID to split.
+     * @param splitAmount   The portion of the token to separate into a new token.
+     * @param recipient     The address that will receive the new split token.
+     *
+     * @return residualTokenId  The token ID of the portion that remains with the original token.
+     * @return newTokenId       The token ID of the newly created split token.
      */
     function _splitToken(
         ISToken sToken_,
         uint256 tokenId,
-        uint256 bindAmount
-    ) internal returns (uint256) {
+        uint256 splitAmount,
+        address recipient
+    ) internal returns (uint256 residualTokenId, uint256 newTokenId) {
+        // Prepare arrays for the splitTransferFrom call
         (
-            uint256[] memory values,
-            address[] memory recipients
-        ) = _asArraysOfLength(bindAmount, address(this), 1);
-        (, uint256[] memory splitIds) = sToken_.splitTransferFrom(
+            uint256[] memory splitAmounts,
+            address[] memory splitRecipients
+        ) = _asArraysOfLength(splitAmount, recipient, 1);
+
+        // Perform the split
+        uint256[] memory generatedTokenIds;
+        (residualTokenId, generatedTokenIds) = sToken_.splitTransferFrom(
             address(this),
             tokenId,
-            recipients,
-            values
+            splitRecipients,
+            splitAmounts
         );
 
-        if (splitIds.length == 0) revert SplitFailed();
-        return splitIds[0];
+        // Ensure that a new token was actually created
+        if (generatedTokenIds.length == 0) revert SplitFailed();
+
+        newTokenId = generatedTokenIds[0];
     }
 
     /**
@@ -526,7 +622,12 @@ contract Content is
             );
         } else {
             // handle as scholar enrollment
-            bindId = _splitToken(sToken_, $.sTokenId, mintAmount);
+            (, bindId) = _splitToken(
+                sToken_,
+                $.sTokenId,
+                mintAmount,
+                address(this)
+            );
         }
 
         sToken_.safeTransferFrom(
