@@ -417,4 +417,13 @@ contract ContentTest is ContentFixture, ERC1155Holder {
     //         "feeCollector reward incorrect"
     //     );
     // }
+
+    function test_onERC1155Received_RevertIfNotFromSToken() public {
+        address attacker = makeAddr("attacker");
+
+        vm.prank(attacker);
+        vm.expectRevert("UNAUTHORIZED_STOKEN");
+
+        content.onERC1155Received(attacker, attacker, 1, 1, "");
+    }
 }

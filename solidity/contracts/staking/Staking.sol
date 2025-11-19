@@ -10,52 +10,17 @@ import "../tokens/IYLDToken.sol";
 import "../external/IdEDU.sol";
 import "../external/WEDU.sol";
 
+import {IStaking} from "./IStaking.sol";
+
 /// @title Staking Contract
 /// @notice Enables staking of native ETH, WEDU, or dEDU to mint sTokens and YLD tokens.
 /// @dev Implements ERC-7201-compliant storage layout and UUPS upgradeable architecture.
-contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-    // -------------------------------------------------------------
-    //                            ERRORS
-    // -------------------------------------------------------------
-
-    /// @dev Thrown when YLD and sToken total supply are not equal.
-    error SupplyMismatch();
-
-    /// @dev Thrown when the contract does not hold enough dEDU to mint corresponding tokens.
-    error InsufficientDEDU();
-
-    // -------------------------------------------------------------
-    //                            EVENTS
-    // -------------------------------------------------------------
-
-    /// @notice Emitted when a user unstakes sTokens and redeems their YLD tokens.
-    /// @param user The address receiving values
-    /// @param tokenId The ID of the sToken being burned.
-    /// @param shares The number of shares burned (both sToken and YLD).
-    /// @param withdrawnAmount Total amount of dEDU redeemed and withdrawn.
-    event Unstaked(
-        address indexed user,
-        uint256 indexed tokenId,
-        uint256 shares,
-        uint256 withdrawnAmount
-    );
-
-    /// @notice Emitted when a user stakes ETH, WEDU, or dEDU and receives sToken and YLD tokens.
-    /// @dev Captures the staking action, including the staker address, amount staked (in dEDU-equivalent),
-    ///      the type and ID of the sToken minted, and the number of YLD shares issued.
-    /// @param user The address of the user recieving the stake.
-    /// @param tokenId The ID of the sToken minted to represent the staked position.
-    /// @param amount The amount of asset staked, denominated in dEDU-equivalent units.
-    /// @param shares The number of YLD shares minted to represent yield entitlement.
-    /// @param tokenType The type of sToken issued (e.g., Learner or Scholar).
-    event Staked(
-        address indexed user,
-        uint256 indexed tokenId,
-        uint256 amount,
-        uint256 shares,
-        ISToken.TokenType tokenType
-    );
-
+contract Staking is
+    IStaking,
+    Initializable,
+    OwnableUpgradeable,
+    UUPSUpgradeable
+{
     // -------------------------------------------------------------
     //                         STORAGE LAYOUT
     // -------------------------------------------------------------

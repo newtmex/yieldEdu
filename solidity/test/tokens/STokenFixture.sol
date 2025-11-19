@@ -10,25 +10,7 @@ contract STokenFixture is GeneralFixture {
     SToken sToken;
 
     constructor() {
-        // Deploy implementation
-        SToken implementation = new SToken();
-
-        // Encode initializer call
-        bytes memory initData = abi.encodeWithSelector(
-            SToken.initialize.selector,
-            "YieldEDU SFT",
-            "sYLD",
-            owner
-        );
-
-        // Deploy proxy
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation),
-            initData
-        );
-
-        // Cast to sToken
-        sToken = SToken(address(proxy));
+        sToken = _deploySToken();
 
         vm.startPrank(owner);
         sToken.grantRole(sToken.MINTER_ROLE(), sTokenMinter);
@@ -106,5 +88,27 @@ contract STokenFixture is GeneralFixture {
             }
             mstore(0x40, add(arr, size))
         }
+    }
+
+    function _deploySToken() internal returns (SToken sToken) {
+        // Deploy implementation
+        SToken implementation = new SToken();
+
+        // Encode initializer call
+        bytes memory initData = abi.encodeWithSelector(
+            SToken.initialize.selector,
+            "YieldEDU SFT",
+            "sYLD",
+            owner
+        );
+
+        // Deploy proxy
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            initData
+        );
+
+        // Cast to sToken
+        sToken = SToken(address(proxy));
     }
 }

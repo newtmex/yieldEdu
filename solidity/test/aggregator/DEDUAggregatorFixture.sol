@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {YLDTokenFixture} from "../tokens/YLDTokenFixture.sol";
+import {StakingFixture} from "../staking/StakingFixture.sol";
 import {DEDUAggregator} from "../../contracts/aggregator/DEDUAggregator.sol";
 import {MockRouter} from "../../contracts/external/mocks/MockRouter.sol";
 
-contract DEDUAggregatorFixture is YLDTokenFixture {
+contract DEDUAggregatorFixture is StakingFixture {
     DEDUAggregator public aggregator;
     MockRouter public router;
 

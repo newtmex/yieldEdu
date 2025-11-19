@@ -30,14 +30,14 @@ task("accrueYield", "Claims GAINZ and swaps to dEDU via DEDUAggregator")
             });
 
         console.log("Executor:", executor.address);
-        console.log("Calling claimAndSwapToDEDU with:");
+        console.log("Calling accumulateRewards with:");
         console.log(" - path:", path);
         console.log(" - amountOutMin:", amountOutMin.toString());
         console.log(" - deadline:", deadline.toString());
 
         const tx = await aggregator
             .connect(executor)
-            .claimAndSwapToDEDU(path, amountOutMin, deadline);
+            .accumulateRewards(path, amountOutMin, deadline);
 
         console.log("Transaction sent:", tx.hash);
         const receipt = await tx.wait();
