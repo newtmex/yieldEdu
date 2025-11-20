@@ -31,7 +31,7 @@ contract ContentTest is ContentFixture, ERC1155Holder {
 
     function testInitializeSetsCorrectValues() public view {
         (
-            uint256 id,
+            string memory id,
             string memory title,
             string memory description,
             uint256 sTokenId
@@ -41,10 +41,7 @@ contract ContentTest is ContentFixture, ERC1155Holder {
         string
             memory expectedDesc = "A foundational content on decentralized finance concepts.";
 
-        assertEq(
-            id,
-            uint256(keccak256(abi.encode(expectedTitle, expectedDesc)))
-        );
+        assertEq(id, "cYLD-F5f3F15a");
         assertEq(title, expectedTitle);
         assertEq(description, expectedDesc);
         assertEq(sTokenId, 0);
@@ -282,7 +279,7 @@ contract ContentTest is ContentFixture, ERC1155Holder {
         IERC20 assetToken = IERC20(content.asset());
 
         // Act: contentController (operator) sends the sToken to Content with completion data
-        vm.prank(contentController);
+        vm.prank(address(contentController));
         sToken.safeTransferFrom(
             learner,
             address(content),

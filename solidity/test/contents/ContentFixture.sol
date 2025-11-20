@@ -1,49 +1,30 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {GeneralFixture} from "../GeneralFixture.sol";
 import {Content} from "../../contracts/contents/Content.sol";
+import {ContentLib} from "../../contracts/contents/ContentLib.sol";
 
-import {YLDTokenFixture} from "../tokens/YLDTokenFixture.sol";
-import {STokenFixture} from "../tokens/STokenFixture.sol";
+import {ContentControllerFixture} from "./ContentControllerFixture.sol";
 
-contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
+contract ContentFixture is ContentControllerFixture {
     Content public content;
     bytes notAllowedError = abi.encodeWithSignature("NotAllowed()");
-    address public contentController = makeAddr("contentController");
 
     constructor() {
-        // Deploy Content implementation
-        Content implementation = new Content();
-
+        uint256 deployFee = contentController.deployFee();
         string memory title = "Intro to DeFi";
         string
             memory description = "A foundational content on decentralized finance concepts.";
-        uint256 contentId = uint256(keccak256(abi.encode(title, description)));
 
-        // Encode initializer call
-        bytes memory initData = abi.encodeWithSelector(
-            Content.initialize.selector,
-            contentId,
-            title,
-            description,
-            address(yld),
-            address(sToken),
-            owner
-        );
+        _mintYLDToken(owner, deployFee);
 
-        // Deploy proxy
-        vm.startPrank(contentController);
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation),
-            initData
-        );
+        vm.startPrank(owner);
+        yld.approve(address(contentController), deployFee);
+        (address proxy, ) = contentController.deployContent(title, description);
         vm.stopPrank();
 
-        // Cast to Content
-        content = Content(address(proxy));
+        content = Content(proxy);
 
         // Grant MINTER_ROLE to this contract
         yld.grantRole(yld.MINTER_ROLE(), address(this));
@@ -110,14 +91,15 @@ contract ContentFixture is GeneralFixture, YLDTokenFixture, STokenFixture {
         uint256 amount
     ) internal returns (uint256 nonce) {
         nonce = _mintLearnerToken(to, amount);
+        address controller = address(contentController);
 
         vm.startPrank(to);
         sToken.safeTransferFrom(to, address(content), nonce, amount, "");
-        sToken.setApprovalForAll(contentController, true);
+        sToken.setApprovalForAll(controller, true);
         vm.stopPrank();
 
-        vm.prank(contentController);
-        sToken.safeTransferFrom(contentController, to, nonce, amount, "");
+        vm.prank(controller);
+        sToken.safeTransferFrom(controller, to, nonce, amount, "");
     }
 
     function _simulateYieldWithdraw(

@@ -63,9 +63,7 @@ contract Content is
     //////////////////////////////////////////////////////////////*/
 
     struct ContentStorage {
-        uint256 contentId;
         uint256 sTokenId;
-        string title;
         string description;
         address contentController;
         uint256 courseDuration; // in seconds
@@ -93,9 +91,9 @@ contract Content is
     //////////////////////////////////////////////////////////////*/
 
     function initialize(
-        uint256 _contentId,
         string memory _title,
         string memory _description,
+        string memory symbol,
         address _rewardToken,
         address _sToken,
         address _admin
@@ -104,12 +102,10 @@ contract Content is
         __Ownable_init(msg.sender);
         __sTokenHandler_init(ISToken(_sToken));
 
-        __ERC20_init(_title, ContentLib.generateSymbol(_title, _contentId));
+        __ERC20_init(_title, symbol);
         __ERC4626_init(IERC20(_rewardToken));
 
         ContentStorage storage $ = _getContentStorage();
-        $.contentId = _contentId;
-        $.title = _title;
         $.description = _description;
 
         _setCourseController($, msg.sender);
@@ -243,14 +239,14 @@ contract Content is
         external
         view
         returns (
-            uint256 contentId,
-            string memory name,
+            string memory _symbol,
+            string memory _name,
             string memory description,
             uint256 sTokenId
         )
     {
         ContentStorage storage $ = _getContentStorage();
-        return ($.contentId, $.title, $.description, $.sTokenId);
+        return (symbol(), name(), $.description, $.sTokenId);
     }
 
     /*//////////////////////////////////////////////////////////////

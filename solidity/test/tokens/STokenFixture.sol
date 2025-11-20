@@ -90,7 +90,7 @@ contract STokenFixture is GeneralFixture {
         }
     }
 
-    function _deploySToken() internal returns (SToken sToken) {
+    function _deploySToken() internal returns (SToken) {
         // Deploy implementation
         SToken implementation = new SToken();
 
@@ -109,6 +109,6 @@ contract STokenFixture is GeneralFixture {
         );
 
         // Cast to sToken
-        sToken = SToken(address(proxy));
+        return SToken(address(proxy));
     }
 }

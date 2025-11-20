@@ -5,35 +5,6 @@ pragma solidity ^0.8.20;
 /// @notice Interface for the Content contract to expose external functions, events, and errors.
 interface IContent {
     /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-    event CourseControllerUpdated(
-        address indexed oldController,
-        address indexed newController
-    );
-    event CourseDurationUpdated(uint256 oldDuration, uint256 newDuration);
-    event MinBindAmountUpdated(uint256 oldAmount, uint256 newAmount);
-    event StudentEnrolled(
-        address indexed student,
-        uint256 indexed originalTokenId,
-        uint256 boundTokenId,
-        uint256 boundAmount,
-        address contentController,
-        uint256 courseDuration,
-        uint256 refundAmount
-    );
-    event BindingCreated(
-        uint256 indexed boundTokenId,
-        uint256 amount,
-        address contentController,
-        uint256 courseDuration
-    );
-    event VerifierUpdated(
-        address indexed oldVerifier,
-        address indexed newVerifier
-    );
-
-    /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
     error InvalidController();
@@ -43,26 +14,73 @@ interface IContent {
     error NotScholarNorLearner();
     error NotAllowed();
 
-    /*//////////////////////////////////////////////////////////////
-                                 FUNCTIONS
-    //////////////////////////////////////////////////////////////*/
+    /*//////////////////////////////////////////////////////////////////////////
+                                     EVENTS
+    //////////////////////////////////////////////////////////////////////////*/
 
-    /// @notice Add or remove verifier permissions
-    /// @param verifier Address of the verifier
-    function setVerifier(address verifier) external;
+    event VerifierUpdated(
+        address indexed oldVerifier,
+        address indexed newVerifier
+    );
+    event CourseControllerUpdated(
+        address indexed oldController,
+        address indexed newController
+    );
+    event CourseDurationUpdated(uint256 oldDuration, uint256 newDuration);
+    event MinBindAmountUpdated(
+        uint256 oldMinBindAmount,
+        uint256 newMinBindAmount
+    );
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                   VIEW FUNCTIONS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function ADMIN_ROLE() external view returns (bytes32);
+
+    function MIN_BIND() external pure returns (uint256);
+
+    function BASIS_POINT() external pure returns (uint256);
 
     /// @notice Returns core content metadata
-    /// @return contentId The content ID
     /// @return name The content title
+    /// @return symbol The content unique symbol
     /// @return description The content description
     /// @return sTokenId The ID of the associated sToken
     function getContentInfo()
         external
         view
         returns (
-            uint256 contentId,
             string memory name,
+            string memory symbol,
             string memory description,
             uint256 sTokenId
         );
+
+    /*//////////////////////////////////////////////////////////////
+                            ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Add or remove verifier permissions
+    /// @param verifier Address of the verifier
+    function setVerifier(address verifier) external;
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                 USER ACTIONS
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function enrollScholar(uint256 deadline, bytes calldata signature) external;
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                   INITIALIZER
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function initialize(
+        string memory _title,
+        string memory _description,
+        string memory symbol,
+        address _rewardToken,
+        address _sToken,
+        address _admin
+    ) external;
 }

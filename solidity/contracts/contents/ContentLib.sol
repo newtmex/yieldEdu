@@ -4,10 +4,10 @@ pragma solidity ^0.8.20;
 library ContentLib {
     function generateSymbol(
         string memory title,
-        uint256 contentId
+        address creator
     ) internal pure returns (string memory) {
-        // Derive deterministic hash from title + ID
-        bytes32 hash = keccak256(abi.encodePacked(contentId, title));
+        // Derive deterministic hash from title + creator address
+        bytes32 hash = keccak256(abi.encodePacked(title, creator));
 
         // 8 hex chars (32 bits of entropy) => ~4.3 billion unique combos
         bytes memory frag = new bytes(8);
@@ -33,32 +33,5 @@ library ContentLib {
         }
 
         return string(abi.encodePacked("cYLD-", frag));
-    }
-
-    function _toHexChar(
-        uint8 nibble,
-        bool upper
-    ) private pure returns (bytes1) {
-        if (nibble < 10) {
-            return bytes1(uint8(nibble + 0x30)); // '0'–'9'
-        } else {
-            return
-                bytes1(
-                    uint8(nibble + (upper ? 0x37 : 0x57)) // 'A'–'F' or 'a'–'f'
-                );
-        }
-    }
-
-    function _toHexChar(uint8 nibble) private pure returns (bytes1) {
-        return bytes1(nibble < 10 ? nibble + 0x30 : nibble + 0x37);
-    }
-
-    function generateContentId(
-        address creator,
-        string memory title,
-        string memory description
-    ) internal pure returns (uint256) {
-        return
-            uint256(keccak256(abi.encodePacked(title, creator, description)));
     }
 }
