@@ -16,10 +16,10 @@ library sTokenLib {
             // Load struct fields (3 slots)
             let content := mload(self)
             let enrolledAt := mload(add(self, 0x20))
-            let completeBy := mload(add(self, 0x40))
+            let completeAfter := mload(add(self, 0x40))
 
             // Return true if any field is non-zero
-            isNonZero := or(content, or(enrolledAt, completeBy))
+            isNonZero := or(content, or(enrolledAt, completeAfter))
         }
     }
 
@@ -41,7 +41,7 @@ library sTokenLib {
     ) internal pure returns (ISToken.Binding memory) {
         self.content = newBinding.content;
         self.enrolledAt = newBinding.enrolledAt;
-        self.completeBy = newBinding.completeBy;
+        self.completeAfter = newBinding.completeAfter;
 
         return self;
     }
@@ -53,7 +53,7 @@ library sTokenLib {
     ) internal pure returns (ISToken.Binding memory) {
         delete self.content;
         delete self.enrolledAt;
-        delete self.completeBy;
+        delete self.completeAfter;
 
         return self;
     }

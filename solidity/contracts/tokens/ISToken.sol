@@ -61,12 +61,12 @@ interface ISToken is ISFT {
      * @dev Used to record when a token becomes attached to a content and the expected completion timeline.
      * @param content The address of the content contract this token is bound to.
      * @param enrolledAt The timestamp when the binding (enrollment) was created.
-     * @param completeBy The expected completion timestamp of the content.
+     * @param completeAfter The expected completion timestamp of the content.
      */
     struct Binding {
         address content;
         uint256 enrolledAt;
-        uint256 completeBy;
+        uint256 completeAfter;
     }
 
     // -------------------------------------------------------------------------

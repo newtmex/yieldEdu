@@ -632,7 +632,7 @@ contract Content is
             bindId,
             mintAmount,
             abi.encode(
-                EnrollmentBinding({courseDuration: duration, student: student})
+                EnrollmentData({courseDuration: duration, student: student})
             )
         );
 

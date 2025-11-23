@@ -11,7 +11,7 @@ import {ISToken} from "../tokens/ISToken.sol";
  * @dev Uses ERC7201 namespaced storage and OpenZeppelin upgradeable contract conventions.
  */
 abstract contract STokenHandler is Initializable, ERC1155HolderUpgradeable {
-    struct EnrollmentBinding {
+    struct EnrollmentData {
         address student;
         uint256 courseDuration;
     }
@@ -21,7 +21,7 @@ abstract contract STokenHandler is Initializable, ERC1155HolderUpgradeable {
         uint256 deadline;
         uint256 assessmentPoints;
         uint256 enrolledAt;
-        uint256 completeBy;
+        uint256 completeAfter;
         address feeCollector;
         address referrer;
     }
