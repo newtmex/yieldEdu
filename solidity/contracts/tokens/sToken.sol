@@ -124,42 +124,36 @@ contract SToken is
     function updateBinding(
         address user,
         uint256 nonce,
-        Binding memory binding,
+        Binding memory newBinding,
         bytes memory data
     ) external onlyRole(BINDING_UPDATE_ROLE) {
-        uint256 tokenBalance = balanceOf(user, nonce);
-        require(tokenBalance > 0, "sToken: no token balance at nonce");
-
-        ISToken.TokenAttributes memory tokenAttr = getRawTokenAttributes(nonce)
+        // Load and decode token attributes
+        ISToken.TokenAttributes memory attr = getRawTokenAttributes(nonce)
             .decode();
 
-        Binding memory tokenBinding = tokenAttr.binding;
-        bool tokenWasBound = tokenBinding.isBound();
-        address content = tokenBinding.content;
+        Binding memory oldBinding = attr.binding;
+        bool wasBound = oldBinding.isBound();
+        bool willBeBound = newBinding.isBound();
 
-        // Check operator approval if binding for the first time
-        if (!tokenWasBound) {
-            address operator = _msgSender();
-            if (user != operator && !isApprovedForAll(user, operator)) {
-                revert ERC1155MissingApprovalForAll(operator, user);
-            }
-        }
+        // Ensure the binding state is actually changing
+        require(wasBound != willBeBound, "sToken: binding state unchanged");
 
-        // Ensure binding state change
-        if (binding.isBound() == tokenWasBound) {
-            revert("sToken: binding state unchanged");
-        }
+        // Determine sender and receiver
+        address from = wasBound ? user : _msgSender();
+        address to = wasBound ? oldBinding.content : user;
 
-        tokenBinding.setBinding(binding);
-        _updateTokenAttributes(user, nonce, abi.encode(tokenAttr));
+        // from must own the token to initiate binding updates
+        uint256 fromBal = balanceOf(from, nonce);
+        require(fromBal > 0, "sToken: no token balance at nonce");
 
-        // Emit event for indexing
-        emit BindingUpdated(user, nonce, binding.isBound(), binding.content);
+        // Update attributes
+        attr.binding = newBinding;
+        _updateTokenAttributes(from, nonce, abi.encode(attr));
 
-        // If unbinding, return tokens to the content contract
-        if (tokenWasBound) {
-            _safeTransferFrom(user, content, nonce, tokenBalance, data);
-        }
+        emit BindingUpdated(user, nonce, willBeBound, newBinding.content);
+
+        // Transfer token
+        _safeTransferFrom(from, to, nonce, fromBal, data);
     }
 
     /**

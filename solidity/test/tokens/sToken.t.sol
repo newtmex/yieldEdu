@@ -184,25 +184,24 @@ contract STokenTest is STokenFixture {
     }
 
     function testMintScholarToken() public {
-        address userWithTransferRole = makeAddr("userWithTransferRole");
-        sToken.grantRole(sToken.TRANSFER_ROLE(), userWithTransferRole);
+        address superAccount = makeAddr("superAccount");
+        sToken.grantRole(sToken.TRANSFER_ROLE(), superAccount);
+        sToken.grantRole(sToken.BINDING_UPDATE_ROLE(), superAccount);
 
         uint256 tokenId = _mintScholarToken(user, 5);
 
         assertEq(sToken.balanceOf(user, tokenId), 5);
 
         vm.prank(user);
-        sToken.safeTransferFrom(user, userWithTransferRole, tokenId, 5, "");
-
-        vm.prank(userWithTransferRole);
-        sToken.safeTransferFrom(userWithTransferRole, user, tokenId, 5, "");
+        sToken.safeTransferFrom(user, superAccount, tokenId, 5, "");
 
         // Bind token to prevent unauthorised transfer
-        vm.prank(user);
-        sToken.setApprovalForAll(address(this), true);
+        vm.prank(superAccount);
         ISToken.Binding memory binding;
         binding.content = address(this);
         sToken.updateBinding(user, tokenId, binding, "");
+
+        assertEq(sToken.balanceOf(user, tokenId), 5);
 
         vm.prank(user);
         address randomUser = makeAddr("randomUser");
@@ -452,7 +451,7 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
     address internal operator;
     address internal content = address(0xD1);
 
-    uint256 internal nonce = 1;
+    uint256 internal nonce;
     bytes internal emptyData = "";
 
     ISToken.Binding internal newBinding;
@@ -464,16 +463,17 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
     function setUp() public {
         // Give test contract and operator the update role
         sToken.grantRole(BINDING_UPDATE_ROLE, address(this));
+        sToken.grantRole(sToken.TRANSFER_ROLE(), address(this));
         operator = address(this);
 
-        // Mint tokens to user for testing
-        _mintScholarToken(user, 10);
+        // Mint tokens to operator for testing
+        nonce = _mintScholarToken(operator, 10);
 
         // Define a content binding
         newBinding = ISToken.Binding({
             content: content,
             enrolledAt: block.timestamp,
-            completeBy: block.timestamp + 30 days
+            completeAfter: block.timestamp + 30 days
         });
     }
 
@@ -486,10 +486,6 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
             .binding;
         assertEq(beforeBind.content, address(0));
 
-        // Give operator approval
-        vm.prank(user);
-        sToken.setApprovalForAll(operator, true);
-
         // Perform binding
         sToken.updateBinding(user, nonce, newBinding, emptyData);
 
@@ -500,23 +496,14 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
             .binding;
         assertEq(afterBind.content, content);
         assertTrue(afterBind.isBound());
-    }
 
-    // --- 2️⃣ Missing Approval ---
-    function test_RevertWhen_NoApprovalOnInitialBinding() public {
-        vm.startPrank(operator);
-        vm.expectRevert(); // ERC1155MissingApprovalForAll
-        sToken.updateBinding(user, nonce, newBinding, emptyData);
-        vm.stopPrank();
+        // After binding, tokens should move from operator → user
+        assertEq(sToken.balanceOf(user, nonce), 10);
+        assertEq(sToken.balanceOf(operator, nonce), 0);
     }
 
     // --- 3️⃣ Invalid State: rebinding again ---
     function test_RevertWhen_RebindingSameState() public {
-        // Give operator approval and bind once
-        vm.startPrank(user);
-        sToken.setApprovalForAll(operator, true);
-        vm.stopPrank();
-
         vm.startPrank(operator);
         sToken.updateBinding(user, nonce, newBinding, emptyData);
 
@@ -530,11 +517,6 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
     function test_UpdateBinding_UnbindsSuccessfullyAndTransfersToCourse()
         public
     {
-        // Bind first
-        vm.startPrank(user);
-        sToken.setApprovalForAll(operator, true);
-        vm.stopPrank();
-
         vm.startPrank(operator);
         sToken.updateBinding(user, nonce, newBinding, emptyData);
         vm.stopPrank();
@@ -554,8 +536,10 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
 
     // --- 5️⃣ Revert When Invalid ISToken.Binding Update (no tokens) ---
     function test_RevertWhen_NoTokenBalance() public {
+        sToken.updateBinding(address(0xADA), nonce, newBinding, emptyData);
+
         vm.expectRevert("sToken: no token balance at nonce");
-        sToken.updateBinding(address(0xE1), nonce, newBinding, emptyData);
+        sToken.updateBinding(user, nonce, emptyBinding, emptyData);
     }
 
     // --- 6️⃣ Role Restriction ---
