@@ -633,11 +633,11 @@ contract Content is
 
         // Prepare enrollment payload in its own scope to reduce stack pressure
         {
-           uint256 refId = 0;
-if (tokenValue > 0) {
-    require(data.length == 32, "Invalid refId data");
-    refId = abi.decode(data, (uint256));
-}
+            uint256 refId = 0;
+            if (tokenValue > 0) {
+                require(data.length == 32, "Invalid refId data");
+                refId = abi.decode(data, (uint256));
+            }
 
             EnrollmentData memory payload = EnrollmentData({
                 courseDuration: $.courseDuration,
