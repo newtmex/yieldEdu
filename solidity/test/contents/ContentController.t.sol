@@ -118,7 +118,6 @@ contract ContentControllerTest is ContentControllerFixture {
     }
 
     function test_deployContent_RevertIfNoFeePaid() public {
-        address controller = address(contentController);
         IERC20 asset = IERC20(contentController.asset());
 
         uint256 fee = contentController.deployFee();
@@ -126,12 +125,12 @@ contract ContentControllerTest is ContentControllerFixture {
 
         // contentOwner does NOT approve enough tokens
         vm.startPrank(contentOwner);
-        asset.approve(controller, approvedAmt);
+        asset.approve(contentControllerAddress, approvedAmt);
 
         vm.expectRevert(
             abi.encodeWithSignature(
                 "ERC20InsufficientAllowance(address,uint256,uint256)",
-                controller,
+                contentControllerAddress,
                 approvedAmt,
                 fee
             )

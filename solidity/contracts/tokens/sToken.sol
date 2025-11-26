@@ -122,7 +122,8 @@ contract SToken is
     }
 
     function updateBinding(
-        address user,
+        address operator,
+        address owner,
         uint256 nonce,
         Binding memory newBinding,
         bytes memory data
@@ -139,8 +140,9 @@ contract SToken is
         require(wasBound != willBeBound, "sToken: binding state unchanged");
 
         // Determine sender and receiver
-        address from = wasBound ? user : _msgSender();
-        address to = wasBound ? oldBinding.content : user;
+        address caller = _msgSender();
+        address from = caller == operator ? caller : owner;
+        address to = wasBound ? oldBinding.content : owner;
 
         // from must own the token to initiate binding updates
         uint256 fromBal = balanceOf(from, nonce);
@@ -150,7 +152,7 @@ contract SToken is
         attr.binding = newBinding;
         _updateTokenAttributes(from, nonce, abi.encode(attr));
 
-        emit BindingUpdated(user, nonce, willBeBound, newBinding.content);
+        emit BindingUpdated(owner, nonce, willBeBound, newBinding.content);
 
         // Transfer token
         _safeTransferFrom(from, to, nonce, fromBal, data);

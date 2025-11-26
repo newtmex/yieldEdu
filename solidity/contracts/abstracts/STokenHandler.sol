@@ -14,6 +14,7 @@ abstract contract STokenHandler is Initializable, ERC1155HolderUpgradeable {
     struct EnrollmentData {
         address student;
         uint256 courseDuration;
+        uint256 referrerId;
     }
 
     struct ContentCompleteData {
@@ -23,7 +24,14 @@ abstract contract STokenHandler is Initializable, ERC1155HolderUpgradeable {
         uint256 enrolledAt;
         uint256 completeAfter;
         address feeCollector;
+        address learner;
         address referrer;
+    }
+
+    struct ControllerUnbindData {
+        bytes signature;
+        uint256 deadline;
+        uint256 assessmentPoints;
     }
 
     /// @custom:storage-location erc7201:yieldEDU.sTokenHandler.storage

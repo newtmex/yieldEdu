@@ -10,6 +10,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ContentControllerFixture is DEDUAggregatorFixture {
     ContentController public contentController;
+    address public contentControllerAddress;
     address public feeCollector;
 
     constructor() {
@@ -29,6 +30,12 @@ contract ContentControllerFixture is DEDUAggregatorFixture {
             address(implementation),
             initData
         );
+
         contentController = ContentController(address(proxy));
+        contentControllerAddress = address(contentController);
+        vm.label(contentControllerAddress, "ContentController");
+
+        sToken.grantRole(sToken.BINDING_UPDATE_ROLE(), contentControllerAddress);
+        sToken.grantRole(sToken.TRANSFER_ROLE(), contentControllerAddress);
     }
 }

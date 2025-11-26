@@ -104,13 +104,14 @@ interface ISToken is ISFT {
      *      - When binding: links a token to a content contract.
      *      - When unbinding: detaches the token and triggers a return transfer if applicable.
      *      Only callable by entities with the `BINDING_UPDATE_ROLE`.
-     * @param user The address that owns the token being updated.
+     * @param owner The address that owns the token being updated.
      * @param nonce The token ID (nonce) whose binding will be updated.
      * @param binding The new binding data to assign (or empty struct to unbind).
      * @param data Additional data passed to hooks or content contracts during unbinding.
      */
     function updateBinding(
-        address user,
+        address operator,
+        address owner,
         uint256 nonce,
         Binding memory binding,
         bytes memory data

@@ -86,20 +86,29 @@ contract ContentFixture is ContentControllerFixture {
         );
     }
 
-    function _mintAndEnrollLearner(
+    function _registerLearner(
         address to,
         uint256 amount
     ) internal returns (uint256 nonce) {
+        nonce = _registerLearnerWithRef(to, amount, 0);
+    }
+
+    function _registerLearnerWithRef(
+        address to,
+        uint256 amount,
+        uint256 refId
+    ) internal returns (uint256 nonce) {
         nonce = _mintLearnerToken(to, amount);
-        address controller = address(contentController);
 
         vm.startPrank(to);
-        sToken.safeTransferFrom(to, address(content), nonce, amount, "");
-        sToken.setApprovalForAll(controller, true);
+        sToken.safeTransferFrom(
+            to,
+            address(content),
+            nonce,
+            amount,
+            abi.encode(refId)
+        );
         vm.stopPrank();
-
-        vm.prank(controller);
-        sToken.safeTransferFrom(controller, to, nonce, amount, "");
     }
 
     function _simulateYieldWithdraw(

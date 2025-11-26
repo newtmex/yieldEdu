@@ -266,7 +266,7 @@ contract Content is
             abi.encodePacked(address(this), scholar, deadline)
         );
 
-        __Enroll__(sToken(), scholar, 0, 0);
+        __Enroll__(sToken(), scholar, 0, 0, "");
     }
 
     function _validateSignedMessage(
@@ -435,14 +435,13 @@ contract Content is
                 tokenAttr.tokenType,
                 data,
                 sToken_,
-                from,
                 tokenId,
                 value
             );
         } else if (tokenAttr.tokenType == ISToken.TokenType.Scholar) {
             __AcceptInvestment__(sToken_, from, tokenId, value);
         } else if (tokenAttr.tokenType == ISToken.TokenType.Learner) {
-            __Enroll__(sToken_, from, tokenId, value);
+            __Enroll__(sToken_, from, tokenId, value, data);
         } else {
             revert("Content: Invalid sToken Action");
         }
@@ -454,7 +453,6 @@ contract Content is
         ISToken.TokenType sTokenType,
         bytes memory completionDataEncoded,
         ISToken sToken,
-        address learner,
         uint256 sTokenId,
         uint256 sTokenAmount
     ) private {
@@ -464,6 +462,8 @@ contract Content is
             completionDataEncoded,
             (ContentCompleteData)
         );
+
+        address learner = completionData.learner;
 
         _validateSignedMessage(
             completionData.deadline,
@@ -592,32 +592,37 @@ contract Content is
         ISToken sToken_,
         address student,
         uint256 tokenId,
-        uint256 tokenValue
+        uint256 tokenValue,
+        bytes memory data
     ) private {
         ContentStorage storage $ = _getContentStorage();
 
-        uint256 duration = $.courseDuration;
         address controller = $.contentController;
+        address _owner = owner();
 
-        if (owner() == address(0) || controller == address(0))
+        if (_owner == address(0) || controller == address(0)) {
             revert("InvalidControllerOrOwner");
+        }
 
         uint256 mintAmount = $.minBindAmount;
         if (mintAmount < MIN_BIND) revert InvalidBindAmount();
 
         uint256 bindId;
         if (tokenValue > 0) {
-            // Handle as learner enrollment
+            // learner enrollment
             if (tokenValue < mintAmount) revert InsufficientValue();
+
+            uint256 refundValue = tokenValue - mintAmount;
+
             bindId = _splitAndRefund(
                 sToken_,
                 student,
                 tokenId,
                 mintAmount,
-                tokenValue - mintAmount
+                refundValue
             );
         } else {
-            // handle as scholar enrollment
+            // scholar enrollment
             (, bindId) = _splitToken(
                 sToken_,
                 $.sTokenId,
@@ -626,15 +631,28 @@ contract Content is
             );
         }
 
-        sToken_.safeTransferFrom(
-            address(this),
-            controller,
-            bindId,
-            mintAmount,
-            abi.encode(
-                EnrollmentData({courseDuration: duration, student: student})
-            )
-        );
+        // Prepare enrollment payload in its own scope to reduce stack pressure
+        {
+           uint256 refId = 0;
+if (tokenValue > 0) {
+    require(data.length == 32, "Invalid refId data");
+    refId = abi.decode(data, (uint256));
+}
+
+            EnrollmentData memory payload = EnrollmentData({
+                courseDuration: $.courseDuration,
+                student: student,
+                referrerId: refId
+            });
+
+            sToken_.safeTransferFrom(
+                address(this),
+                controller,
+                bindId,
+                mintAmount,
+                abi.encode(payload)
+            );
+        }
 
         _mint(address(this), mintAmount);
     }

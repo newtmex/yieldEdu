@@ -101,7 +101,9 @@ abstract contract ContentFactory is Initializable {
         $.contents.add(content);
     }
 
-    function tryGetContent(string memory symbol) public view returns (address) {
+    function getContentBySymbol(
+        string memory symbol
+    ) public view returns (address) {
         bytes32 salt = keccak256(abi.encodePacked(symbol));
 
         bytes memory creationCode = abi.encodePacked(
@@ -130,14 +132,14 @@ abstract contract ContentFactory is Initializable {
         );
 
         address predicted = address(uint160(uint256(hash)));
-        return contentExists(predicted) ? predicted : address(0);
+        return isContent(predicted) ? predicted : address(0);
     }
 
     // ---------------------------------------------------------
     //                     VIEW FUNCTIONS
     // ---------------------------------------------------------
 
-    function allContents() external view returns (address[] memory) {
+    function contents() external view returns (address[] memory) {
         return _getContentFactoryStorage().contents.values();
     }
 
@@ -145,7 +147,7 @@ abstract contract ContentFactory is Initializable {
         return _getContentFactoryStorage().contents.length();
     }
 
-    function contentExists(address content) public view returns (bool) {
+    function isContent(address content) public view returns (bool) {
         return _getContentFactoryStorage().contents.contains(content);
     }
 }

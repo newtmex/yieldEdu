@@ -199,7 +199,7 @@ contract STokenTest is STokenFixture {
         vm.prank(superAccount);
         ISToken.Binding memory binding;
         binding.content = address(this);
-        sToken.updateBinding(user, tokenId, binding, "");
+        sToken.updateBinding(superAccount, user, tokenId, binding, "");
 
         assertEq(sToken.balanceOf(user, tokenId), 5);
 
@@ -487,7 +487,7 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
         assertEq(beforeBind.content, address(0));
 
         // Perform binding
-        sToken.updateBinding(user, nonce, newBinding, emptyData);
+        sToken.updateBinding(operator, user, nonce, newBinding, emptyData);
 
         // After binding
         ISToken.Binding memory afterBind = sToken
@@ -505,11 +505,11 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
     // --- 3️⃣ Invalid State: rebinding again ---
     function test_RevertWhen_RebindingSameState() public {
         vm.startPrank(operator);
-        sToken.updateBinding(user, nonce, newBinding, emptyData);
+        sToken.updateBinding(operator, user, nonce, newBinding, emptyData);
 
         // Try rebinding again (already bound)
         vm.expectRevert("sToken: binding state unchanged");
-        sToken.updateBinding(user, nonce, newBinding, emptyData);
+        sToken.updateBinding(operator, user, nonce, newBinding, emptyData);
         vm.stopPrank();
     }
 
@@ -518,7 +518,7 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
         public
     {
         vm.startPrank(operator);
-        sToken.updateBinding(user, nonce, newBinding, emptyData);
+        sToken.updateBinding(operator, user, nonce, newBinding, emptyData);
         vm.stopPrank();
 
         // Ensure user owns tokens before unbinding
@@ -526,7 +526,7 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
 
         // Mock that contract has the role to unbind
         vm.startPrank(operator);
-        sToken.updateBinding(user, nonce, emptyBinding, emptyData);
+        sToken.updateBinding(user, user, nonce, emptyBinding, emptyData);
         vm.stopPrank();
 
         // After unbinding, tokens should move from user → content
@@ -536,10 +536,16 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
 
     // --- 5️⃣ Revert When Invalid ISToken.Binding Update (no tokens) ---
     function test_RevertWhen_NoTokenBalance() public {
-        sToken.updateBinding(address(0xADA), nonce, newBinding, emptyData);
+        sToken.updateBinding(
+            operator,
+            address(0xADA),
+            nonce,
+            newBinding,
+            emptyData
+        );
 
         vm.expectRevert("sToken: no token balance at nonce");
-        sToken.updateBinding(user, nonce, emptyBinding, emptyData);
+        sToken.updateBinding(operator, user, nonce, emptyBinding, emptyData);
     }
 
     // --- 6️⃣ Role Restriction ---
@@ -552,6 +558,6 @@ contract UpdateBindingTest is STokenFixture, ERC1155Holder {
             )
         );
         vm.prank(user);
-        sToken.updateBinding(user, nonce, newBinding, emptyData);
+        sToken.updateBinding(operator, user, nonce, newBinding, emptyData);
     }
 }
