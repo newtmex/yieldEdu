@@ -150,4 +150,8 @@ abstract contract ContentFactory is Initializable {
     function isContent(address content) public view returns (bool) {
         return _getContentFactoryStorage().contents.contains(content);
     }
+
+    function contentsBeacon() public view returns (address) {
+        return _getContentFactoryStorage().contentsBeacon;
+    }
 }

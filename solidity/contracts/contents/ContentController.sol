@@ -8,13 +8,11 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {STokenHandler} from "../abstracts/STokenHandler.sol";
 import {ContentFactory} from "../abstracts/ContentFactory.sol";
 import {UserModule} from "../abstracts/UserModule.sol";
 import {ISToken} from "../tokens/ISToken.sol";
-import {Content} from "./Content.sol";
 import {sTokenLib} from "../tokens/sTokenLib.sol";
 
 contract ContentController is
@@ -58,26 +56,18 @@ contract ContentController is
     function initialize(
         address owner,
         address sToken_,
-        IERC20 asset_,
-        address feeCollector_
+        IERC20 yldToken_,
+        address feeCollector_,
+        address contentBeacon_
     ) external initializer {
         __UUPSUpgradeable_init();
         __Ownable_init(owner);
+
+        __ContentFactory_init(contentBeacon_);
         __sTokenHandler_init(ISToken(sToken_));
-        __ERC4626_init(asset_);
 
-        // ---------------------------------------------------------
-        // Create and initialize the Content Beacon
-        // ---------------------------------------------------------
-        address proxyAdmin = msg.sender;
-        address contentImpl = address(new Content());
-        UpgradeableBeacon beacon = new UpgradeableBeacon(
-            contentImpl,
-            proxyAdmin
-        );
-
-        // Pass beacon address into ContentFactory initializer
-        __ContentFactory_init(address(beacon));
+        __ERC20_init("ContentContoller", "CTYLD");
+        __ERC4626_init(yldToken_);
 
         // ---------------------------------------------------------
         // Store controller-specific settings

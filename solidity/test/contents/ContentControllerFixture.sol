@@ -2,11 +2,15 @@
 pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+
 import {DEDUAggregatorFixture} from "../aggregator/DEDUAggregatorFixture.sol";
 
 import {ContentController} from "../../contracts/contents/ContentController.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {Content} from "../../contracts/contents/Content.sol";
 
 contract ContentControllerFixture is DEDUAggregatorFixture {
     ContentController public contentController;
@@ -16,6 +20,16 @@ contract ContentControllerFixture is DEDUAggregatorFixture {
     constructor() {
         feeCollector = address(aggregator);
 
+        // ---------------------------------------------------------
+        // Create and initialize the Content Beacon
+        // ---------------------------------------------------------
+        address proxyAdmin = msg.sender;
+        address contentImpl = address(new Content());
+        UpgradeableBeacon beacon = new UpgradeableBeacon(
+            contentImpl,
+            proxyAdmin
+        );
+
         // Deploy ContentController UUPS proxy
         ContentController implementation = new ContentController();
         bytes memory initData = abi.encodeWithSelector(
@@ -23,7 +37,8 @@ contract ContentControllerFixture is DEDUAggregatorFixture {
             owner, // admin
             address(sToken), // sToken
             IERC20(address(yld)), // asset,
-            feeCollector // fee collector
+            feeCollector, // fee collector
+            address(beacon)
         );
 
         ERC1967Proxy proxy = new ERC1967Proxy(
@@ -35,7 +50,10 @@ contract ContentControllerFixture is DEDUAggregatorFixture {
         contentControllerAddress = address(contentController);
         vm.label(contentControllerAddress, "ContentController");
 
-        sToken.grantRole(sToken.BINDING_UPDATE_ROLE(), contentControllerAddress);
+        sToken.grantRole(
+            sToken.BINDING_UPDATE_ROLE(),
+            contentControllerAddress
+        );
         sToken.grantRole(sToken.TRANSFER_ROLE(), contentControllerAddress);
     }
 }
