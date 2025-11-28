@@ -1,6 +1,4 @@
 import { task } from "hardhat/config";
-import { ISToken__factory, Staking } from "../typechain-types";
-import { ISToken } from "../typechain-types/contracts/tokens";
 import { formatEther, parseEther } from "ethers";
 
 task("stake", "Stake ETH, WEDU, or dEDU into the Staking contract")

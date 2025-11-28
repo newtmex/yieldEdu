@@ -1,4 +1,5 @@
 import { ethers, upgrades } from "hardhat";
+import { MockDEDU } from "../typechain-types";
 
 export default async function deployYLDToken({
     dEDUAddress,
@@ -7,7 +8,7 @@ export default async function deployYLDToken({
 
     const MockDEDUFactory = await ethers.getContractFactory("MockDEDU");
     const mockAsset = dEDUAddress
-        ? MockDEDUFactory.attach(dEDUAddress)
+        ? (MockDEDUFactory.attach(dEDUAddress) as MockDEDU)
         : await MockDEDUFactory.deploy();
     !dEDUAddress && (await mockAsset.waitForDeployment());
 
@@ -27,4 +28,3 @@ export default async function deployYLDToken({
 
     return { yldToken, mockAsset };
 }
-

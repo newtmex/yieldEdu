@@ -1,4 +1,5 @@
 import { ethers, upgrades } from "hardhat";
+import { WEDU } from "../typechain-types";
 
 export default async function deployStakingContract({
     yldAddress,
@@ -13,7 +14,7 @@ export default async function deployStakingContract({
 
     const WEDUFactory = await ethers.getContractFactory("WEDU");
     const wedu = weduAddress
-        ? WEDUFactory.attach(weduAddress)
+        ? (WEDUFactory.attach(weduAddress) as WEDU)
         : await WEDUFactory.deploy();
     !weduAddress && (await wedu.waitForDeployment());
 
