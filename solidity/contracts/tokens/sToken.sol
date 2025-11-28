@@ -158,6 +158,12 @@ contract SToken is
         _safeTransferFrom(from, to, nonce, fromBal, data);
     }
 
+    function getTokenAttributes(
+        uint256 nonce
+    ) public view returns (ISToken.TokenAttributes memory) {
+        return getRawTokenAttributes(nonce).decode();
+    }
+
     /**
      * @dev See SFTUpgradeable._ensureCanTransfer for compatibility requirements.
      */
