@@ -1,4 +1,4 @@
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import path from "path";
 
 import deployYLDToken from "../utils/yldToken";
@@ -16,9 +16,7 @@ async function main() {
     // ----------------------------------------
     // Deploy Tokens
     // ----------------------------------------
-    const { yldToken, mockAsset: dEDUToken } = await deployYLDToken({
-        dEDUAddress: "0x1881d02D05a44713a69d6eDDE3e7167792A636d6",
-    });
+    const { yldToken, mockAsset: dEDUToken } = await deployYLDToken();
 
     const { sToken } = await deploySToken();
 
@@ -85,16 +83,11 @@ async function main() {
         Staking: await staking.getAddress(),
         WEDU: await wedu.getAddress(),
         ContentController: await contentController.getAddress(),
-        ContentBeacon: await contentBeacon.getAddress(),
+        Content: await contentBeacon.getAddress(),
         DEDUAggregator: await deduAggregator.getAddress(),
     };
 
-    const networkId =
-        network.name === "mainnet"
-            ? 1
-            : network.name === "localhost"
-              ? 31337
-              : 41923;
+    const networkId = Number((await ethers.provider.getNetwork()).chainId);
 
     // ----------------------------------------
     // Export Deployments
