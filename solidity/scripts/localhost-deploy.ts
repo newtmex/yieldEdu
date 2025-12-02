@@ -1,4 +1,4 @@
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 
 import path from "path";
 import deployYLDToken from "../utils/yldToken";
@@ -20,6 +20,22 @@ async function main() {
         sTokenAddress: await sToken.getAddress(),
     });
 
+    const DEDUAggregatorFactory = await ethers.getContractFactory(
+        "DEDUAggregator",
+        { signer: deployer }
+    );
+
+    const dEDUAggregator = await upgrades.deployProxy(
+        DEDUAggregatorFactory,
+        [
+            "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+            await yldToken.getAddress(),
+            deployer.address,
+        ],
+        { kind: "uups" }
+    );
+    await dEDUAggregator.waitForDeployment();
+
     // Grant MINTER_ROLE to staking contract
     await yldToken.grantRole(
         await yldToken.MINTER_ROLE(),
@@ -37,14 +53,12 @@ async function main() {
         SToken: await sToken.getAddress(),
         Staking: await staking.getAddress(),
         WEDU: await wedu.getAddress(),
+        DEDUAggregator: await dEDUAggregator.getAddress(),
     };
 
-    const networkId =
-        network.name === "mainnet"
-            ? 1
-            : network.name === "localhost"
-            ? 31337
-            : 41923;
+    const networkId = await ethers.provider
+        .getNetwork()
+        .then((n) => Number(n.chainId));
 
     await Promise.all([
         exportDeployments(

@@ -115,7 +115,7 @@ export const deployedContracts = ${JSON.stringify(existing, null, 2)} as const;
 
         fs.writeFileSync(
             outFile,
-            prettier.format(output, { parser: "typescript" })
+            await prettier.format(output, { parser: "typescript" })
         );
     }
 }
