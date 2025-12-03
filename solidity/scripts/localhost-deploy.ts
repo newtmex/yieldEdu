@@ -94,29 +94,14 @@ async function main() {
     // ----------------------------------------
     console.log("📝 Exporting deployment artifacts...");
 
-    await Promise.all([
-        exportDeployments(
+    await exportDeployments(
+        [
             path.join(__dirname, "../../app/dapp/investors"),
-            [],
-            [],
-            contracts,
-            networkId
-        ),
-        exportDeployments(
             path.join(__dirname, "../../app/ponder"),
-            [],
-            [],
-            contracts,
-            networkId
-        ),
-        exportDeployments(
             path.join(__dirname, "../../app/investor-leaderboard/abis"),
-            [],
-            [],
-            contracts,
-            networkId
-        ),
-    ]);
+        ],
+        contracts
+    );
 
     console.log(
         "✅ Deployment completed successfully. All artifacts exported."

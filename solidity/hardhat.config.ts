@@ -7,6 +7,7 @@ import "@openzeppelin/hardhat-upgrades";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 
+import "./scripts/contentsTokenisationUpgrade";
 import "./scripts/yieldAccrualUpgrade";
 import "./scripts/accrueYield";
 import "./scripts/stakingUpgrade";

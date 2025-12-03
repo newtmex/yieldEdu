@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { artifacts } from "hardhat";
 import prettier from "prettier";
+import { artifacts, deployments, ethers } from "hardhat";
 
 /**
  * @deprecated Use the overload with `networkId` instead.
@@ -28,78 +28,51 @@ export async function exportDeployments(
  * @param networkId - Chain ID (e.g. 31337 for Hardhat).
  */
 export async function exportDeployments(
-    appPath: string,
-    addresses: Record<string, any>,
-    contractNames: string[],
-    contracts: Record<string, string>,
-    networkId: number
+    appPaths: string[],
+    contractMap: Record<string, string>
 ): Promise<void>;
 
 export async function exportDeployments(
-    appPath: string,
-    addresses: Record<string, any>,
-    contractNames: string[],
-    contractMap?: Record<string, string>,
-    networkId?: number
+    appPaths: string[],
+    contractMap: Record<string, string>
 ): Promise<void> {
-    const deploymentsDir = path.join(appPath);
-    fs.mkdirSync(deploymentsDir, { recursive: true });
+    if (!Array.isArray(appPaths)) {
+        throw new Error("DEPRECATED: appPaths must be an array of strings.");
+    }
 
-    if (
-        typeof networkId === "undefined" ||
-        typeof contractMap === "undefined"
-    ) {
-        // --------------------------
-        // Deprecated JSON + abis mode
-        // --------------------------
-        const deploymentsPath = path.join(deploymentsDir, "deployments.json");
-        fs.writeFileSync(deploymentsPath, JSON.stringify(addresses, null, 2));
+    const networkId = Number((await ethers.provider.getNetwork()).chainId);
 
-        const abiDir = path.join(deploymentsDir, "abis");
-        fs.mkdirSync(abiDir, { recursive: true });
+    const contracts: Record<string, { address: string; abi: any }> = {};
+    const { save, getExtendedArtifact } = deployments;
 
-        for (const name of contractNames) {
-            const artifact = await artifacts.readArtifact(name);
-            fs.writeFileSync(
-                path.join(abiDir, `${name}.json`),
-                JSON.stringify(artifact, null, 2)
-            );
-        }
-    } else {
-        // --------------------------
-        // New TS single-file mode with merging
-        // --------------------------
-        const contracts: Record<string, { address: string; abi: any }> = {};
+    for (const [name, address] of Object.entries(contractMap)) {
+        const artifact = await artifacts.readArtifact(name);
+        contracts[name] = {
+            address: address,
+            abi: artifact.abi,
+        };
 
-        for (const [name, address] of Object.entries(contractMap)) {
-            const artifact = await artifacts.readArtifact(name);
-            contracts[name] = {
-                address: address,
-                abi: artifact.abi,
-            };
-        }
+        const { abi, metadata } = await getExtendedArtifact(name);
+        await save(name, { abi, metadata, address });
+        console.log(`📁 Saved artifact for ${name} at ${address}`);
+    }
 
-        const outFile = path.join(deploymentsDir, "deployedContracts.ts");
+    for (const appPath of appPaths) {
+        const deploymentsDir = path.join(appPath);
+        if (!fs.existsSync(deploymentsDir))
+            fs.mkdirSync(deploymentsDir, { recursive: true });
+
+        const outFile = deploymentsDir.endsWith(".ts")
+            ? deploymentsDir
+            : path.join(deploymentsDir, "deployedContracts.ts");
+
+        console.log("📝 Exporting deployment artifacts to", outFile);
 
         // Load existing deployments if file exists
         let existing: Record<string, any> = {};
         if (fs.existsSync(outFile)) {
-            try {
-                // Dynamically import the module
-                const mod = await import(outFile);
-                if (mod.deployedContracts) {
-                    existing = mod.deployedContracts;
-                }
-            } catch (err) {
-                console.error(
-                    "❌ Failed to import deployedContracts:",
-                    (err as Error).message
-                );
-                existing = {};
-            }
+            existing = extractObjectFromTs(outFile, "deployedContracts");
         }
-
-        console.log({ existing });
 
         // Merge current network
         existing[networkId] = contracts;
@@ -117,5 +90,80 @@ export const deployedContracts = ${JSON.stringify(existing, null, 2)} as const;
             outFile,
             await prettier.format(output, { parser: "typescript" })
         );
+    }
+}
+
+export function extractObjectFromTs(
+    filePath: string,
+    objectName: string
+): {
+    [key: string]: {
+        [key: string]: {
+            address: string;
+            abi: any;
+        };
+    };
+} {
+    const content = fs.readFileSync(filePath, "utf8");
+
+    // Step 1: Find "export const deployedContracts = {"
+    const startRegex = new RegExp(`export\\s+const\\s+${objectName}\\s*=\\s*{`);
+
+    const startMatch = content.match(startRegex);
+    if (!startMatch) throw new Error(`Object '${objectName}' not found`);
+
+    const startIndex = startMatch.index! + startMatch[0].length - 1;
+
+    // Step 2: Extract full object literal using brace balancing
+    let i = startIndex;
+    let braceCount = 0;
+    let inString: string | null = null;
+
+    while (i < content.length) {
+        const char = content[i];
+
+        // Handle string boundaries to avoid breaking inside strings
+        if (char === '"' || char === "'" || char === "`") {
+            if (!inString) {
+                inString = char;
+            } else if (inString === char) {
+                inString = null;
+            }
+        }
+
+        if (!inString) {
+            if (char === "{") braceCount++;
+            if (char === "}") braceCount--;
+            if (braceCount === 0) {
+                i++;
+                break;
+            }
+        }
+
+        i++;
+    }
+
+    const rawObject = content.slice(
+        startMatch.index! + startMatch[0].length - 1,
+        i
+    );
+
+    // Step 3: Clean TS syntax for safe JSON parsing
+    let cleaned = rawObject
+        .replace(/as const;?/g, "") // remove 'as const'
+        .replace(/(\w+):/g, '"$1":') // unquoted property keys → quoted
+        .replace(/,(\s*[}\]])/g, "$1"); // remove trailing commas
+
+    // Remove comments
+    cleaned = cleaned
+        .replace(/\/\*[\s\S]*?\*\//g, "") // block comments
+        .replace(/\/\/.*/g, ""); // line comments
+
+    // Step 4: Parse
+    try {
+        return JSON.parse(cleaned);
+    } catch (err) {
+        console.error("Failed to parse JSON. Cleaned text:\n", cleaned);
+        throw err;
     }
 }
