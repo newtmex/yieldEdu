@@ -81,10 +81,14 @@ task(
 
         // ------- Execute upgrades -------
         for (const c of contractsToUpgrade) {
-            const info = deployedContracts[c.key];
+            let info = deployedContracts[c.key];
 
             if (!info || !info.address) {
-                console.log(
+                // info = {
+                //     address: "0xe2e1E9fd9149Fa801A344504f454b1a552b0668C",
+                //     abi: [],
+                // };
+                throw new Error(
                     `⚠️ Skipping ${c.key}: no address found in deployedContracts`
                 );
                 continue;
