@@ -11,6 +11,7 @@ import "./scripts/yieldAccrualUpgrade";
 import "./scripts/accrueYield";
 import "./scripts/stakingUpgrade";
 import "./scripts/stake";
+import "./scripts/compileYuzuPoints";
 
 // import "@nomicfoundation/hardhat-foundry"; remove for now, as it causes issues with hardhat compile command
 
