@@ -3889,7 +3889,7 @@ export const deployedContracts = {
       ],
     },
     ContentController: {
-      address: "0x7D0172e49649D3A74f2eC2D95CfEEe728CBE7FA5",
+      address: "0x21323DC410E484eBa9ff5Bd7b969261F46328410",
       abi: [
         {
           inputs: [],
@@ -5348,7 +5348,7 @@ export const deployedContracts = {
       ],
     },
     Content: {
-      address: "0x005eDF15A33792198957999ed6301FeFd8eEA8d4",
+      address: "0x35EF88a8b85773CDC02b7305018Eb20F33d14D5C",
       abi: [
         {
           inputs: [],

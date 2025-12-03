@@ -2,16 +2,12 @@
   "manifestVersion": "3.2",
   "proxies": [
     {
-      "address": "0xCc73868D86cBA963cD5e24874B64f8aA7eF9Cb4F",
-      "kind": "uups"
-    },
-    {
-      "address": "0x2e5122138229c838A0166ddfcA782Dc2Fcb71045",
-      "kind": "uups"
-    },
-    {
       "address": "0x7D0172e49649D3A74f2eC2D95CfEEe728CBE7FA5",
       "txHash": "0xd43d030088b83fe07010cba11b084b74269bf96366bbded08e41b7382cb7e667",
+      "kind": "uups"
+    },
+    {
+      "address": "0xCc73868D86cBA963cD5e24874B64f8aA7eF9Cb4F",
       "kind": "uups"
     },
     {
@@ -20,6 +16,15 @@
     },
     {
       "address": "0x5151622f616E40fA617c0fbe1Df92Ea5067eB8e9",
+      "kind": "uups"
+    },
+    {
+      "address": "0x2e5122138229c838A0166ddfcA782Dc2Fcb71045",
+      "kind": "uups"
+    },
+    {
+      "address": "0x21323DC410E484eBa9ff5Bd7b969261F46328410",
+      "txHash": "0x173f06d6e89593e8a4c4018f708e12a3d158cef74fa14eda19de6dc646b70670",
       "kind": "uups"
     }
   ],
@@ -466,6 +471,7 @@
       },
       "allAddresses": [
         "0x7eD0F55bCEFe9017C84aA2d83B956481b8eE5820",
+        "0x2522bF82EAa04F5F4dAB114d48643c7f40E21251",
         "0x08185111286E6Fd8b7f3fbCeBFCD1f422D3855E0",
         "0xf03f97eFaCF3dF00bF019d7B6f8839fAdf2f7634",
         "0xCD9ecFF36a2800819Df52FcafbdCDf4cB0538097"
@@ -817,6 +823,7 @@
       },
       "allAddresses": [
         "0xEF2FF31aa3383bf18B4fA3b14a550e68c1638744",
+        "0x7D6587eA1f1eb4A8E99161F7cDB7f6242dfCd433",
         "0xF05A404fB285cB1D8826d6Bbf87E937b8d76ac79",
         "0x7893fe33b8023FB4e9434eABa4bbF769b8c4794a",
         "0xdCC368E6bF48dE7C248cFF1cfdB14F82438B6a15"
@@ -984,8 +991,9 @@
       },
       "allAddresses": [
         "0x7910DFd71A8E366cb6dBb46E1449Cba2a043187f",
-        "0x9f3feEd7fA4B337B6096e7E4659f787Fa7EB2972",
+        "0x47C6F94c27D1d4dd5044a93B4A21a1F03181A835",
         "0xC692Ca4D8449Ba7BfCd45ad7A3FffF75B4eC1511",
+        "0x9f3feEd7fA4B337B6096e7E4659f787Fa7EB2972",
         "0x3E9f813e90c744c8576D34F996A87f5ee66CaC08"
       ]
     },
@@ -1217,6 +1225,7 @@
       },
       "allAddresses": [
         "0x84535412C54433080530B86AF12deD84840736ed",
+        "0x3Fc76aDB73B70b2BbA1033334f40477db1673B1B",
         "0xA321b0CD04F7968fF7f2EAC56f5039Da23913990"
       ]
     },
