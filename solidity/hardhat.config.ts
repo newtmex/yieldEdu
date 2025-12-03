@@ -26,6 +26,10 @@ const config: HardhatUserConfig = {
 			url: process.env.EDUCHAIN_RPC!,
 			accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
 		},
+		testnet: {
+			url: "https://rpc.open-campus-codex.gelato.digital",
+			accounts: [process.env.DEPLOYER_PRIVATE_KEY!],
+		},
 	},
 };
 
