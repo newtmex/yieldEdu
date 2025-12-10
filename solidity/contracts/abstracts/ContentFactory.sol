@@ -107,16 +107,6 @@ abstract contract ContentFactory is Initializable {
         $.contentBySymbol[symbol] = content;
     }
 
-    function ackSymbol(address content) public {
-        ContentFactoryStorage storage $ = _getContentFactoryStorage();
-        if ($.contents.contains(content)) {
-            string memory symbol = ERC20(content).symbol();
-            if ($.contentBySymbol[symbol] == address(0)) {
-                $.contentBySymbol[symbol] = content;
-            }
-        }
-    }
-
     function getContentBySymbol(
         string memory symbol
     ) public view returns (address) {
