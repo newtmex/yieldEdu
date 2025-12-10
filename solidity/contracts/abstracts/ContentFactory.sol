@@ -5,6 +5,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {IContent} from "../contents/IContent.sol";
 import {ContentLib} from "../contents/ContentLib.sol";
@@ -12,10 +13,13 @@ import {ContentLib} from "../contents/ContentLib.sol";
 abstract contract ContentFactory is Initializable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    error ContentAlreadyExists();
+
     /// @custom:storage-location erc7201:yieldedu.contentfactory.storage
     struct ContentFactoryStorage {
         EnumerableSet.AddressSet contents;
         address contentsBeacon; // set externally & stored in initializer
+        mapping(string => address) contentBySymbol;
     }
 
     bytes32 private constant CONTENT_FACTORY_STORAGE_SLOT =
@@ -69,11 +73,12 @@ abstract contract ContentFactory is Initializable {
         ) {
             revert("ZeroAddress");
         }
+        ContentFactoryStorage storage $ = _getContentFactoryStorage();
 
         // Deterministic symbol generation
         symbol = ContentLib.generateSymbol(title, creator);
-
-        ContentFactoryStorage storage $ = _getContentFactoryStorage();
+        if ($.contentBySymbol[symbol] != address(0))
+            revert ContentAlreadyExists();
 
         bytes32 salt = keccak256(abi.encodePacked(symbol));
 
@@ -99,40 +104,23 @@ abstract contract ContentFactory is Initializable {
         );
 
         $.contents.add(content);
+        $.contentBySymbol[symbol] = content;
+    }
+
+    function ackSymbol(address content) public {
+        ContentFactoryStorage storage $ = _getContentFactoryStorage();
+        if ($.contents.contains(content)) {
+            string memory symbol = ERC20(content).symbol();
+            if ($.contentBySymbol[symbol] == address(0)) {
+                $.contentBySymbol[symbol] = content;
+            }
+        }
     }
 
     function getContentBySymbol(
         string memory symbol
     ) public view returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(symbol));
-
-        bytes memory creationCode = abi.encodePacked(
-            type(BeaconProxy).creationCode,
-            abi.encode(
-                _getContentFactoryStorage().contentsBeacon,
-                abi.encodeWithSelector(
-                    IContent.initialize.selector,
-                    symbol,
-                    "", // irrelevant
-                    "",
-                    address(0),
-                    address(0),
-                    address(0)
-                )
-            )
-        );
-
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                bytes1(0xff),
-                address(this),
-                salt,
-                keccak256(creationCode)
-            )
-        );
-
-        address predicted = address(uint160(uint256(hash)));
-        return isContent(predicted) ? predicted : address(0);
+        return _getContentFactoryStorage().contentBySymbol[symbol];
     }
 
     // ---------------------------------------------------------

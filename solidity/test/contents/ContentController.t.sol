@@ -97,6 +97,7 @@ contract ContentControllerTest is ContentControllerFixture {
 
         // 2. Content proxy created
         assertTrue(contentAddr != address(0));
+        assertTrue(contentController.getContentBySymbol(symbol) == contentAddr);
 
         // 3. Content is a valid BeaconProxy (check code size > 0)
         uint256 codeSize;
