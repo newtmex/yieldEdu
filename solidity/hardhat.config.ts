@@ -11,6 +11,7 @@ import "./scripts/contentsTokenisationUpgrade";
 import "./scripts/yieldAccrualUpgrade";
 import "./scripts/accrueYield";
 import "./scripts/stakingUpgrade";
+import "./scripts/setVerifier";
 import "./scripts/stake";
 import "./scripts/compileYuzuPoints";
 
