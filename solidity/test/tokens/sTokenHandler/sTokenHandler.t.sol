@@ -61,8 +61,14 @@ contract STokenHandlerTest is STokenFixture {
         uint256[] memory ids = _uint256ArrayPrefilled(1, 1);
         uint256[] memory values = _uint256ArrayPrefilled(1, 1);
 
-        vm.expectRevert("BATCH_NOT_SUPPORTED");
-        handler.onERC1155BatchReceived(address(this), owner, ids, values, "");
+        bytes4 value = handler.onERC1155BatchReceived(
+            address(this),
+            owner,
+            ids,
+            values,
+            ""
+        );
+        assertEq(value, 0);
 
         vm.stopPrank();
     }

@@ -146,9 +146,7 @@ abstract contract STokenHandler is Initializable, ERC1155HolderUpgradeable {
         uint256[] memory,
         uint256[] memory,
         bytes memory
-    ) public override onlySToken returns (bytes4) {
-        revert("BATCH_NOT_SUPPORTED");
-    }
+    ) public override onlySToken returns (bytes4) {}
 
     /**
      * @dev Modifier placeholder for access control.
