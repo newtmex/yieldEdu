@@ -54,8 +54,7 @@ contract Content is
     using MessageHashUtils for bytes32;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    /// @notice Minimum binding threshold
-    uint256 public constant MIN_BIND = 10 ether;
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     uint256 public constant BASIS_POINT = 100_00;
 
     /*//////////////////////////////////////////////////////////////
@@ -110,7 +109,7 @@ contract Content is
 
         _setCourseController($, msg.sender);
         _setCourseDuration($, 7 days);
-        _setMinBindAmount($, MIN_BIND);
+        _setMinBindAmount($, MIN_BIND());
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ADMIN_ROLE, _admin);
@@ -128,6 +127,11 @@ contract Content is
         address oldVerifier = $.verifier;
         $.verifier = _verifier;
         emit VerifierUpdated(oldVerifier, _verifier);
+    }
+
+    function setMinBindAmount(uint256 amount) external onlyRole(MANAGER_ROLE) {
+        ContentStorage storage $ = _getContentStorage();
+        _setMinBindAmount($, amount);
     }
 
     function _setCourseController(
@@ -154,7 +158,7 @@ contract Content is
         ContentStorage storage $,
         uint256 newAmount
     ) internal {
-        require(newAmount >= MIN_BIND, "Below min threshold");
+        require(newAmount >= MIN_BIND(), "Below min threshold");
         uint256 oldAmount = $.minBindAmount;
         $.minBindAmount = newAmount;
         emit MinBindAmountUpdated(oldAmount, newAmount);
@@ -247,6 +251,12 @@ contract Content is
     {
         ContentStorage storage $ = _getContentStorage();
         return (symbol(), name(), $.description, $.sTokenId);
+    }
+
+    /// @notice Minimum binding threshold
+    function MIN_BIND() public view returns (uint256) {
+        if (block.chainid == 656476) return 1;
+        return 10 ether;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -605,7 +615,7 @@ contract Content is
         }
 
         uint256 mintAmount = $.minBindAmount;
-        if (mintAmount < MIN_BIND) revert InvalidBindAmount();
+        if (mintAmount < MIN_BIND()) revert InvalidBindAmount();
 
         uint256 bindId;
         if (tokenValue > 0) {

@@ -66,7 +66,7 @@ contract ContentController is
         __ContentFactory_init(contentBeacon_);
         __sTokenHandler_init(ISToken(sToken_));
 
-        __ERC20_init("ContentContoller", "CTYLD");
+        __ERC20_init("ContentContoller", "ctYLD");
         __ERC4626_init(yldToken_);
 
         // ---------------------------------------------------------

@@ -2,7 +2,8 @@
     "name": "solidity",
     "version": "1.0.0",
     "scripts": {
-        "test": "hardhat test"
+        "test": "hardhat test",
+        "hardhat:upgradeContents": "hardhat upgradeContents"
     },
     "devDependencies": {
         "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",

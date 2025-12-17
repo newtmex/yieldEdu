@@ -38,7 +38,7 @@ interface IContent {
 
     function ADMIN_ROLE() external view returns (bytes32);
 
-    function MIN_BIND() external pure returns (uint256);
+    function MIN_BIND() external returns (uint256);
 
     function BASIS_POINT() external pure returns (uint256);
 
